@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../src/ProofOfCapital.sol";
+import "../src/interfaces/IProofOfCapital.sol";
 import "../src/utils/Constant.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -243,6 +244,122 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoUpgradeProposed.selector);
         proofOfCapital.upgradeToAndCall(address(newImplementation), "");
+    }
+    
+    // Tests for extendLock function
+    function testExtendLockWithHalfYear() public {
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.HALF_YEAR);
+    }
+    
+    function testExtendLockWithThreeMonths() public {
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS);
+        
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.THREE_MONTHS);
+    }
+    
+    function testExtendLockWithTenMinutes() public {
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.TEN_MINUTES);
+        
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.TEN_MINUTES);
+    }
+    
+    function testExtendLockUnauthorized() public {
+        // Non-owner tries to extend lock
+        vm.prank(royalty);
+        vm.expectRevert();
+        proofOfCapital.extendLock(Constants.HALF_YEAR);
+    }
+    
+    function testExtendLockExceedsTwoYears() public {
+        // We start with 365 days, limit is 730 days (TWO_YEARS)
+        // HALF_YEAR = 182.5 days approximately
+        // So 365 + 182.5 = 547.5 days (still within 730 limit)
+        // But 365 + 182.5 + 182.5 = 730 days (at the limit)
+        
+        // First extend by HALF_YEAR - should work
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        
+        // Second extend by THREE_MONTHS to get closer to limit - should work
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS);
+        
+        // Now try to extend by HALF_YEAR - this should exceed the limit
+        vm.prank(owner);
+        vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
+        proofOfCapital.extendLock(Constants.HALF_YEAR);
+    }
+    
+    function testExtendLockWithInvalidTimePeriod() public {
+        // Try to extend with invalid time period (not one of the allowed constants)
+        uint256 invalidTime = 100 days; // Not a valid period
+        
+        vm.prank(owner);
+        vm.expectRevert(ProofOfCapital.InvalidTimePeriod.selector);
+        proofOfCapital.extendLock(invalidTime);
+    }
+    
+    function testExtendLockEvent() public {
+        uint256 extensionTime = Constants.THREE_MONTHS;
+        
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, true);
+        // Expecting LockExtended event with extensionTime parameter
+        emit IProofOfCapital.LockExtended(extensionTime);
+        proofOfCapital.extendLock(extensionTime);
+    }
+    
+    function testExtendLockMultipleTimes() public {
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        
+        // First extension
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS);
+        
+        uint256 afterFirstExtension = proofOfCapital.lockEndTime();
+        assertEq(afterFirstExtension, initialLockEndTime + Constants.THREE_MONTHS);
+        
+        // Second extension
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.TEN_MINUTES);
+        
+        assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
+    }
+    
+    function testExtendLockAtBoundaryOfTwoYears() public {
+        // We start with 365 days lock, limit is 730 days
+        // We can extend by exactly 365 days total
+        
+        // Extend by THREE_MONTHS multiple times to get close to the limit
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        // Now we have 365 + 360 = 725 days, close to 730 limit
+        
+        // TEN_MINUTES should still work (it's very small)
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.TEN_MINUTES);
+        
+        // But HALF_YEAR should fail now
+        vm.prank(owner);
+        vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
+        proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 }
 

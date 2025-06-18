@@ -19,6 +19,12 @@ interface IProofOfCapital {
     event ReturnWalletChanged(address indexed newReturnWalletAddress);
     event ProfitPercentageChanged(uint256 newRoyaltyProfitPercentage);
     event UnwrapModeChanged(bool isNeedToUnwrap);
+    
+    // Upgrade events
+    event UpgradeProposed(address indexed implementation, uint256 proposalTime);
+    event UpgradeConfirmed(address indexed implementation, uint256 confirmationTime);
+    event UpgradeCancelled(address indexed implementation, uint256 cancellationTime);
+
     // Management functions
 
     function extendLock(uint256 additionalTime) external;
@@ -35,6 +41,11 @@ interface IProofOfCapital {
 
     // Contract migration
     function setOldContractAddress(address oldContract) external;
+
+    // Upgrade management
+    function proposeUpgrade(address newImplementation) external;
+    function confirmUpgrade() external;
+    function cancelUpgradeProposal() external;
 
     // Trading functions
     function buyTokens(uint256 amount) external;
@@ -59,10 +70,7 @@ interface IProofOfCapital {
     // View functions
     function remainingSeconds() external view returns (uint256);
     function tradingOpportunity() external view returns (bool);
-    function jettonBalance() external view returns (uint256);
-    function jettonSold() external view returns (uint256);
     function jettonAvailable() external view returns (uint256);
-    function supportTokenBalance() external view returns (uint256);
 
     // State variables getters
     function isActive() external view returns (bool);

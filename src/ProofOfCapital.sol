@@ -25,6 +25,61 @@ contract ProofOfCapital is
 {
     using SafeERC20 for IERC20;
 
+    // Custom errors
+    error AccessDenied();
+    error NotMarketMaker();
+    error ContractNotActive();
+    error OnlyReserveOwner();
+    error InitialPriceMustBePositive();
+    error MultiplierTooHigh();
+    error MultiplierTooLow();
+    error PriceIncrementTooLow();
+    error InvalidRoyaltyProfitPercentage();
+    error ETHTransferFailed();
+    error LockCannotExceedTwoYears();
+    error InvalidTimePeriod();
+    error CannotActivateWithdrawalTooCloseToLockEnd();
+    error InvalidRecipientOrAmount();
+    error DeferredWithdrawalBlocked();
+    error MainJettonDeferredWithdrawalAlreadyScheduled();
+    error NoDeferredWithdrawalScheduled();
+    error WithdrawalDateNotReached();
+    error InsufficientJettonBalance();
+    error InsufficientAmount();
+    error InvalidRecipient();
+    error SupportDeferredWithdrawalAlreadyScheduled();
+    error InvalidNewOwner();
+    error InvalidReserveOwner();
+    error SameModeAlreadyActive();
+    error SameUnwrapModeAlreadyActive();
+    error InvalidAddress();
+    error OnlyRoyaltyWalletCanChange();
+    error InvalidPercentage();
+    error CannotDecreaseRoyalty();
+    error CannotIncreaseRoyalty();
+    error CannotBeSelf();
+    error InvalidAmount();
+    error UseDepositFunctionForOwners();
+    error UseSupportTokenInstead();
+    error InvalidETHAmount();
+    error LockPeriodNotEnded();
+    error NoTokensToWithdraw();
+    error NoSupportTokensToWithdraw();
+    error ProfitModeNotActive();
+    error NoProfitAvailable();
+    error TradingNotAllowedOnlyMarketMakers();
+    error InsufficientTokenBalance();
+    error InsufficientSupportBalance();
+    error NoTokensAvailableForBuyback();
+    error InsufficientTokensForBuyback();
+    error InsufficientSoldTokens();
+    error UpgradeAlreadyProposed();
+    error NoUpgradeProposed();
+    error UpgradeProposalExpired();
+    error UpgradeConfirmationPeriodNotPassed();
+    error UpgradeNotConfirmed();
+    error OnlyRoyaltyCanProposeUpgrade();
+
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
         address launchToken;
@@ -42,7 +97,6 @@ contract ProofOfCapital is
         uint256 profitPercentage;
         uint256 offsetJettons;
         uint256 controlPeriod;
-        bool jettonSupport;
         address jettonSupportAddress;
         uint256 royaltyProfitPercent;
         address[] oldContractAddresses; // Array of old contract addresses
@@ -122,26 +176,31 @@ contract ProofOfCapital is
     uint256 public supportJettonDeferredWithdrawalDate;
     address public recipientDeferredWithdrawalSupportJetton;
 
-    uint8 public callJettonsID;
     bool public isNeedToUnwrap; // Controls whether to unwrap WETH to ETH when sending
 
+    // Upgrade control variables
+    address public proposedUpgradeImplementation; // Proposed new implementation address
+    uint256 public upgradeProposalTime; // When upgrade was proposed by royalty wallet
+    uint256 public upgradeConfirmationTime; // When upgrade was confirmed by owner
+    bool public upgradeConfirmed; // Whether upgrade is confirmed by owner
+
     modifier onlyOwnerOrOldContract() {
-        require(_msgSender() == owner() || oldContractAddress[_msgSender()], "Access denied");
+        require(_msgSender() == owner() || oldContractAddress[_msgSender()], AccessDenied());
         _;
     }
 
     modifier onlyMarketMaker() {
-        require(marketMakerAddresses[_msgSender()], "Not a market maker");
+        require(marketMakerAddresses[_msgSender()], NotMarketMaker());
         _;
     }
 
     modifier onlyActiveContract() {
-        require(isActive, "Contract is not active");
+        require(isActive, ContractNotActive());
         _;
     }
 
     modifier onlyReserveOwner() {
-        require(_msgSender() == reserveOwner, "Only reserve owner can call this function");
+        require(_msgSender() == reserveOwner, OnlyReserveOwner());
         _;
     }
 
@@ -151,13 +210,13 @@ contract ProofOfCapital is
     }
 
     function initialize(InitParams calldata params) public initializer {
-        require(params.initialPricePerToken > 0, "Initial price must be positive");
-        require(params.levelDecreaseMultiplierafterTrend < Constants.PERCENTAGE_DIVISOR, "Multiplier too high");
-        require(params.levelIncreaseMultiplier > 0, "Multiplier too low");
-        require(params.priceIncrementMultiplier > 0, "Price increment too low");
+        require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
+        require(params.levelDecreaseMultiplierafterTrend < Constants.PERCENTAGE_DIVISOR, MultiplierTooHigh());
+        require(params.levelIncreaseMultiplier > 0, MultiplierTooLow());
+        require(params.priceIncrementMultiplier > 0, PriceIncrementTooLow());
         require(
             params.royaltyProfitPercent > 1 && params.royaltyProfitPercent <= Constants.MAX_ROYALTY_PERCENT,
-            "Invalid royalty profit percentage"
+            InvalidRoyaltyProfitPercentage()
         );
 
         __Ownable_init(_msgSender());
@@ -180,7 +239,7 @@ contract ProofOfCapital is
         profitPercentage = params.profitPercentage;
         offsetJettons = params.offsetJettons;
         controlPeriod = _getPeriod(params.controlPeriod);
-        jettonSupport = params.jettonSupport;
+        jettonSupport = params.jettonSupportAddress == wethAddress;
         jettonSupportAddress = params.jettonSupportAddress;
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
@@ -213,7 +272,6 @@ contract ProofOfCapital is
 
         profitInTime = true;
         canWithdrawal = true;
-        callJettonsID = 1;
         isNeedToUnwrap = true; // Default to true - unwrap WETH to ETH when sending
 
         if (params.offsetJettons > 0) {
@@ -226,78 +284,19 @@ contract ProofOfCapital is
         }
     }
 
-    /**
-     * @dev Authorize upgrade - only owner can upgrade
-     */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    /**
-     * @dev Get implementation version
-     */
-    function getVersion() external pure returns (string memory) {
-        return "1.0.0";
-    }
 
-    /**
-     * @dev Limit period to valid range
-     */
-    function _getPeriod(uint256 period) internal pure returns (uint256) {
-        if (period < Constants.MIN_CONTROL_PERIOD) {
-            return Constants.MIN_CONTROL_PERIOD;
-        } else if (period > Constants.MAX_CONTROL_PERIOD) {
-            return Constants.MAX_CONTROL_PERIOD;
-        }
-        return period;
-    }
 
-    /**
-     * @dev Safe transfer ETH - unwraps WETH and sends native ETH
-     */
-    function _safeTransferETH(address to, uint256 amount) internal {
-        if (isNeedToUnwrap) {
-            // Unwrap WETH to ETH before sending
-            IWETH(wethAddress).withdraw(amount);
-            (bool success,) = to.call{value: amount}("");
-            require(success, "ETH transfer failed");
-        } else {
-            // Transfer WETH directly without unwrapping
-            IERC20(wethAddress).safeTransfer(to, amount);
-        }
-    }
-
-    /**
-     * @dev Wrap received ETH to WETH
-     */
-    function _wrapETH(uint256 amount) internal {
-        IWETH(wethAddress).deposit{value: amount}();
-    }
-
-    /**
-     * @dev General transfer function for support tokens (ETH or ERC20)
-     * @param to Recipient address
-     * @param amount Amount to transfer
-     */
-    function _transferSupportTokens(address to, uint256 amount) internal {
-        if (amount == 0) return;
-
-        if (!jettonSupport) {
-            // Transfer ETH (unwrap WETH first)
-            _safeTransferETH(to, amount);
-        } else {
-            // Transfer support tokens
-            IERC20(jettonSupportAddress).safeTransfer(to, amount);
-        }
-    }
 
     /**
      * @dev Extend lock period
      */
     function extendLock(uint256 additionalTime) external override onlyOwner {
-        require((lockEndTime + additionalTime) - block.timestamp < Constants.TWO_YEARS, "Lock cannot exceed two years");
+        require((lockEndTime + additionalTime) - block.timestamp < Constants.TWO_YEARS, LockCannotExceedTwoYears());
         require(
             additionalTime == Constants.HALF_YEAR || additionalTime == Constants.TEN_MINUTES
                 || additionalTime == Constants.THREE_MONTHS,
-            "Invalid time period"
+            InvalidTimePeriod()
         );
 
         lockEndTime += additionalTime;
@@ -313,7 +312,7 @@ contract ProofOfCapital is
         } else {
             require(
                 lockEndTime - block.timestamp > Constants.THIRTY_DAYS,
-                "Cannot activate withdrawal too close to lock end"
+                CannotActivateWithdrawalTooCloseToLockEnd()
             );
             canWithdrawal = true;
         }
@@ -323,9 +322,9 @@ contract ProofOfCapital is
      * @dev Schedule deferred withdrawal of main jetton
      */
     function jettonDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
-        require(recipientAddress != address(0) && amount > 0, "Invalid recipient or amount");
-        require(canWithdrawal, "Deferred withdrawal is blocked");
-        require(mainJettonDeferredWithdrawalAmount == 0, "Main jetton deferred withdrawal already scheduled");
+        require(recipientAddress != address(0) && amount > 0, InvalidRecipientOrAmount());
+        require(canWithdrawal, DeferredWithdrawalBlocked());
+        require(mainJettonDeferredWithdrawalAmount == 0, MainJettonDeferredWithdrawalAlreadyScheduled());
 
         recipientDeferredWithdrawalMainJetton = recipientAddress;
         mainJettonDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
@@ -338,8 +337,8 @@ contract ProofOfCapital is
      * @dev Cancel deferred withdrawal of main jetton
      */
     function stopJettonDeferredWithdrawal() external override {
-        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, "Access denied");
-        require(mainJettonDeferredWithdrawalDate != 0, "No deferred withdrawal scheduled");
+        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
+        require(mainJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
         mainJettonDeferredWithdrawalDate = 0;
         mainJettonDeferredWithdrawalAmount = 0;
@@ -350,11 +349,11 @@ contract ProofOfCapital is
      * @dev Confirm and execute deferred withdrawal of main jetton
      */
     function confirmJettonDeferredWithdrawal() external override onlyOwner nonReentrant {
-        require(canWithdrawal, "Deferred withdrawal is blocked");
-        require(mainJettonDeferredWithdrawalDate != 0, "No deferred withdrawal scheduled");
-        require(block.timestamp >= mainJettonDeferredWithdrawalDate, "Withdrawal date not reached");
-        require(contractJettonBalance > totalJettonsSold, "Insufficient jetton balance");
-        require(contractJettonBalance - totalJettonsSold >= mainJettonDeferredWithdrawalAmount, "Insufficient amount");
+        require(canWithdrawal, DeferredWithdrawalBlocked());
+        require(mainJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(block.timestamp >= mainJettonDeferredWithdrawalDate, WithdrawalDateNotReached());
+        require(contractJettonBalance > totalJettonsSold, InsufficientJettonBalance());
+        require(contractJettonBalance - totalJettonsSold >= mainJettonDeferredWithdrawalAmount, InsufficientAmount());
 
         launchToken.safeTransfer(
             recipientDeferredWithdrawalMainJetton, mainJettonDeferredWithdrawalAmount
@@ -370,9 +369,9 @@ contract ProofOfCapital is
      * @dev Schedule deferred withdrawal of support tokens
      */
     function supportDeferredWithdrawal(address recipientAddress) external override onlyOwner {
-        require(canWithdrawal, "Deferred withdrawal is blocked");
-        require(recipientAddress != address(0), "Invalid recipient");
-        require(supportJettonDeferredWithdrawalDate == 0, "Support deferred withdrawal already scheduled");
+        require(canWithdrawal, DeferredWithdrawalBlocked());
+        require(recipientAddress != address(0), InvalidRecipient());
+        require(supportJettonDeferredWithdrawalDate == 0, SupportDeferredWithdrawalAlreadyScheduled());
 
         recipientDeferredWithdrawalSupportJetton = recipientAddress;
         supportJettonDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
@@ -384,8 +383,8 @@ contract ProofOfCapital is
      * @dev Cancel deferred withdrawal of support tokens
      */
     function stopSupportDeferredWithdrawal() external override {
-        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, "Access denied");
-        require(supportJettonDeferredWithdrawalDate != 0, "No deferred withdrawal scheduled");
+        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
+        require(supportJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
         supportJettonDeferredWithdrawalDate = 0;
         recipientDeferredWithdrawalSupportJetton = owner();
@@ -395,9 +394,9 @@ contract ProofOfCapital is
      * @dev Confirm and execute deferred withdrawal of support tokens
      */
     function confirmSupportDeferredWithdrawal() external override onlyOwner nonReentrant {
-        require(canWithdrawal, "Deferred withdrawal is blocked");
-        require(supportJettonDeferredWithdrawalDate != 0, "No deferred withdrawal scheduled");
-        require(block.timestamp >= supportJettonDeferredWithdrawalDate, "Withdrawal date not reached");
+        require(canWithdrawal, DeferredWithdrawalBlocked());
+        require(supportJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(block.timestamp >= supportJettonDeferredWithdrawalDate, WithdrawalDateNotReached());
 
         _transferSupportTokens(recipientDeferredWithdrawalSupportJetton, contractSupportBalance);
 
@@ -411,7 +410,7 @@ contract ProofOfCapital is
      * @dev Assign new owner
      */
     function assignNewOwner(address newOwner) external override onlyReserveOwner {
-        require(newOwner != address(0), "Invalid new owner");
+        require(newOwner != address(0), InvalidNewOwner());
 
         if (owner() == reserveOwner) {
             _transferOwnership(newOwner);
@@ -425,7 +424,7 @@ contract ProofOfCapital is
      * @dev Assign new reserve owner
      */
     function assignNewReserveOwner(address newReserveOwner) external override onlyReserveOwner {
-        require(newReserveOwner != address(0), "Invalid reserve owner");
+        require(newReserveOwner != address(0), InvalidReserveOwner());
         _transferReserveOwner(newReserveOwner);
     }
 
@@ -433,7 +432,7 @@ contract ProofOfCapital is
      * @dev Switch profit withdrawal mode
      */
     function switchProfitMode(bool flag) external override onlyOwner {
-        require(flag != profitInTime, "Same mode already active");
+        require(flag != profitInTime, SameModeAlreadyActive());
 
         profitInTime = flag;
         emit ProfitModeChanged(flag);
@@ -443,7 +442,7 @@ contract ProofOfCapital is
      * @dev Set whether to unwrap WETH to ETH when sending
      */
     function setUnwrapMode(bool needToUnwrap) external onlyOwner {
-        require(needToUnwrap != isNeedToUnwrap, "Same unwrap mode already active");
+        require(needToUnwrap != isNeedToUnwrap, SameUnwrapModeAlreadyActive());
 
         isNeedToUnwrap = needToUnwrap;
         emit UnwrapModeChanged(needToUnwrap);
@@ -453,7 +452,7 @@ contract ProofOfCapital is
      * @dev Change return wallet address
      */
     function changeReturnWallet(address newReturnWalletAddress) external override onlyOwner {
-        require(newReturnWalletAddress != address(0), "Invalid address");
+        require(newReturnWalletAddress != address(0), InvalidAddress());
         returnWalletAddress = newReturnWalletAddress;
         emit ReturnWalletChanged(newReturnWalletAddress);
     }
@@ -462,8 +461,8 @@ contract ProofOfCapital is
      * @dev Change royalty wallet address
      */
     function changeRoyaltyWallet(address newRoyaltyWalletAddress) external override {
-        require(_msgSender() == royaltyWalletAddress, "Only royalty wallet can change");
-        require(newRoyaltyWalletAddress != address(0), "Invalid address");
+        require(_msgSender() == royaltyWalletAddress, OnlyRoyaltyWalletCanChange());
+        require(newRoyaltyWalletAddress != address(0), InvalidAddress());
         royaltyWalletAddress = newRoyaltyWalletAddress;
         emit RoyaltyWalletChanged(newRoyaltyWalletAddress);
     }
@@ -472,16 +471,16 @@ contract ProofOfCapital is
      * @dev Change profit percentage distribution
      */
     function changeProfitPercentage(uint256 newRoyaltyProfitPercentage) external override {
-        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, "Access denied");
+        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
         require(
             newRoyaltyProfitPercentage > 0 && newRoyaltyProfitPercentage <= Constants.PERCENTAGE_DIVISOR,
-            "Invalid percentage"
+            InvalidPercentage()
         );
 
         if (_msgSender() == owner()) {
-            require(newRoyaltyProfitPercentage > royaltyProfitPercent, "Cannot decrease royalty");
+            require(newRoyaltyProfitPercentage > royaltyProfitPercent, CannotDecreaseRoyalty());
         } else {
-            require(newRoyaltyProfitPercentage < royaltyProfitPercent, "Cannot increase royalty");
+            require(newRoyaltyProfitPercentage < royaltyProfitPercent, CannotIncreaseRoyalty());
         }
 
         royaltyProfitPercent = newRoyaltyProfitPercentage;
@@ -493,7 +492,7 @@ contract ProofOfCapital is
      * @dev Set market maker status for an address
      */
     function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external override onlyOwner {
-        require(marketMakerAddress != address(0), "Invalid address");
+        require(marketMakerAddress != address(0), InvalidAddress());
 
         marketMakerAddresses[marketMakerAddress] = isMarketMaker;
         emit MarketMakerStatusChanged(marketMakerAddress, isMarketMaker);
@@ -503,18 +502,17 @@ contract ProofOfCapital is
      * @dev Set old contract address for migration
      */
     function setOldContractAddress(address oldContract) external override onlyOwner {
-        require(oldContract != address(0), "Invalid address");
-        require(oldContract != address(this), "Cannot be self");
+        require(oldContract != address(0), InvalidAddress());
+        require(oldContract != address(this), CannotBeSelf());
         oldContractAddress[oldContract] = true;
     }
 
     /**
      * @dev Buy tokens with support tokens
      */
-    function buyTokens(uint256 amount) external override nonReentrant onlyActiveContract onlyInitializing {
-        require(jettonSupport, "Support token not enabled");
-        require(amount > 0, "Invalid amount");
-        require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), "Use deposit function for owners");
+    function buyTokens(uint256 amount) external override nonReentrant onlyActiveContract {
+        require(amount > 0, InvalidAmount());
+        require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), UseDepositFunctionForOwners());
 
         IERC20(jettonSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
         _handleTokenPurchaseCommon(amount);
@@ -523,10 +521,10 @@ contract ProofOfCapital is
     /**
      * @dev Buy tokens with ETH
      */
-    function buyTokensWithETH() external payable override nonReentrant onlyActiveContract onlyInitializing {
-        require(!jettonSupport, "Use support token instead");
-        require(msg.value > 0, "Invalid ETH amount");
-        require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), "Use deposit function for owners");
+    function buyTokensWithETH() external payable override nonReentrant onlyActiveContract {
+        require(!jettonSupport, UseSupportTokenInstead());
+        require(msg.value > 0, InvalidETHAmount());
+        require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), UseDepositFunctionForOwners());
 
         // Wrap received ETH to WETH
         _wrapETH(msg.value);
@@ -542,10 +540,8 @@ contract ProofOfCapital is
         nonReentrant
         onlyActiveContract
         onlyOwnerOrOldContract
-        onlyInitializing
     {
-        require(jettonSupport, "Support token not enabled");
-        require(amount > 0, "Invalid amount");
+        require(amount > 0, InvalidAmount());
 
         IERC20(jettonSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
         _handleOwnerDeposit(amount);
@@ -561,10 +557,9 @@ contract ProofOfCapital is
         nonReentrant
         onlyActiveContract
         onlyOwnerOrOldContract
-        onlyInitializing
     {
-        require(!jettonSupport, "Use support token instead");
-        require(msg.value > 0, "Invalid ETH amount");
+        require(!jettonSupport, UseSupportTokenInstead());
+        require(msg.value > 0, InvalidETHAmount());
 
         // Wrap received ETH to WETH
         _wrapETH(msg.value);
@@ -574,8 +569,8 @@ contract ProofOfCapital is
     /**
      * @dev Sell tokens back to contract
      */
-    function sellTokens(uint256 amount) external override nonReentrant onlyActiveContract onlyInitializing {
-        require(amount > 0, "Invalid amount");
+    function sellTokens(uint256 amount) external override nonReentrant onlyActiveContract {
+        require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(_msgSender(), address(this), amount);
 
@@ -590,10 +585,10 @@ contract ProofOfCapital is
      * @dev Withdraw all tokens after lock period
      */
     function withdrawAllTokens() external override onlyOwner nonReentrant {
-        require(block.timestamp >= lockEndTime, "Lock period not ended");
+        require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
 
         uint256 availableTokens = contractJettonBalance - totalJettonsSold;
-        require(availableTokens > 0, "No tokens to withdraw");
+        require(availableTokens > 0, NoTokensToWithdraw());
 
         launchToken.safeTransfer(owner(), availableTokens);
 
@@ -615,32 +610,123 @@ contract ProofOfCapital is
      * @dev Withdraw all support tokens after lock period
      */
     function withdrawAllSupportTokens() external override onlyOwner nonReentrant {
-        require(block.timestamp >= lockEndTime, "Lock period not ended");
-        require(contractSupportBalance > 0, "No support tokens to withdraw");
+        require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
+        require(contractSupportBalance > 0, NoSupportTokensToWithdraw());
 
         _transferSupportTokens(owner(), contractSupportBalance);
         contractSupportBalance = 0;
     }
 
     /**
+     * @dev Propose contract upgrade by royalty wallet
+     */
+    function proposeUpgrade(address newImplementation) external {
+        require(_msgSender() == royaltyWalletAddress, OnlyRoyaltyCanProposeUpgrade());
+        require(newImplementation != address(0), InvalidAddress());
+        require(proposedUpgradeImplementation == address(0), UpgradeAlreadyProposed());
+
+        proposedUpgradeImplementation = newImplementation;
+        upgradeProposalTime = block.timestamp;
+        upgradeConfirmed = false;
+        upgradeConfirmationTime = 0;
+
+        emit UpgradeProposed(newImplementation, block.timestamp);
+    }
+
+    /**
+     * @dev Confirm proposed upgrade by owner (within 30 days of proposal)
+     */
+    function confirmUpgrade() external onlyOwner {
+        require(proposedUpgradeImplementation != address(0), NoUpgradeProposed());
+        require(block.timestamp <= upgradeProposalTime + Constants.THIRTY_DAYS, UpgradeProposalExpired());
+        require(!upgradeConfirmed, UpgradeAlreadyProposed());
+
+        upgradeConfirmed = true;
+        upgradeConfirmationTime = block.timestamp;
+
+        emit UpgradeConfirmed(proposedUpgradeImplementation, block.timestamp);
+    }
+
+    /**
+     * @dev Cancel upgrade proposal (can be called by royalty wallet or owner)
+     */
+    function cancelUpgradeProposal() external {
+        require(_msgSender() == royaltyWalletAddress || _msgSender() == owner(), AccessDenied());
+        require(proposedUpgradeImplementation != address(0), NoUpgradeProposed());
+
+        address cancelledImplementation = proposedUpgradeImplementation;
+        proposedUpgradeImplementation = address(0);
+        upgradeProposalTime = 0;
+        upgradeConfirmed = false;
+        upgradeConfirmationTime = 0;
+
+        emit UpgradeCancelled(cancelledImplementation, block.timestamp);
+    }
+    /**
      * @dev Get profit on request
      */
     function getProfitOnRequest() external override nonReentrant {
-        require(profitInTime, "Profit mode is not active");
+        require(profitInTime, ProfitModeNotActive());
 
         if (_msgSender() == owner()) {
-            require(ownerSupportBalance > 0, "No profit available");
+            require(ownerSupportBalance > 0, NoProfitAvailable());
             _transferSupportTokens(owner(), ownerSupportBalance);
             ownerSupportBalance = 0;
         } else {
-            require(_msgSender() == royaltyWalletAddress, "Access denied");
-            require(royaltySupportBalance > 0, "No profit available");
+            require(_msgSender() == royaltyWalletAddress, AccessDenied());
+            require(royaltySupportBalance > 0, NoProfitAvailable());
             _transferSupportTokens(royaltyWalletAddress, royaltySupportBalance);
             royaltySupportBalance = 0;
         }
     }
 
+    // View functions
+
+    /**
+     * @dev Get remaining seconds
+     */
+    function remainingSeconds() external view override returns (uint256) {
+        return lockEndTime > block.timestamp ? lockEndTime - block.timestamp : 0;
+    }
+
+    function tradingOpportunity() external view override returns (bool) {
+        return lockEndTime - block.timestamp < Constants.THIRTY_DAYS;
+    }
+
+    function jettonAvailable() external view override returns (uint256) {
+        return totalJettonsSold - jettonsEarned;
+    }
+
     // Internal functions for handling different types of transactions
+
+
+    /**
+     * @dev Limit period to valid range
+     */
+    function _getPeriod(uint256 period) internal pure returns (uint256) {
+        if (period < Constants.MIN_CONTROL_PERIOD) {
+            return Constants.MIN_CONTROL_PERIOD;
+        } else if (period > Constants.MAX_CONTROL_PERIOD) {
+            return Constants.MAX_CONTROL_PERIOD;
+        }
+        return period;
+    }
+
+    /**
+     * @dev Safe transfer ETH - unwraps WETH and sends native ETH
+     */
+    function _safeTransferETH(address to, uint256 amount) internal {
+        if (isNeedToUnwrap) {
+            // Unwrap WETH to ETH before sending
+            IWETH(wethAddress).withdraw(amount);
+            (bool success,) = to.call{value: amount}("");
+            require(success, ETHTransferFailed());
+        } else {
+            // Transfer WETH directly without unwrapping
+            IERC20(wethAddress).safeTransfer(to, amount);
+        }
+    }
+
     function _handleOwnerDeposit(uint256 value) internal {
         if (offsetJettons > jettonsEarned) {
             uint256 deltaSupportBalance = _calculateChangeOffsetSupport(value);
@@ -658,9 +744,9 @@ contract ProofOfCapital is
      */
     function _handleTokenPurchaseCommon(uint256 supportAmount) internal {
         if (!_checkTradingAccess()) {
-            require(marketMakerAddresses[_msgSender()], "Trading not allowed - only market makers can trade now");
+            require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
-        require(contractJettonBalance > totalJettonsSold, "Insufficient token balance");
+        require(contractJettonBalance > totalJettonsSold, InsufficientTokenBalance());
 
         uint256 totalTokens = _calculateJettonsToGiveForSupportAmount(supportAmount);
         uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
@@ -703,7 +789,7 @@ contract ProofOfCapital is
         }
 
         jettonsEarned += effectiveAmount;
-        require(contractSupportBalance >= supportAmountToPay, "Insufficient support balance");
+        require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
         contractSupportBalance -= supportAmountToPay;
         contractJettonBalance += amount;
 
@@ -714,17 +800,17 @@ contract ProofOfCapital is
 
     function _handleTokenSale(uint256 amount) internal {
         if (!_checkTradingAccess()) {
-            require(marketMakerAddresses[_msgSender()], "Trading not allowed - only market makers can trade now");
+            require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
 
         uint256 tokensAvailableForBuyback =
             totalJettonsSold - (offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned);
-        require(tokensAvailableForBuyback > 0, "No tokens available for buyback");
-        require(tokensAvailableForBuyback >= amount, "Insufficient tokens for buyback");
+        require(tokensAvailableForBuyback > 0, NoTokensAvailableForBuyback());
+        require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
 
         uint256 supportAmountToPay = _calculateSupportToPayForTokenAmount(amount);
-        require(contractSupportBalance >= supportAmountToPay, "Insufficient support balance");
-        require(totalJettonsSold >= amount, "Insufficient sold tokens");
+        require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
+        require(totalJettonsSold >= amount, InsufficientSoldTokens());
 
         contractSupportBalance -= supportAmountToPay;
         totalJettonsSold -= amount;
@@ -775,31 +861,31 @@ contract ProofOfCapital is
 
     // Full implementation of calculation functions based on Tact contract
     function _calculateOffset(uint256 amountJettons) internal {
-        uint256 remainingOffsetJettons = amountJettons;
+        int256 remainingOffsetJettons = int256(amountJettons);
         uint256 localCurrentStep = offsetStep;
-        uint256 remainderOfStepLocal = remainderOffsetJettons;
+        int256 remainderOfStepLocal = int256(remainderOffsetJettons);
         uint256 jettonsPerLevel = sizeOffsetStep;
         uint256 currentPriceLocal = currentPrice;
 
         while (remainingOffsetJettons > 0) {
-            uint256 tokensAvailableInStep = remainderOfStepLocal;
+            int256 tokensAvailableInStep = remainderOfStepLocal;
 
             if (remainingOffsetJettons >= tokensAvailableInStep) {
-                remainingOffsetJettons -= tokensAvailableInStep;
+                remainingOffsetJettons -= int256(tokensAvailableInStep);
                 localCurrentStep += 1;
 
                 jettonsPerLevel = _calculateJettonsPerLevel(jettonsPerLevel, localCurrentStep);
-                remainderOfStepLocal = jettonsPerLevel;
+                remainderOfStepLocal = int256(jettonsPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
-                remainderOfStepLocal -= remainingOffsetJettons;
+                remainderOfStepLocal -= int256(remainingOffsetJettons);
                 remainingOffsetJettons = 0;
             }
         }
 
         offsetStep = localCurrentStep;
-        remainderOffsetJettons = remainderOfStepLocal;
+        remainderOffsetJettons = uint256(remainderOfStepLocal);
         sizeOffsetStep = jettonsPerLevel;
         offsetPrice = currentPriceLocal;
 
@@ -807,15 +893,15 @@ contract ProofOfCapital is
         quantityJettonsPerLevel = jettonsPerLevel;
         currentPrice = currentPriceLocal;
 
-        remainderOfStep = remainderOfStepLocal;
+        remainderOfStep = uint256(remainderOfStepLocal);
         contractJettonBalance = amountJettons;
         totalJettonsSold = amountJettons;
     }
 
     function _calculateChangeOffsetSupport(uint256 amountSupport) internal returns (uint256) {
-        uint256 remainingAddSupport = amountSupport;
+        int256 remainingAddSupport = int256(amountSupport);
         uint256 remainingOffsetJettonsLocal = offsetJettons;
-        uint256 remainingAddJettons = offsetJettons - jettonsEarned;
+        int256 remainingAddJettons = int256(offsetJettons) - int256(jettonsEarned);
         uint256 localCurrentStep = offsetStep;
         uint256 remainderOfStepLocal = remainderOffsetJettons;
         uint256 jettonsPerLevel = sizeOffsetStep;
@@ -824,14 +910,14 @@ contract ProofOfCapital is
         while (remainingAddSupport > 0 && remainingAddJettons > 0) {
             uint256 tokensAvailableInStep = jettonsPerLevel - remainderOfStepLocal;
             uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-            uint256 tonInStep = (tokensAvailableInStep * currentPriceLocal) / Constants.PRICE_PRECISION;
+            uint256 tonInStep = (uint256(tokensAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
             uint256 tonRealInStep =
                 (tonInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal)) / Constants.PERCENTAGE_DIVISOR;
 
-            if (remainingAddSupport >= tonRealInStep && remainingAddJettons >= tokensAvailableInStep) {
-                remainingAddSupport -= tonRealInStep;
+            if (remainingAddSupport >= int256(tonRealInStep) && remainingAddJettons >= int256(tokensAvailableInStep)) {
+                remainingAddSupport -= int256(tonRealInStep);
                 remainingOffsetJettonsLocal -= tokensAvailableInStep;
-                remainingAddJettons -= tokensAvailableInStep;
+                remainingAddJettons -= int256(tokensAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
@@ -860,16 +946,16 @@ contract ProofOfCapital is
                 uint256 supportToPayForStep = 0;
                 uint256 tokensToBuyInThisStep = 0;
 
-                if (remainingAddSupport >= tonRealInStep) {
-                    supportToPayForStep = (remainingAddJettons * adjustedPrice) / Constants.PRICE_PRECISION;
-                    tokensToBuyInThisStep = remainingAddJettons;
+                if (remainingAddSupport >= int256(tonRealInStep)) {
+                    supportToPayForStep = (uint256(remainingAddJettons) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    tokensToBuyInThisStep = uint256(remainingAddJettons);
                 } else {
-                    supportToPayForStep = remainingAddSupport;
-                    tokensToBuyInThisStep = (remainingAddSupport * Constants.PRICE_PRECISION) / adjustedPrice;
+                    supportToPayForStep = uint256(remainingAddSupport);
+                    tokensToBuyInThisStep = (uint256(remainingAddSupport) * Constants.PRICE_PRECISION) / adjustedPrice;
                 }
 
                 remainderOfStepLocal += tokensToBuyInThisStep;
-                remainingAddSupport -= supportToPayForStep;
+                remainingAddSupport -= int256(supportToPayForStep);
                 remainingOffsetJettonsLocal -= tokensToBuyInThisStep;
                 remainingAddJettons = 0;
             }
@@ -881,48 +967,48 @@ contract ProofOfCapital is
         sizeOffsetStep = jettonsPerLevel;
         offsetJettons = remainingOffsetJettonsLocal;
 
-        return (amountSupport - remainingAddSupport);
+        return (amountSupport - uint256(remainingAddSupport));
     }
 
     function _calculateJettonsToGiveForSupportAmount(uint256 supportAmount) internal returns (uint256) {
         uint256 jettonsToGive = 0;
-        uint256 remainingSupportAmount = supportAmount;
+        int256 remainingSupportAmount = int256(supportAmount);
         uint256 localCurrentStep = currentStep;
-        uint256 remainderOfStepLocal = remainderOfStep;
+        int256 remainderOfStepLocal = int256(remainderOfStep);
         uint256 jettonsPerLevel = quantityJettonsPerLevel;
         uint256 currentPriceLocal = currentPrice;
         uint256 totalProfit = 0;
         uint256 remainderOfJettons = contractJettonBalance - totalJettonsSold;
 
         while (remainingSupportAmount > 0 && remainderOfJettons >= jettonsToGive) {
-            uint256 tokensAvailableInStep = remainderOfStepLocal;
-            uint256 tonRequiredForStep = (tokensAvailableInStep * currentPriceLocal) / Constants.PRICE_PRECISION;
+            int256 tokensAvailableInStep = remainderOfStepLocal;
+            int256 tonRequiredForStep = (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
             if (remainingSupportAmount >= tonRequiredForStep) {
-                jettonsToGive += tokensAvailableInStep;
+                jettonsToGive += uint256(tokensAvailableInStep);
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
 
-                uint256 profitInStep = (tonRequiredForStep * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
+                uint256 profitInStep = (uint256(tonRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
                 totalProfit += profitInStep;
 
                 remainingSupportAmount -= tonRequiredForStep;
                 localCurrentStep += 1;
 
                 jettonsPerLevel = _calculateJettonsPerLevel(jettonsPerLevel, localCurrentStep);
-                remainderOfStepLocal = jettonsPerLevel;
+                remainderOfStepLocal = int256(jettonsPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
-                uint256 tokensToBuyInThisStep = (remainingSupportAmount * Constants.PRICE_PRECISION) / currentPriceLocal;
+                uint256 tokensToBuyInThisStep = (uint256(remainingSupportAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
                 jettonsToGive += tokensToBuyInThisStep;
-                uint256 tonSpentInThisStep = remainingSupportAmount;
+                uint256 tonSpentInThisStep = uint256(remainingSupportAmount);
 
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 profitInStep = (tonSpentInThisStep * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
                 totalProfit += profitInStep;
 
                 remainingSupportAmount = 0;
-                remainderOfStepLocal -= tokensToBuyInThisStep;
+                remainderOfStepLocal -= int256(tokensToBuyInThisStep);
             }
         }
 
@@ -938,7 +1024,7 @@ contract ProofOfCapital is
         if (remainderOfStepLocal < 0) {
             remainderOfStep = 0;
         } else {
-            remainderOfStep = remainderOfStepLocal;
+            remainderOfStep = uint256(remainderOfStepLocal);
         }
 
         return jettonsToGive;
@@ -946,23 +1032,23 @@ contract ProofOfCapital is
 
     function _calculateSupportToPayForTokenAmount(uint256 tokenAmount) internal returns (uint256) {
         uint256 supportAmountToPay = 0;
-        uint256 remainingJettonAmount = tokenAmount;
+        int256 remainingJettonAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStep;
-        uint256 remainderOfStepLocal = remainderOfStep;
+        int256 remainderOfStepLocal = int256(remainderOfStep);
         uint256 jettonsPerLevel = quantityJettonsPerLevel;
         uint256 currentPriceLocal = currentPrice;
 
         while (remainingJettonAmount > 0) {
-            uint256 tokensAvailableInStep = jettonsPerLevel - remainderOfStepLocal;
+            int256 tokensAvailableInStep = int256(jettonsPerLevel) - remainderOfStepLocal;
 
-            if (remainingJettonAmount >= tokensAvailableInStep) {
+            if (remainingJettonAmount >= int256(tokensAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (tokensAvailableInStep * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep = (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
-                remainingJettonAmount -= tokensAvailableInStep;
+                remainingJettonAmount -= int256(tokensAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
@@ -981,17 +1067,17 @@ contract ProofOfCapital is
                     remainderOfStepLocal = 0;
                 } else {
                     localCurrentStep = currentStepEarned;
-                    remainderOfStepLocal = jettonsPerLevel;
+                    remainderOfStepLocal = int256(jettonsPerLevel);
                     remainingJettonAmount = 0;
                 }
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (remainingJettonAmount * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep = (uint256(remainingJettonAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
-                remainderOfStepLocal += remainingJettonAmount;
+                remainderOfStepLocal += int256(remainingJettonAmount);
                 remainingJettonAmount = 0;
             }
         }
@@ -1003,7 +1089,7 @@ contract ProofOfCapital is
         if (remainderOfStepLocal < 0) {
             remainderOfStep = 0;
         } else {
-            remainderOfStep = remainderOfStepLocal;
+            remainderOfStep = uint256(remainderOfStepLocal);
         }
 
         return supportAmountToPay;
@@ -1011,33 +1097,33 @@ contract ProofOfCapital is
 
     function _calculateSupportForTokenAmountEarned(uint256 tokenAmount) internal returns (uint256) {
         uint256 supportAmountToPay = 0;
-        uint256 remainingJettonAmount = tokenAmount;
+        int256 remainingJettonAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStepEarned;
-        uint256 remainderOfStepLocal = remainderOfStepEarned;
+        int256 remainderOfStepLocal = int256(remainderOfStepEarned);
         uint256 jettonsPerLevel = quantityJettonsPerLevelEarned;
         uint256 currentPriceLocal = currentPriceEarned;
 
         while (remainingJettonAmount > 0 && localCurrentStep <= currentStep) {
-            uint256 tokensAvailableInStep = remainderOfStepLocal;
+            int256 tokensAvailableInStep = remainderOfStepLocal;
 
-            if (remainingJettonAmount >= tokensAvailableInStep) {
+            if (remainingJettonAmount >= int256(tokensAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (tokensAvailableInStep * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep = (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
                 localCurrentStep += 1;
                 jettonsPerLevel = _calculateJettonsPerLevel(jettonsPerLevel, localCurrentStep);
-                remainderOfStepLocal = jettonsPerLevel;
-                remainingJettonAmount -= tokensAvailableInStep;
+                remainderOfStepLocal = int256(jettonsPerLevel);
+                remainingJettonAmount -= int256(tokensAvailableInStep);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (remainingJettonAmount * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep = (uint256(remainingJettonAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
                 remainderOfStepLocal -= remainingJettonAmount;
@@ -1052,36 +1138,59 @@ contract ProofOfCapital is
         if (remainderOfStepLocal < 0) {
             remainderOfStepEarned = 0;
         } else {
-            remainderOfStepEarned = remainderOfStepLocal;
+            remainderOfStepEarned = uint256(remainderOfStepLocal);
         }
 
         return supportAmountToPay;
     }
 
-    // View functions
-    function remainingSeconds() external view override returns (uint256) {
-        return lockEndTime > block.timestamp ? lockEndTime - block.timestamp : 0;
+    /**
+     * @dev Wrap received ETH to WETH
+     */
+    function _wrapETH(uint256 amount) internal {
+        IWETH(wethAddress).deposit{value: amount}();
     }
 
-    function tradingOpportunity() external view override returns (bool) {
-        return lockEndTime - block.timestamp < Constants.THIRTY_DAYS;
+    /**
+     * @dev General transfer function for support tokens (ETH or ERC20)
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     */
+    function _transferSupportTokens(address to, uint256 amount) internal {
+        if (amount == 0) return;
+
+        if (!jettonSupport) {
+            // Transfer ETH (unwrap WETH first)
+            _safeTransferETH(to, amount);
+        } else {
+            // Transfer support tokens
+            IERC20(jettonSupportAddress).safeTransfer(to, amount);
+        }
     }
 
-    function jettonBalance() external view override returns (uint256) {
-        return contractJettonBalance;
+
+    /**
+     * @dev Authorize upgrade - only owner can upgrade
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+        require(proposedUpgradeImplementation != address(0), NoUpgradeProposed());
+        require(upgradeConfirmed, UpgradeNotConfirmed());
+        require(newImplementation == proposedUpgradeImplementation, InvalidAddress());
+        require(
+            block.timestamp >= upgradeConfirmationTime + Constants.THIRTY_DAYS,
+            UpgradeConfirmationPeriodNotPassed()
+        );
+
+        // Reset upgrade state after successful upgrade
+        proposedUpgradeImplementation = address(0);
+        upgradeProposalTime = 0;
+        upgradeConfirmed = false;
+        upgradeConfirmationTime = 0;
     }
 
-    function jettonSold() external view override returns (uint256) {
-        return totalJettonsSold;
-    }
 
-    function jettonAvailable() external view override returns (uint256) {
-        return totalJettonsSold - jettonsEarned;
-    }
 
-    function supportTokenBalance() external view override returns (uint256) {
-        return contractSupportBalance;
-    }
+
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

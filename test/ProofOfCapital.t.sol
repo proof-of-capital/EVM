@@ -361,6 +361,149 @@ contract ProofOfCapitalTest is Test {
         vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
+    
+    // Tests for blockDeferredWithdrawal function
+    function testBlockDeferredWithdrawalFromTrueToFalse() public {
+        // Initially canWithdrawal should be true (default)
+        assertTrue(proofOfCapital.canWithdrawal());
+        
+        // Block deferred withdrawal
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        // Should now be false
+        assertFalse(proofOfCapital.canWithdrawal());
+    }
+    
+    function testBlockDeferredWithdrawalFromFalseToTrueWhenTimeAllows() public {
+        // First block withdrawal
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Now try to unblock when we have enough time (more than 30 days before lock end)
+        // Lock is set to 365 days from start, so we should have enough time
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        // Should now be true again
+        assertTrue(proofOfCapital.canWithdrawal());
+    }
+    
+    function testBlockDeferredWithdrawalFailsWhenTooCloseToLockEnd() public {
+        // First block withdrawal
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Move time forward to be within 30 days of lock end
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1 days); // 29 days before lock end
+        
+        // Try to unblock - should fail
+        vm.prank(owner);
+        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        // Should still be false
+        assertFalse(proofOfCapital.canWithdrawal());
+    }
+    
+    function testBlockDeferredWithdrawalAtExactBoundary() public {
+        // First block withdrawal
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Move time forward to be exactly 30 days before lock end
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.THIRTY_DAYS);
+        
+        // Try to unblock - should fail (condition is >, not >=)
+        vm.prank(owner);
+        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
+        proofOfCapital.blockDeferredWithdrawal();
+    }
+    
+    function testBlockDeferredWithdrawalJustOverBoundary() public {
+        // First block withdrawal
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Move time forward to be just over 30 days before lock end
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.THIRTY_DAYS - 1); // 30 days + 1 second
+        
+        // Try to unblock - should work
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        // Should now be true
+        assertTrue(proofOfCapital.canWithdrawal());
+    }
+    
+    function testBlockDeferredWithdrawalUnauthorized() public {
+        // Non-owner tries to block/unblock withdrawal
+        vm.prank(royalty);
+        vm.expectRevert();
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        vm.prank(returnWallet);
+        vm.expectRevert();
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        vm.prank(marketMaker);
+        vm.expectRevert();
+        proofOfCapital.blockDeferredWithdrawal();
+    }
+    
+    function testBlockDeferredWithdrawalMultipleToggles() public {
+        // Start with true
+        assertTrue(proofOfCapital.canWithdrawal());
+        
+        // Toggle to false
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Toggle back to true
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertTrue(proofOfCapital.canWithdrawal());
+        
+        // Toggle to false again
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Toggle back to true again
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertTrue(proofOfCapital.canWithdrawal());
+    }
+    
+    function testBlockDeferredWithdrawalAfterLockExtension() public {
+        // First block withdrawal
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        assertFalse(proofOfCapital.canWithdrawal());
+        
+        // Move time close to original lock end
+        uint256 originalLockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(originalLockEndTime - Constants.THIRTY_DAYS + 1 days);
+        
+        // Extend the lock
+        vm.prank(owner);
+        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        
+        // Now try to unblock - should work because lock was extended
+        vm.prank(owner);
+        proofOfCapital.blockDeferredWithdrawal();
+        
+        // Should now be true
+        assertTrue(proofOfCapital.canWithdrawal());
+    }
 }
 
 contract ProofOfCapitalProfitTest is Test {

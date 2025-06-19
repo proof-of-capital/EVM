@@ -534,7 +534,7 @@ contract ProofOfCapitalProfitTest is BaseTest {
     function testBuyTokensWithETHTradingNotAllowedOnlyMarketMakers() public {
         // Test the same scenario with buyTokensWithETH for ETH-based contracts
         
-        // Deploy ETH-based contract (jettonSupport = false)
+        // Deploy ETH-based contract (tokenSupport = false)
         vm.startPrank(owner);
         
         // Deploy mock WETH
@@ -548,15 +548,15 @@ contract ProofOfCapitalProfitTest is BaseTest {
             wethAddress: address(mockWETH),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(0x999), // Different from wethAddress to make jettonSupport = false
+            tokenSupportAddress: address(0x999), // Different from wethAddress to make tokenSupport = false
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -649,7 +649,7 @@ contract ProofOfCapitalProfitTest is BaseTest {
         
         // Activate trading access by scheduling deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(owner, 1000e18);
+        proofOfCapital.tokenDeferredWithdrawal(owner, 1000e18);
         
         // Verify we now have trading access
         assertTrue(_checkTradingAccessHelper(), "Should have trading access");
@@ -673,8 +673,8 @@ contract ProofOfCapitalProfitTest is BaseTest {
         );
         
         // Check deferred withdrawals
-        bool deferredWithdrawalAccess = (proofOfCapital.mainJettonDeferredWithdrawalDate() > 0) || 
-                                      (proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        bool deferredWithdrawalAccess = (proofOfCapital.mainTokenDeferredWithdrawalDate() > 0) || 
+                                      (proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
         
         return controlDayAccess || deferredWithdrawalAccess;
     }

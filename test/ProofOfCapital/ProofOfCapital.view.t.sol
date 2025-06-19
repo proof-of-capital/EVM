@@ -68,26 +68,26 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertFalse(proofOfCapital.tradingOpportunity());
     }
     
-    function testJettonAvailableInitialState() public {
-        // Initially: totalJettonsSold = 10000e18 (from offset), jettonsEarned = 0
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
+    function testTokenAvailableInitialState() public {
+        // Initially: totalTokensSold = 10000e18 (from offset), tokensEarned = 0
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
         
         // Verify initial state
-        assertEq(totalSold, 10000e18); // offsetJettons
-        assertEq(jettonsEarned, 0);
+        assertEq(totalSold, 10000e18); // offsetTokens
+        assertEq(tokensEarned, 0);
         
-        // jettonAvailable should be totalJettonsSold - jettonsEarned
-        uint256 expectedAvailable = totalSold - jettonsEarned;
-        assertEq(proofOfCapital.jettonAvailable(), expectedAvailable);
-        assertEq(proofOfCapital.jettonAvailable(), 10000e18);
+        // tokenAvailable should be totalTokensSold - tokensEarned
+        uint256 expectedAvailable = totalSold - tokensEarned;
+        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
+        assertEq(proofOfCapital.tokenAvailable(), 10000e18);
     }
     
-    function testJettonAvailableWhenEarnedEqualsTotal() public {
-        // This tests edge case where jettonsEarned equals totalJettonsSold
-        // In initial state: totalJettonsSold = 10000e18, jettonsEarned = 0
+    function testTokenAvailableWhenEarnedEqualsTotal() public {
+        // This tests edge case where tokensEarned equals totalTokensSold
+        // In initial state: totalTokensSold = 10000e18, tokensEarned = 0
         
-        // We need to create scenario where jettonsEarned increases
+        // We need to create scenario where tokensEarned increases
         // This happens when return wallet sells tokens back to contract
         
         // Give tokens to return wallet
@@ -95,40 +95,40 @@ contract ProofOfCapitalViewTest is BaseTest {
         token.transfer(returnWallet, 10000e18);
         vm.stopPrank();
         
-        // Return wallet sells tokens back (this increases jettonsEarned)
+        // Return wallet sells tokens back (this increases tokensEarned)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
         proofOfCapital.sellTokens(10000e18);
         vm.stopPrank();
         
-        // Check if jettonsEarned increased
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        // Check if tokensEarned increased
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         
-        // jettonAvailable should be totalSold - jettonsEarned
-        uint256 expectedAvailable = totalSold - jettonsEarned;
-        assertEq(proofOfCapital.jettonAvailable(), expectedAvailable);
+        // tokenAvailable should be totalSold - tokensEarned
+        uint256 expectedAvailable = totalSold - tokensEarned;
+        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
         
-        // If jettonsEarned equals totalSold, available should be 0
-        if (jettonsEarned == totalSold) {
-            assertEq(proofOfCapital.jettonAvailable(), 0);
+        // If tokensEarned equals totalSold, available should be 0
+        if (tokensEarned == totalSold) {
+            assertEq(proofOfCapital.tokenAvailable(), 0);
         }
     }
     
-    function testJettonAvailableStateConsistency() public {
-        // Test that jettonAvailable always equals totalJettonsSold - jettonsEarned
+    function testTokenAvailableStateConsistency() public {
+        // Test that tokenAvailable always equals totalTokensSold - tokensEarned
         
         // Record initial state
-        uint256 initialTotalSold = proofOfCapital.totalJettonsSold();
-        uint256 initialJettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 initialAvailable = proofOfCapital.jettonAvailable();
+        uint256 initialTotalSold = proofOfCapital.totalTokensSold();
+        uint256 initialTokensEarned = proofOfCapital.tokensEarned();
+        uint256 initialAvailable = proofOfCapital.tokenAvailable();
         
         // Verify initial consistency
-        assertEq(initialAvailable, initialTotalSold - initialJettonsEarned);
+        assertEq(initialAvailable, initialTotalSold - initialTokensEarned);
         
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
-        assertTrue(proofOfCapital.jettonAvailable() == proofOfCapital.totalJettonsSold() - proofOfCapital.jettonsEarned());
+        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalTokensSold() - proofOfCapital.tokensEarned());
     }
     
     function testViewFunctionsIntegration() public {
@@ -137,7 +137,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         // Initial state
         uint256 remaining = proofOfCapital.remainingSeconds();
         bool tradingOpp = proofOfCapital.tradingOpportunity();
-        uint256 available = proofOfCapital.jettonAvailable();
+        uint256 available = proofOfCapital.tokenAvailable();
         
         // Verify logical consistency
         // If remaining > 30 days, trading opportunity should be false
@@ -158,7 +158,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertTrue(newRemaining < remaining);
         
         // Available should remain the same (no trading activity)
-        assertEq(proofOfCapital.jettonAvailable(), available);
+        assertEq(proofOfCapital.tokenAvailable(), available);
     }
     
     function testRemainingSecondsAfterLockEnd() public {
@@ -188,10 +188,10 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertEq(proofOfCapital.remainingSeconds(), 0);
         assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 30 days is true
         
-        // Test jettonAvailable consistency
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 expectedAvailable = totalSold - jettonsEarned;
-        assertEq(proofOfCapital.jettonAvailable(), expectedAvailable);
+        // Test tokenAvailable consistency
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 expectedAvailable = totalSold - tokensEarned;
+        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
     }
 } 

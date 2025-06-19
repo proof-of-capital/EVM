@@ -77,15 +77,15 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     
     // Test 3: NoTokensAvailableForBuyback error in initial state  
     function testSellTokensNoTokensAvailableForBuyback() public {
-        // In initial state: totalJettonsSold = offsetJettons = 10000e18, jettonsEarned = 0
+        // In initial state: totalTokensSold = offsetTokens = 10000e18, tokensEarned = 0
         // So tokensAvailableForBuyback = 10000e18 - max(10000e18, 0) = 0
         
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 offsetJettons = proofOfCapital.offsetJettons();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
         
-        assertEq(totalSold, offsetJettons);
-        assertEq(jettonsEarned, 0);
+        assertEq(totalSold, offsetTokens);
+        assertEq(tokensEarned, 0);
         
         vm.prank(user);
         vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
@@ -127,9 +127,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         proofOfCapital.setMarketMaker(user, false);
         
-        // Schedule main jetton deferred withdrawal
+        // Schedule main token deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(owner, 1000e18);
+        proofOfCapital.tokenDeferredWithdrawal(owner, 1000e18);
         
         // User tries to sell - gets NoTokensAvailableForBuyback in initial state
         vm.prank(user);
@@ -152,23 +152,23 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     // Test 8: Return wallet can always sell (tests _handleReturnWalletSale branch)
     function testSellTokensReturnWalletBasic() public {
         // Return wallet can sell even without buyback tokens available
-        uint256 initialJettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 initialContractJettonBalance = proofOfCapital.contractJettonBalance();
+        uint256 initialTokensEarned = proofOfCapital.tokensEarned();
+        uint256 initialContractTokenBalance = proofOfCapital.contractTokenBalance();
         
         uint256 sellAmount = 1000e18;
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(sellAmount);
         
         // Verify state changes
-        assertGt(proofOfCapital.jettonsEarned(), initialJettonsEarned);
-        assertEq(proofOfCapital.contractJettonBalance(), initialContractJettonBalance + sellAmount);
+        assertGt(proofOfCapital.tokensEarned(), initialTokensEarned);
+        assertEq(proofOfCapital.contractTokenBalance(), initialContractTokenBalance + sellAmount);
     }
     
     // Test 9: Return wallet sale after user creates support balance  
     function testSellTokensReturnWalletWithSupportBalance() public {
-        // Use returnWallet to sell tokens back to increase contractJettonBalance
+        // Use returnWallet to sell tokens back to increase contractTokenBalance
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(5000e18); // This increases contractJettonBalance
+        proofOfCapital.sellTokens(5000e18); // This increases contractTokenBalance
         
         // First, user buys tokens to create support balance
         vm.prank(user);
@@ -182,8 +182,8 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.sellTokens(sellAmount);
         
         // Verify state changes
-        assertGt(proofOfCapital.jettonsEarned(), 0);
-        assertGt(proofOfCapital.contractJettonBalance(), 0);
+        assertGt(proofOfCapital.tokensEarned(), 0);
+        assertGt(proofOfCapital.contractTokenBalance(), 0);
         
         // Owner balance should be >= initial (may increase depending on calculations)
         uint256 finalOwnerBalance = weth.balanceOf(owner);
@@ -197,9 +197,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
         proofOfCapital.sellTokens(100e18);
         
-        // Use returnWallet to sell tokens back to increase contractJettonBalance
+        // Use returnWallet to sell tokens back to increase contractTokenBalance
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(15000e18); // This increases contractJettonBalance
+        proofOfCapital.sellTokens(15000e18); // This increases contractTokenBalance
         
         // Buy a significant amount of tokens to try to create buyback availability
         vm.prank(user);
@@ -209,10 +209,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.buyTokens(20000e18);
         
         // Check if buyback tokens are now available
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 offsetJettons = proofOfCapital.offsetJettons();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         
         if (totalSold > maxEarnedOrOffset) {
             // If buyback tokens are available, try selling a small amount
@@ -220,13 +220,13 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
             uint256 sellAmount = availableForBuyback / 10; // Sell only 10%
             
             if (sellAmount > 0) {
-                uint256 initialTotalSold = proofOfCapital.totalJettonsSold();
+                uint256 initialTotalSold = proofOfCapital.totalTokensSold();
                 
                 vm.prank(marketMaker);
                 proofOfCapital.sellTokens(sellAmount);
                 
-                // Verify totalJettonsSold decreased
-                assertEq(proofOfCapital.totalJettonsSold(), initialTotalSold - sellAmount);
+                // Verify totalTokensSold decreased
+                assertEq(proofOfCapital.totalTokensSold(), initialTotalSold - sellAmount);
             }
         } else {
             // If still no buyback tokens available, selling should still fail
@@ -238,19 +238,19 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     
     // Test 11: InsufficientTokensForBuyback error when trying to sell more than available
     function testSellTokensInsufficientTokensForBuyback() public {
-        // Use returnWallet to sell tokens back to increase contractJettonBalance
+        // Use returnWallet to sell tokens back to increase contractTokenBalance
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(5000e18); // This increases contractJettonBalance
+        proofOfCapital.sellTokens(5000e18); // This increases contractTokenBalance
         
         // Buy a small amount of tokens to create limited buyback availability
         vm.prank(user);
-        proofOfCapital.buyTokens(2000e18); // This increases totalJettonsSold
+        proofOfCapital.buyTokens(2000e18); // This increases totalTokensSold
         
         // Calculate current buyback availability
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 offsetJettons = proofOfCapital.offsetJettons();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         uint256 tokensAvailableForBuyback = totalSold - maxEarnedOrOffset;
         
         // Verify we have some buyback tokens available but not many
@@ -286,41 +286,41 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         */
     }
     
-    // Test 13: InsufficientSoldTokens error when trying to sell more tokens than totalJettonsSold
+    // Test 13: InsufficientSoldTokens error when trying to sell more tokens than totalTokensSold
     // NOTE: This test demonstrates that the InsufficientSoldTokens check exists in the code,
     // but creating a realistic scenario where it triggers is extremely difficult due to the
-    // mathematical relationship: tokensAvailableForBuyback = totalJettonsSold - max(offsetJettons, jettonsEarned)
-    // For InsufficientSoldTokens to trigger, we need: amount <= tokensAvailableForBuyback AND amount > totalJettonsSold
-    // This would require tokensAvailableForBuyback > totalJettonsSold, which means max(offsetJettons, jettonsEarned) < 0
-    // Since both offsetJettons and jettonsEarned are always >= 0, this is mathematically impossible.
+    // mathematical relationship: tokensAvailableForBuyback = totalTokensSold - max(offsetTokens, tokensEarned)
+    // For InsufficientSoldTokens to trigger, we need: amount <= tokensAvailableForBuyback AND amount > totalTokensSold
+    // This would require tokensAvailableForBuyback > totalTokensSold, which means max(offsetTokens, tokensEarned) < 0
+    // Since both offsetTokens and tokensEarned are always >= 0, this is mathematically impossible.
     function testSellTokensInsufficientSoldTokens() public {
-        // Create a scenario with maximum reduction of totalJettonsSold
+        // Create a scenario with maximum reduction of totalTokensSold
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(5000e18);
         
         vm.prank(user);
         proofOfCapital.buyTokens(1000e18);
         
-        // Sell the maximum possible amount to reduce totalJettonsSold
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 offsetJettons = proofOfCapital.offsetJettons();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        // Sell the maximum possible amount to reduce totalTokensSold
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         uint256 tokensAvailableForBuyback = totalSold - maxEarnedOrOffset;
         
         // Try to sell the maximum available tokens
         vm.prank(user);
         proofOfCapital.sellTokens(tokensAvailableForBuyback);
         
-        // Check final state - totalJettonsSold should now be at minimum
-        totalSold = proofOfCapital.totalJettonsSold();
-        offsetJettons = proofOfCapital.offsetJettons();
-        jettonsEarned = proofOfCapital.jettonsEarned();
-        maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        // Check final state - totalTokensSold should now be at minimum
+        totalSold = proofOfCapital.totalTokensSold();
+        offsetTokens = proofOfCapital.offsetTokens();
+        tokensEarned = proofOfCapital.tokensEarned();
+        maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         
-        // Verify that totalJettonsSold == max(offsetJettons, jettonsEarned)
+        // Verify that totalTokensSold == max(offsetTokens, tokensEarned)
         // This means tokensAvailableForBuyback = 0, so any sell attempt will fail with NoTokensAvailableForBuyback
-        assertEq(totalSold, maxEarnedOrOffset, "totalJettonsSold should equal max(offsetJettons, jettonsEarned)");
+        assertEq(totalSold, maxEarnedOrOffset, "totalTokensSold should equal max(offsetTokens, tokensEarned)");
         
         // Try to sell any amount - should fail with NoTokensAvailableForBuyback, not InsufficientSoldTokens
         vm.prank(user);
@@ -328,7 +328,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.sellTokens(1);
         
         // The InsufficientSoldTokens check exists in the code at line 832 but is mathematically unreachable
-        // under normal conditions due to the constraint that tokensAvailableForBuyback <= totalJettonsSold always holds
+        // under normal conditions due to the constraint that tokensAvailableForBuyback <= totalTokensSold always holds
     }
     
     // Test 14: InsufficientSoldTokens with simulation of no offset condition
@@ -336,7 +336,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Instead of creating a new contract, we'll simulate the no-offset condition
         // by manipulating the existing contract state
         
-        // First, use returnWallet to increase contractJettonBalance
+        // First, use returnWallet to increase contractTokenBalance
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(5000e18);
         
@@ -344,33 +344,33 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(user);
         proofOfCapital.buyTokens(1000e18);
         
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 offsetJettons = proofOfCapital.offsetJettons();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
         
         // Calculate tokens available for buyback
-        uint256 maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         uint256 tokensAvailableForBuyback = totalSold - maxEarnedOrOffset;
         
         // Verify that we have some tokens available for buyback
         assertGt(tokensAvailableForBuyback, 0, "Should have tokens available for buyback");
         
-        // The mathematical constraint is: tokensAvailableForBuyback <= totalJettonsSold
-        // This is because tokensAvailableForBuyback = totalJettonsSold - max(offsetJettons, jettonsEarned)
-        // Since max(offsetJettons, jettonsEarned) >= 0, we always have tokensAvailableForBuyback <= totalJettonsSold
+        // The mathematical constraint is: tokensAvailableForBuyback <= totalTokensSold
+        // This is because tokensAvailableForBuyback = totalTokensSold - max(offsetTokens, tokensEarned)
+        // Since max(offsetTokens, tokensEarned) >= 0, we always have tokensAvailableForBuyback <= totalTokensSold
         
         // Try to sell exactly the available amount - should work
         vm.prank(user);
         proofOfCapital.sellTokens(tokensAvailableForBuyback);
         
-        // Now totalJettonsSold should be reduced
-        uint256 newTotalSold = proofOfCapital.totalJettonsSold();
-        assertEq(newTotalSold, totalSold - tokensAvailableForBuyback, "totalJettonsSold should be reduced");
+        // Now totalTokensSold should be reduced
+        uint256 newTotalSold = proofOfCapital.totalTokensSold();
+        assertEq(newTotalSold, totalSold - tokensAvailableForBuyback, "totalTokensSold should be reduced");
         
         // Verify the mathematical constraint still holds
-        offsetJettons = proofOfCapital.offsetJettons();
-        jettonsEarned = proofOfCapital.jettonsEarned();
-        maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        offsetTokens = proofOfCapital.offsetTokens();
+        tokensEarned = proofOfCapital.tokensEarned();
+        maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         
         // Now tokensAvailableForBuyback should be 0 or very small
         if (newTotalSold > maxEarnedOrOffset) {
@@ -378,7 +378,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
             assertLe(remainingTokensForBuyback, newTotalSold, "Mathematical constraint should hold");
         } else {
             // No more tokens available for buyback
-            assertEq(newTotalSold, maxEarnedOrOffset, "totalJettonsSold should equal max(offsetJettons, jettonsEarned)");
+            assertEq(newTotalSold, maxEarnedOrOffset, "totalTokensSold should equal max(offsetTokens, tokensEarned)");
         }
         
         // Try to sell any amount now - should fail with NoTokensAvailableForBuyback
@@ -387,7 +387,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.sellTokens(1);
         
         // CONCLUSION: The InsufficientSoldTokens check exists in the code but is mathematically
-        // unreachable because the constraint tokensAvailableForBuyback <= totalJettonsSold always holds
-        // due to the fact that max(offsetJettons, jettonsEarned) >= 0
+        // unreachable because the constraint tokensAvailableForBuyback <= totalTokensSold always holds
+        // due to the fact that max(offsetTokens, tokensEarned) >= 0
     }
 } 

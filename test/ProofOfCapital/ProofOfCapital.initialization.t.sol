@@ -90,7 +90,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeMultiplierValidAtBoundary() public {
         ProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = Constants.PERCENTAGE_DIVISOR - 1; // Valid: just below divisor
-        params.offsetJettons = 100e18; // Smaller offset to avoid overflow in calculations
+        params.offsetTokens = 100e18; // Smaller offset to avoid overflow in calculations
         
         bytes memory initData = abi.encodeWithSelector(
             ProofOfCapital.initialize.selector,
@@ -246,13 +246,13 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeBoundaryValues() public {
         ProofOfCapital.InitParams memory params = getValidParams();
         
-        // Set all parameters to their boundary values with smaller offsetJettons
+        // Set all parameters to their boundary values with smaller offsetTokens
         params.initialPricePerToken = 1; // Minimum valid
         params.levelDecreaseMultiplierafterTrend = 500; // Safe value below divisor
         params.levelIncreaseMultiplier = 1; // Minimum valid
         params.priceIncrementMultiplier = 1; // Minimum valid
         params.royaltyProfitPercent = 2; // Minimum valid
-        params.offsetJettons = 100e18; // Smaller offset to avoid overflow
+        params.offsetTokens = 100e18; // Smaller offset to avoid overflow
         
         bytes memory initData = abi.encodeWithSelector(
             ProofOfCapital.initialize.selector,
@@ -299,7 +299,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.levelIncreaseMultiplier = 10000; // Large but reasonable multiplier
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Maximum royalty
-        params.offsetJettons = 1000e18; // Smaller offset to avoid calculations overflow
+        params.offsetTokens = 1000e18; // Smaller offset to avoid calculations overflow
         
         bytes memory initData = abi.encodeWithSelector(
             ProofOfCapital.initialize.selector,
@@ -333,15 +333,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: 1, // Way below minimum
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -374,15 +374,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -418,15 +418,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: validPeriod, // Within valid range
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -459,15 +459,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 wethAddress: address(weth),
                 lockEndTime: block.timestamp + 365 days,
                 initialPricePerToken: 1e18,
-                firstLevelJettonQuantity: 1000e18,
+                firstLevelTokenQuantity: 1000e18,
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetJettons: 1000e18,
+                offsetTokens: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
-                jettonSupportAddress: address(weth),
+                tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0)
             });
@@ -494,15 +494,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 wethAddress: address(weth),
                 lockEndTime: block.timestamp + 365 days,
                 initialPricePerToken: 1e18,
-                firstLevelJettonQuantity: 1000e18,
+                firstLevelTokenQuantity: 1000e18,
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetJettons: 1000e18,
+                offsetTokens: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
-                jettonSupportAddress: address(weth),
+                tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0)
             });

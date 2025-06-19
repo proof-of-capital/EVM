@@ -70,15 +70,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18, // Add offset to enable trading
+            offsetTokens: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0)
         });
@@ -529,22 +529,22 @@ contract ProofOfCapitalTest is Test {
         assertTrue(proofOfCapital.canWithdrawal());
     }
     
-    // Tests for jettonDeferredWithdrawal function
-    function testJettonDeferredWithdrawalSuccess() public {
+    // Tests for tokenDeferredWithdrawal function
+    function testTokenDeferredWithdrawalSuccess() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // Schedule deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Check that variables are set correctly
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainJetton(), recipient);
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalAmount(), amount);
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), recipient);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), amount);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
     }
     
-    function testJettonDeferredWithdrawalEmitsEvent() public {
+    function testTokenDeferredWithdrawalEmitsEvent() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         uint256 expectedExecuteTime = block.timestamp + Constants.THIRTY_DAYS;
@@ -553,35 +553,35 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
         emit IProofOfCapital.DeferredWithdrawalScheduled(recipient, amount, expectedExecuteTime);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
     }
     
-    function testJettonDeferredWithdrawalInvalidRecipientZeroAddress() public {
+    function testTokenDeferredWithdrawalInvalidRecipientZeroAddress() public {
         uint256 amount = 1000e18;
         
         // Try with zero address
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InvalidRecipientOrAmount.selector);
-        proofOfCapital.jettonDeferredWithdrawal(address(0), amount);
+        proofOfCapital.tokenDeferredWithdrawal(address(0), amount);
     }
     
-    function testJettonDeferredWithdrawalInvalidAmountZero() public {
+    function testTokenDeferredWithdrawalInvalidAmountZero() public {
         address recipient = address(0x123);
         
         // Try with zero amount
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InvalidRecipientOrAmount.selector);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, 0);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, 0);
     }
     
-    function testJettonDeferredWithdrawalInvalidRecipientAndAmount() public {
+    function testTokenDeferredWithdrawalInvalidRecipientAndAmount() public {
         // Try with both zero address and zero amount
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InvalidRecipientOrAmount.selector);
-        proofOfCapital.jettonDeferredWithdrawal(address(0), 0);
+        proofOfCapital.tokenDeferredWithdrawal(address(0), 0);
     }
     
-    function testJettonDeferredWithdrawalWhenWithdrawalBlocked() public {
+    function testTokenDeferredWithdrawalWhenWithdrawalBlocked() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
@@ -593,10 +593,10 @@ contract ProofOfCapitalTest is Test {
         // Try to schedule deferred withdrawal when blocked
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
     }
     
-    function testJettonDeferredWithdrawalAlreadyScheduled() public {
+    function testTokenDeferredWithdrawalAlreadyScheduled() public {
         address recipient1 = address(0x123);
         address recipient2 = address(0x456);
         uint256 amount1 = 1000e18;
@@ -604,33 +604,33 @@ contract ProofOfCapitalTest is Test {
         
         // Schedule first withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient1, amount1);
+        proofOfCapital.tokenDeferredWithdrawal(recipient1, amount1);
         
         // Try to schedule second withdrawal (should fail)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.MainJettonDeferredWithdrawalAlreadyScheduled.selector);
-        proofOfCapital.jettonDeferredWithdrawal(recipient2, amount2);
+        vm.expectRevert(ProofOfCapital.MainTokenDeferredWithdrawalAlreadyScheduled.selector);
+        proofOfCapital.tokenDeferredWithdrawal(recipient2, amount2);
     }
     
-    function testJettonDeferredWithdrawalUnauthorized() public {
+    function testTokenDeferredWithdrawalUnauthorized() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // Non-owner tries to schedule withdrawal
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
     }
     
-    function testJettonDeferredWithdrawalWithDifferentAmounts() public {
+    function testTokenDeferredWithdrawalWithDifferentAmounts() public {
         address recipient = address(0x123);
         
         // Test with different valid amounts
@@ -642,21 +642,21 @@ contract ProofOfCapitalTest is Test {
         
         for (uint256 i = 0; i < amounts.length; i++) {
             // Reset state by stopping any existing withdrawal
-            if (proofOfCapital.mainJettonDeferredWithdrawalAmount() > 0) {
+            if (proofOfCapital.mainTokenDeferredWithdrawalAmount() > 0) {
                 vm.prank(owner);
-                proofOfCapital.stopJettonDeferredWithdrawal();
+                proofOfCapital.stopTokenDeferredWithdrawal();
             }
             
             // Schedule withdrawal with this amount
             vm.prank(owner);
-            proofOfCapital.jettonDeferredWithdrawal(recipient, amounts[i]);
+            proofOfCapital.tokenDeferredWithdrawal(recipient, amounts[i]);
             
             // Verify amount is set correctly
-            assertEq(proofOfCapital.mainJettonDeferredWithdrawalAmount(), amounts[i]);
+            assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), amounts[i]);
         }
     }
     
-    function testJettonDeferredWithdrawalAfterUnblocking() public {
+    function testTokenDeferredWithdrawalAfterUnblocking() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
@@ -672,14 +672,14 @@ contract ProofOfCapitalTest is Test {
         
         // Now schedule withdrawal should work
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Verify it was scheduled
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalAmount(), amount);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainJetton(), recipient);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), amount);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), recipient);
     }
     
-    function testJettonDeferredWithdrawalDateCalculation() public {
+    function testTokenDeferredWithdrawalDateCalculation() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
@@ -688,101 +688,101 @@ contract ProofOfCapitalTest is Test {
         
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Verify date is set correctly (current time + 30 days)
         uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalDate(), expectedDate);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), expectedDate);
         
         // Move time forward and schedule another (after stopping first)
         vm.warp(block.timestamp + 10 days);
         vm.prank(owner);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
         
         uint256 newCurrentTime = block.timestamp;
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalDate(), newExpectedDate);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), newExpectedDate);
     }
     
-    // Tests for stopJettonDeferredWithdrawal function (testing each require)
-    function testStopJettonDeferredWithdrawalSuccess() public {
+    // Tests for stopTokenDeferredWithdrawal function (testing each require)
+    function testStopTokenDeferredWithdrawalSuccess() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // First schedule a withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Verify it was scheduled
-        assertTrue(proofOfCapital.mainJettonDeferredWithdrawalDate() > 0);
+        assertTrue(proofOfCapital.mainTokenDeferredWithdrawalDate() > 0);
         
         // Stop the withdrawal
         vm.prank(owner);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
         
         // Verify it was stopped
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalAmount(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainJetton(), owner);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), owner);
     }
     
-    function testStopJettonDeferredWithdrawalByRoyalty() public {
+    function testStopTokenDeferredWithdrawalByRoyalty() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // First schedule a withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Stop the withdrawal using royalty wallet
         vm.prank(royalty);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
         
         // Verify it was stopped
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), 0);
     }
     
-    function testStopJettonDeferredWithdrawalAccessDenied() public {
+    function testStopTokenDeferredWithdrawalAccessDenied() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // First schedule a withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Try to stop with unauthorized addresses
         vm.prank(returnWallet);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
         
         vm.prank(marketMaker);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
     }
     
-    function testStopJettonDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
+    function testStopTokenDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to stop without scheduling first
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
         
         // Try with royalty wallet
         vm.prank(royalty);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.stopJettonDeferredWithdrawal();
+        proofOfCapital.stopTokenDeferredWithdrawal();
     }
     
-    // Tests for confirmJettonDeferredWithdrawal function (testing each require)
-    function testConfirmJettonDeferredWithdrawalDeferredWithdrawalBlocked() public {
+    // Tests for confirmTokenDeferredWithdrawal function (testing each require)
+    function testConfirmTokenDeferredWithdrawalDeferredWithdrawalBlocked() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Block withdrawals
         vm.prank(owner);
@@ -791,103 +791,103 @@ contract ProofOfCapitalTest is Test {
         // Try to confirm when blocked
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
-    function testConfirmJettonDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
+    function testConfirmTokenDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to confirm without scheduling
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
-    function testConfirmJettonDeferredWithdrawalWithdrawalDateNotReached() public {
+    function testConfirmTokenDeferredWithdrawalWithdrawalDateNotReached() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Try to confirm before 30 days
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         // Move time forward but not enough
         vm.warp(block.timestamp + Constants.THIRTY_DAYS - 1);
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
-    function testConfirmJettonDeferredWithdrawalInsufficientJettonBalance() public {
-        // Test specific require: contractJettonBalance > totalJettonsSold
-        // Default state: contractJettonBalance = 0, totalJettonsSold = 10000e18 (from offset)
-        // This creates the exact condition for InsufficientJettonBalance error
+    function testConfirmTokenDeferredWithdrawalInsufficientTokenBalance() public {
+        // Test specific require: contractTokenBalance > totalTokensSold
+        // Default state: contractTokenBalance = 0, totalTokensSold = 10000e18 (from offset)
+        // This creates the exact condition for InsufficientTokenBalance error
         
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
-        // Verify initial state - contractJettonBalance should be <= totalJettonsSold
-        uint256 contractBalance = proofOfCapital.contractJettonBalance();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        // Verify initial state - contractTokenBalance should be <= totalTokensSold
+        uint256 contractBalance = proofOfCapital.contractTokenBalance();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         
-        // In our setup: contractJettonBalance = 0, totalJettonsSold = 10000e18 (offsetJettons)
-        assertTrue(contractBalance <= totalSold, "Setup verification: contractJettonBalance should be <= totalJettonsSold");
+        // In our setup: contractTokenBalance = 0, totalTokensSold = 10000e18 (offsetTokens)
+        assertTrue(contractBalance <= totalSold, "Setup verification: contractTokenBalance should be <= totalTokensSold");
         
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Move time forward to pass date requirement
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
         
-        // Try to confirm - should fail with InsufficientJettonBalance
-        // because contractJettonBalance (0) <= totalJettonsSold (10000e18)
+        // Try to confirm - should fail with InsufficientTokenBalance
+        // because contractTokenBalance (0) <= totalTokensSold (10000e18)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InsufficientJettonBalance.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
-    function testConfirmJettonDeferredWithdrawalInsufficientJettonBalanceSpecific() public {
-        // Test specific require: contractJettonBalance > totalJettonsSold
-        // Default state: contractJettonBalance = 0, totalJettonsSold = 10000e18 (from offset)
-        // This creates the exact condition for InsufficientJettonBalance error
+    function testConfirmTokenDeferredWithdrawalInsufficientTokenBalanceSpecific() public {
+        // Test specific require: contractTokenBalance > totalTokensSold
+        // Default state: contractTokenBalance = 0, totalTokensSold = 10000e18 (from offset)
+        // This creates the exact condition for InsufficientTokenBalance error
         
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
-        // Verify initial state - contractJettonBalance should be <= totalJettonsSold
-        uint256 contractBalance = proofOfCapital.contractJettonBalance();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        // Verify initial state - contractTokenBalance should be <= totalTokensSold
+        uint256 contractBalance = proofOfCapital.contractTokenBalance();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         
-        // In our setup: contractJettonBalance = 0, totalJettonsSold = 10000e18 (offsetJettons)
-        assertTrue(contractBalance <= totalSold, "Setup verification: contractJettonBalance should be <= totalJettonsSold");
+        // In our setup: contractTokenBalance = 0, totalTokensSold = 10000e18 (offsetTokens)
+        assertTrue(contractBalance <= totalSold, "Setup verification: contractTokenBalance should be <= totalTokensSold");
         
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Move time forward to pass date requirement
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
         
-        // Try to confirm - should fail with InsufficientJettonBalance
-        // because contractJettonBalance (0) <= totalJettonsSold (10000e18)
+        // Try to confirm - should fail with InsufficientTokenBalance
+        // because contractTokenBalance (0) <= totalTokensSold (10000e18)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InsufficientJettonBalance.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
-    function testConfirmJettonDeferredWithdrawalRequire5_InsufficientAmount() public {
+    function testConfirmTokenDeferredWithdrawalRequire5_InsufficientAmount() public {
         // Create scenario where:
-        // 1. contractJettonBalance > totalJettonsSold (to pass require 4)
-        // 2. contractJettonBalance - totalJettonsSold < mainJettonDeferredWithdrawalAmount (to fail require 5)
+        // 1. contractTokenBalance > totalTokensSold (to pass require 4)
+        // 2. contractTokenBalance - totalTokensSold < mainTokenDeferredWithdrawalAmount (to fail require 5)
         
         address recipient = address(0x123);
         
-        // Use returnWallet to sell tokens back to contract, which increases contractJettonBalance
-        // From _handleReturnWalletSale: contractJettonBalance += amount;
+        // Use returnWallet to sell tokens back to contract, which increases contractTokenBalance
+        // From _handleReturnWalletSale: contractTokenBalance += amount;
         
         vm.startPrank(owner);
         
@@ -896,18 +896,18 @@ contract ProofOfCapitalTest is Test {
         
         vm.stopPrank();
         
-        // ReturnWallet sells tokens back, which increases contractJettonBalance
+        // ReturnWallet sells tokens back, which increases contractTokenBalance
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18); // This should increase contractJettonBalance
+        proofOfCapital.sellTokens(50000e18); // This should increase contractTokenBalance
         vm.stopPrank();
         
-        // Check the state - this should now have contractJettonBalance > totalJettonsSold
-        uint256 contractBalance = proofOfCapital.contractJettonBalance();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        // Check the state - this should now have contractTokenBalance > totalTokensSold
+        uint256 contractBalance = proofOfCapital.contractTokenBalance();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         
-        // Ensure we have the first condition: contractJettonBalance > totalJettonsSold
-        require(contractBalance > totalSold, "Setup failed: need contractJettonBalance > totalJettonsSold");
+        // Ensure we have the first condition: contractTokenBalance > totalTokensSold
+        require(contractBalance > totalSold, "Setup failed: need contractTokenBalance > totalTokensSold");
         
         // Calculate available tokens
         uint256 availableTokens = contractBalance - totalSold;
@@ -917,7 +917,7 @@ contract ProofOfCapitalTest is Test {
         
         // Schedule withdrawal for more than available
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, requestedAmount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, requestedAmount);
         
         // Move time forward to pass the date check
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -925,16 +925,16 @@ contract ProofOfCapitalTest is Test {
         // Now confirm withdrawal - should fail with exactly InsufficientAmount
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InsufficientAmount.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
-    function testConfirmJettonDeferredWithdrawalOnlyOwner() public {
+    function testConfirmTokenDeferredWithdrawalOnlyOwner() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -942,40 +942,40 @@ contract ProofOfCapitalTest is Test {
         // Try to confirm with non-owner addresses
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         vm.prank(recipient);
         vm.expectRevert();
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
     
     // Simple working test cases (without complex state setup)
-    function testConfirmJettonDeferredWithdrawalBasicValidation() public {
+    function testConfirmTokenDeferredWithdrawalBasicValidation() public {
         // Test that all our basic require checks work as expected
         
         // Test 1: No withdrawal scheduled
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         // Test 2: Schedule and test date not reached
         address recipient = address(0x123);
         uint256 amount = 1000e18;
         
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, amount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
         
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         // Test 3: Block withdrawals and test blocked error
         vm.prank(owner);
@@ -985,68 +985,68 @@ contract ProofOfCapitalTest is Test {
         
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
-    function testConfirmJettonDeferredWithdrawalSuccess() public {
-        // Test successful execution of confirmJettonDeferredWithdrawal
+    function testConfirmTokenDeferredWithdrawalSuccess() public {
+        // Test successful execution of confirmTokenDeferredWithdrawal
         // Need to create state where all require conditions pass:
         // 1. canWithdrawal = true (default)
-        // 2. mainJettonDeferredWithdrawalDate != 0 (withdrawal scheduled)
-        // 3. block.timestamp >= mainJettonDeferredWithdrawalDate (date reached)
-        // 4. contractJettonBalance > totalJettonsSold (sufficient balance)
-        // 5. contractJettonBalance - totalJettonsSold >= mainJettonDeferredWithdrawalAmount (sufficient available)
+        // 2. mainTokenDeferredWithdrawalDate != 0 (withdrawal scheduled)
+        // 3. block.timestamp >= mainTokenDeferredWithdrawalDate (date reached)
+        // 4. contractTokenBalance > totalTokensSold (sufficient balance)
+        // 5. contractTokenBalance - totalTokensSold >= mainTokenDeferredWithdrawalAmount (sufficient available)
         
         address recipient = address(0x123);
         uint256 withdrawalAmount = 1000e18;
         
-        // Step 1: Create state where contractJettonBalance > totalJettonsSold
-        // Use returnWallet to sell tokens back to contract, increasing contractJettonBalance
+        // Step 1: Create state where contractTokenBalance > totalTokensSold
+        // Use returnWallet to sell tokens back to contract, increasing contractTokenBalance
         vm.startPrank(owner);
         token.transfer(returnWallet, 10000e18);
         vm.stopPrank();
         
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18); // This increases contractJettonBalance
+        proofOfCapital.sellTokens(10000e18); // This increases contractTokenBalance
         vm.stopPrank();
         
         // Step 2: Schedule withdrawal with amount less than available
         vm.prank(owner);
-        proofOfCapital.jettonDeferredWithdrawal(recipient, withdrawalAmount);
+        proofOfCapital.tokenDeferredWithdrawal(recipient, withdrawalAmount);
         
         // Verify withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainJetton(), recipient);
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalAmount(), withdrawalAmount);
-        assertTrue(proofOfCapital.mainJettonDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), recipient);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), withdrawalAmount);
+        assertTrue(proofOfCapital.mainTokenDeferredWithdrawalDate() > 0);
         
         // Step 3: Move time forward to reach withdrawal date
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
         
         // Step 4: Get balances before confirmation
         uint256 recipientBalanceBefore = token.balanceOf(recipient);
-        uint256 contractBalanceBefore = proofOfCapital.contractJettonBalance();
+        uint256 contractBalanceBefore = proofOfCapital.contractTokenBalance();
         
         // Verify we have sufficient balance for withdrawal
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         uint256 available = contractBalanceBefore - totalSold;
         assertTrue(available >= withdrawalAmount, "Insufficient available tokens for withdrawal");
         
         // Step 5: Confirm withdrawal - should succeed
         vm.prank(owner);
-        proofOfCapital.confirmJettonDeferredWithdrawal();
+        proofOfCapital.confirmTokenDeferredWithdrawal();
         
         // Step 6: Verify successful execution
         // Check token transfer
         assertEq(token.balanceOf(recipient), recipientBalanceBefore + withdrawalAmount);
         
         // Check contract balance decreased
-        assertEq(proofOfCapital.contractJettonBalance(), contractBalanceBefore - withdrawalAmount);
+        assertEq(proofOfCapital.contractTokenBalance(), contractBalanceBefore - withdrawalAmount);
         
         // Check state variables reset
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.mainJettonDeferredWithdrawalAmount(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainJetton(), owner);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), owner);
     }
 
     // Tests for assignNewOwner function
@@ -1238,8 +1238,8 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         // Verify withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient);
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
     }
     
     function testSupportDeferredWithdrawalEmitsEvent() public {
@@ -1330,8 +1330,8 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         // Verify it was scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient);
-        assertTrue(proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
+        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
     }
     
     function testSupportDeferredWithdrawalDateCalculation() public {
@@ -1346,7 +1346,7 @@ contract ProofOfCapitalTest is Test {
         
         // Verify date is set correctly (current time + 30 days)
         uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), expectedDate);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), expectedDate);
         
         // Move time forward and schedule another (after stopping first)
         vm.warp(block.timestamp + 10 days);
@@ -1358,7 +1358,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), newExpectedDate);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), newExpectedDate);
     }
     
     function testSupportDeferredWithdrawalWithDifferentRecipients() public {
@@ -1369,7 +1369,7 @@ contract ProofOfCapitalTest is Test {
         
         for (uint256 i = 0; i < recipients.length; i++) {
             // Reset state by stopping any existing withdrawal
-            if (proofOfCapital.supportJettonDeferredWithdrawalDate() > 0) {
+            if (proofOfCapital.supportTokenDeferredWithdrawalDate() > 0) {
                 vm.prank(owner);
                 proofOfCapital.stopSupportDeferredWithdrawal();
             }
@@ -1379,7 +1379,7 @@ contract ProofOfCapitalTest is Test {
             proofOfCapital.supportDeferredWithdrawal(recipients[i]);
             
             // Verify recipient is set correctly
-            assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipients[i]);
+            assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipients[i]);
         }
     }
     
@@ -1387,17 +1387,17 @@ contract ProofOfCapitalTest is Test {
         address recipient = address(0x123);
         
         // Initially no withdrawal should be scheduled
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner); // Default to owner
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner); // Default to owner
         
         // Schedule withdrawal
         vm.prank(owner);
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         // Verify all state variables are set correctly
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient);
-        assertTrue(proofOfCapital.supportJettonDeferredWithdrawalDate() > block.timestamp);
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
+        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > block.timestamp);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
     }
     
     // Tests for stopSupportDeferredWithdrawal function
@@ -1409,16 +1409,16 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         // Verify it was scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient);
-        assertTrue(proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
+        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
         
         // Stop the withdrawal using owner
         vm.prank(owner);
         proofOfCapital.stopSupportDeferredWithdrawal();
         
         // Verify it was stopped and state reset
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
     }
     
     function testStopSupportDeferredWithdrawalSuccessByRoyalty() public {
@@ -1429,16 +1429,16 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         // Verify it was scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient);
-        assertTrue(proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
+        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
         
         // Stop the withdrawal using royalty wallet
         vm.prank(royalty);
         proofOfCapital.stopSupportDeferredWithdrawal();
         
         // Verify it was stopped and state reset
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
     }
     
     function testStopSupportDeferredWithdrawalAccessDenied() public {
@@ -1462,8 +1462,8 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.stopSupportDeferredWithdrawal();
         
         // Verify state wasn't changed
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient);
-        assertTrue(proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
+        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
     }
     
     function testStopSupportDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
@@ -1486,8 +1486,8 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
         // Record initial scheduled state
-        uint256 scheduledDate = proofOfCapital.supportJettonDeferredWithdrawalDate();
-        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportJetton();
+        uint256 scheduledDate = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportToken();
         
         // Verify initial state
         assertTrue(scheduledDate > 0);
@@ -1498,12 +1498,12 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.stopSupportDeferredWithdrawal();
         
         // Verify state is properly reset
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
         
         // Verify values actually changed
-        assertTrue(scheduledDate > 0 && proofOfCapital.supportJettonDeferredWithdrawalDate() == 0);
-        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalSupportJetton() == owner);
+        assertTrue(scheduledDate > 0 && proofOfCapital.supportTokenDeferredWithdrawalDate() == 0);
+        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalSupportToken() == owner);
     }
     
     function testStopSupportDeferredWithdrawalMultipleTimes() public {
@@ -1545,16 +1545,16 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient2);
         
         // Verify second withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), recipient2);
-        assertTrue(proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient2);
+        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
         
         // Stop second withdrawal using royalty wallet
         vm.prank(royalty);
         proofOfCapital.stopSupportDeferredWithdrawal();
         
         // Verify it was stopped
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
     }
     
     function testStopSupportDeferredWithdrawalOwnerVsRoyaltyAccess() public {
@@ -1576,8 +1576,8 @@ contract ProofOfCapitalTest is Test {
         
         // Both should work since both owner and royalty have access
         // Verify final state
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
     }
     
     function testStopSupportDeferredWithdrawalConsistentBehavior() public {
@@ -1588,25 +1588,25 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
-        uint256 scheduledDate1 = proofOfCapital.supportJettonDeferredWithdrawalDate();
+        uint256 scheduledDate1 = proofOfCapital.supportTokenDeferredWithdrawalDate();
         
         vm.prank(owner);
         proofOfCapital.stopSupportDeferredWithdrawal();
         
-        uint256 resetDate1 = proofOfCapital.supportJettonDeferredWithdrawalDate();
-        address resetRecipient1 = proofOfCapital.recipientDeferredWithdrawalSupportJetton();
+        uint256 resetDate1 = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        address resetRecipient1 = proofOfCapital.recipientDeferredWithdrawalSupportToken();
         
         // Test stopping by royalty
         vm.prank(owner);
         proofOfCapital.supportDeferredWithdrawal(recipient);
         
-        uint256 scheduledDate2 = proofOfCapital.supportJettonDeferredWithdrawalDate();
+        uint256 scheduledDate2 = proofOfCapital.supportTokenDeferredWithdrawalDate();
         
         vm.prank(royalty);
         proofOfCapital.stopSupportDeferredWithdrawal();
         
-        uint256 resetDate2 = proofOfCapital.supportJettonDeferredWithdrawalDate();
-        address resetRecipient2 = proofOfCapital.recipientDeferredWithdrawalSupportJetton();
+        uint256 resetDate2 = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        address resetRecipient2 = proofOfCapital.recipientDeferredWithdrawalSupportToken();
         
         // Both should have same behavior
         assertEq(resetDate1, resetDate2); // Both should be 0
@@ -1643,8 +1643,8 @@ contract ProofOfCapitalTest is Test {
         
         // Check state variables reset
         assertEq(proofOfCapital.contractSupportBalance(), 0);
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
         
         // Check contract is deactivated
         assertFalse(proofOfCapital.isActive());
@@ -1749,8 +1749,8 @@ contract ProofOfCapitalTest is Test {
         
         // Verify state reset and contract deactivated
         assertEq(proofOfCapital.contractSupportBalance(), 0);
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
         assertFalse(proofOfCapital.isActive());
     }
     
@@ -1817,8 +1817,8 @@ contract ProofOfCapitalTest is Test {
         uint256 initialSupportBalance = proofOfCapital.contractSupportBalance();
         
         // Record scheduled state
-        uint256 scheduledDate = proofOfCapital.supportJettonDeferredWithdrawalDate();
-        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportJetton();
+        uint256 scheduledDate = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportToken();
         
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -1832,16 +1832,16 @@ contract ProofOfCapitalTest is Test {
         
         // Verify all state changes
         assertEq(proofOfCapital.contractSupportBalance(), 0);
-        assertEq(proofOfCapital.supportJettonDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportJetton(), owner);
+        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
         assertFalse(proofOfCapital.isActive());
         
         // Verify token transfer (with initial balance)
         assertEq(weth.balanceOf(recipient), recipientBalanceBefore + initialSupportBalance);
         
         // Verify values actually changed
-        assertTrue(scheduledDate > 0 && proofOfCapital.supportJettonDeferredWithdrawalDate() == 0);
-        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalSupportJetton() == owner);
+        assertTrue(scheduledDate > 0 && proofOfCapital.supportTokenDeferredWithdrawalDate() == 0);
+        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalSupportToken() == owner);
     }
     
     // Tests for setUnwrapMode function
@@ -2452,28 +2452,28 @@ contract ProofOfCapitalTest is Test {
         assertFalse(proofOfCapital.tradingOpportunity());
     }
     
-    function testJettonAvailableInitialState() public {
-        // Initially: totalJettonsSold = 10000e18 (from offset), jettonsEarned = 0
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
+    function testTokenAvailableInitialState() public {
+        // Initially: totalTokensSold = 10000e18 (from offset), tokensEarned = 0
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
         
         // Verify initial state
-        assertEq(totalSold, 10000e18); // offsetJettons
-        assertEq(jettonsEarned, 0);
+        assertEq(totalSold, 10000e18); // offsetTokens
+        assertEq(tokensEarned, 0);
         
-        // jettonAvailable should be totalJettonsSold - jettonsEarned
-        uint256 expectedAvailable = totalSold - jettonsEarned;
-        assertEq(proofOfCapital.jettonAvailable(), expectedAvailable);
-        assertEq(proofOfCapital.jettonAvailable(), 10000e18);
+        // tokenAvailable should be totalTokensSold - tokensEarned
+        uint256 expectedAvailable = totalSold - tokensEarned;
+        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
+        assertEq(proofOfCapital.tokenAvailable(), 10000e18);
     }
     
  
     
-    function testJettonAvailableWhenEarnedEqualsTotal() public {
-        // This tests edge case where jettonsEarned equals totalJettonsSold
-        // In initial state: totalJettonsSold = 10000e18, jettonsEarned = 0
+    function testTokenAvailableWhenEarnedEqualsTotal() public {
+        // This tests edge case where tokensEarned equals totalTokensSold
+        // In initial state: totalTokensSold = 10000e18, tokensEarned = 0
         
-        // We need to create scenario where jettonsEarned increases
+        // We need to create scenario where tokensEarned increases
         // This happens when return wallet sells tokens back to contract
         
         // Give tokens to return wallet
@@ -2481,40 +2481,40 @@ contract ProofOfCapitalTest is Test {
         token.transfer(returnWallet, 10000e18);
         vm.stopPrank();
         
-        // Return wallet sells tokens back (this increases jettonsEarned)
+        // Return wallet sells tokens back (this increases tokensEarned)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
         proofOfCapital.sellTokens(10000e18);
         vm.stopPrank();
         
-        // Check if jettonsEarned increased
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        // Check if tokensEarned increased
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         
-        // jettonAvailable should be totalSold - jettonsEarned
-        uint256 expectedAvailable = totalSold - jettonsEarned;
-        assertEq(proofOfCapital.jettonAvailable(), expectedAvailable);
+        // tokenAvailable should be totalSold - tokensEarned
+        uint256 expectedAvailable = totalSold - tokensEarned;
+        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
         
-        // If jettonsEarned equals totalSold, available should be 0
-        if (jettonsEarned == totalSold) {
-            assertEq(proofOfCapital.jettonAvailable(), 0);
+        // If tokensEarned equals totalSold, available should be 0
+        if (tokensEarned == totalSold) {
+            assertEq(proofOfCapital.tokenAvailable(), 0);
         }
     }
     
-    function testJettonAvailableStateConsistency() public {
-        // Test that jettonAvailable always equals totalJettonsSold - jettonsEarned
+    function testTokenAvailableStateConsistency() public {
+        // Test that tokenAvailable always equals totalTokensSold - tokensEarned
         
         // Record initial state
-        uint256 initialTotalSold = proofOfCapital.totalJettonsSold();
-        uint256 initialJettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 initialAvailable = proofOfCapital.jettonAvailable();
+        uint256 initialTotalSold = proofOfCapital.totalTokensSold();
+        uint256 initialTokensEarned = proofOfCapital.tokensEarned();
+        uint256 initialAvailable = proofOfCapital.tokenAvailable();
         
         // Verify initial consistency
-        assertEq(initialAvailable, initialTotalSold - initialJettonsEarned);
+        assertEq(initialAvailable, initialTotalSold - initialTokensEarned);
         
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
-        assertTrue(proofOfCapital.jettonAvailable() == proofOfCapital.totalJettonsSold() - proofOfCapital.jettonsEarned());
+        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalTokensSold() - proofOfCapital.tokensEarned());
     }
     
     
@@ -2524,7 +2524,7 @@ contract ProofOfCapitalTest is Test {
         // Initial state
         uint256 remaining = proofOfCapital.remainingSeconds();
         bool tradingOpp = proofOfCapital.tradingOpportunity();
-        uint256 available = proofOfCapital.jettonAvailable();
+        uint256 available = proofOfCapital.tokenAvailable();
         
         // Verify logical consistency
         // If remaining > 30 days, trading opportunity should be false
@@ -2545,20 +2545,20 @@ contract ProofOfCapitalTest is Test {
         assertTrue(newRemaining < remaining);
         
         // Available should remain the same (no trading activity)
-        assertEq(proofOfCapital.jettonAvailable(), available);
+        assertEq(proofOfCapital.tokenAvailable(), available);
     }
     
     // Tests for withdrawAllTokens function
     function testWithdrawAllTokensSuccess() public {
-        // The key insight: contractJettonBalance is only increased by returnWallet selling tokens back
-        // We need to create a scenario where returnWallet sells tokens to increase contractJettonBalance
+        // The key insight: contractTokenBalance is only increased by returnWallet selling tokens back
+        // We need to create a scenario where returnWallet sells tokens to increase contractTokenBalance
         
         // Give tokens to return wallet
         vm.startPrank(owner);
         token.transfer(returnWallet, 50000e18);
         vm.stopPrank();
         
-        // Return wallet sells tokens back (this increases contractJettonBalance)
+        // Return wallet sells tokens back (this increases contractTokenBalance)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
         proofOfCapital.sellTokens(50000e18);
@@ -2569,8 +2569,8 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
         
         // Record initial state
-        uint256 contractBalance = proofOfCapital.contractJettonBalance();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        uint256 contractBalance = proofOfCapital.contractTokenBalance();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         uint256 availableTokens = contractBalance - totalSold;
         uint256 ownerBalanceBefore = token.balanceOf(owner);
         
@@ -2586,12 +2586,12 @@ contract ProofOfCapitalTest is Test {
         
         // Verify state reset
         assertEq(proofOfCapital.currentStep(), 0);
-        assertEq(proofOfCapital.contractJettonBalance(), 0);
-        assertEq(proofOfCapital.totalJettonsSold(), 0);
-        assertEq(proofOfCapital.jettonsEarned(), 0);
-        assertEq(proofOfCapital.quantityJettonsPerLevel(), proofOfCapital.firstLevelJettonQuantity());
+        assertEq(proofOfCapital.contractTokenBalance(), 0);
+        assertEq(proofOfCapital.totalTokensSold(), 0);
+        assertEq(proofOfCapital.tokensEarned(), 0);
+        assertEq(proofOfCapital.quantityTokensPerLevel(), proofOfCapital.firstLevelTokenQuantity());
         assertEq(proofOfCapital.currentPrice(), proofOfCapital.initialPricePerToken());
-        assertEq(proofOfCapital.remainderOfStep(), proofOfCapital.firstLevelJettonQuantity());
+        assertEq(proofOfCapital.remainderOfStep(), proofOfCapital.firstLevelTokenQuantity());
     }
     
     function testWithdrawAllTokensLockPeriodNotEnded() public {
@@ -2606,7 +2606,7 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
         
-        // In initial state: contractJettonBalance = 0, totalJettonsSold = 10000e18 (offset)
+        // In initial state: contractTokenBalance = 0, totalTokensSold = 10000e18 (offset)
         // So availableTokens = 0 - 10000e18 = negative, but function checks > 0
         
         vm.prank(owner);
@@ -2659,7 +2659,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
         
         // Record initial values for comparison
-        uint256 firstLevelQuantity = proofOfCapital.firstLevelJettonQuantity();
+        uint256 firstLevelQuantity = proofOfCapital.firstLevelTokenQuantity();
         uint256 initialPrice = proofOfCapital.initialPricePerToken();
         
         // Withdraw all tokens
@@ -2668,15 +2668,15 @@ contract ProofOfCapitalTest is Test {
         
         // Verify complete state reset
         assertEq(proofOfCapital.currentStep(), 0);
-        assertEq(proofOfCapital.contractJettonBalance(), 0);
-        assertEq(proofOfCapital.totalJettonsSold(), 0);
-        assertEq(proofOfCapital.jettonsEarned(), 0);
-        assertEq(proofOfCapital.quantityJettonsPerLevel(), firstLevelQuantity);
+        assertEq(proofOfCapital.contractTokenBalance(), 0);
+        assertEq(proofOfCapital.totalTokensSold(), 0);
+        assertEq(proofOfCapital.tokensEarned(), 0);
+        assertEq(proofOfCapital.quantityTokensPerLevel(), firstLevelQuantity);
         assertEq(proofOfCapital.currentPrice(), initialPrice);
         assertEq(proofOfCapital.remainderOfStep(), firstLevelQuantity);
         assertEq(proofOfCapital.currentStepEarned(), 0);
         assertEq(proofOfCapital.remainderOfStepEarned(), firstLevelQuantity);
-        assertEq(proofOfCapital.quantityJettonsPerLevelEarned(), firstLevelQuantity);
+        assertEq(proofOfCapital.quantityTokensPerLevelEarned(), firstLevelQuantity);
         assertEq(proofOfCapital.currentPriceEarned(), initialPrice);
     }
     
@@ -2700,7 +2700,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllTokens();
         
         // Verify withdrawal succeeded
-        assertEq(proofOfCapital.contractJettonBalance(), 0);
+        assertEq(proofOfCapital.contractTokenBalance(), 0);
     }
     
     function testWithdrawAllTokensCalculatesAvailableCorrectly() public {
@@ -2724,8 +2724,8 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
         
         // Calculate expected available tokens
-        uint256 contractBalance = proofOfCapital.contractJettonBalance();
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
+        uint256 contractBalance = proofOfCapital.contractTokenBalance();
+        uint256 totalSold = proofOfCapital.totalTokensSold();
         uint256 expectedAvailable = contractBalance - totalSold;
         
         uint256 ownerBalanceBefore = token.balanceOf(owner);
@@ -2870,7 +2870,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllSupportTokens();
         
         // The function should call _transferSupportTokens which handles WETH/ETH conversion
-        // In our test setup, jettonSupport = true, so it should transfer WETH directly
+        // In our test setup, tokenSupport = true, so it should transfer WETH directly
         assertEq(weth.balanceOf(owner), ownerBalanceBefore + supportBalance);
         assertEq(proofOfCapital.contractSupportBalance(), 0);
     }
@@ -2894,7 +2894,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
         
         // Test main token withdrawal
-        uint256 mainTokenBalance = proofOfCapital.contractJettonBalance() - proofOfCapital.totalJettonsSold();
+        uint256 mainTokenBalance = proofOfCapital.contractTokenBalance() - proofOfCapital.totalTokensSold();
         uint256 ownerMainBalanceBefore = token.balanceOf(owner);
         
         vm.prank(owner);
@@ -2902,8 +2902,8 @@ contract ProofOfCapitalTest is Test {
         
         // Verify main tokens withdrawn and state reset
         assertEq(token.balanceOf(owner), ownerMainBalanceBefore + mainTokenBalance);
-        assertEq(proofOfCapital.contractJettonBalance(), 0);
-        assertEq(proofOfCapital.totalJettonsSold(), 0);
+        assertEq(proofOfCapital.contractTokenBalance(), 0);
+        assertEq(proofOfCapital.totalTokensSold(), 0);
         
         // Second test: test support token withdrawal with zero balance (expected to fail)
         vm.prank(owner);
@@ -3071,7 +3071,7 @@ contract ProofOfCapitalTest is Test {
     
     function testBuyTokensWithETHUseSupportTokenInstead() public {
         // Contract is configured to use support tokens (WETH), not ETH
-        assertTrue(proofOfCapital.jettonSupport());
+        assertTrue(proofOfCapital.tokenSupport());
         
         // Try to buy with ETH when support tokens should be used
         vm.deal(marketMaker, 10 ether); // Give marketMaker some ETH
@@ -3090,7 +3090,7 @@ contract ProofOfCapitalTest is Test {
     
     function testBuyTokensWithETHUseDepositFunctionForOwners() public {
         // Owner tries to use buyTokensWithETH instead of depositWithETH
-        // But since jettonSupport is true, it will revert with UseSupportTokenInstead first
+        // But since tokenSupport is true, it will revert with UseSupportTokenInstead first
         vm.deal(owner, 10 ether); // Give owner some ETH
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
@@ -3106,7 +3106,7 @@ contract ProofOfCapitalTest is Test {
     
     function testDepositWithETHUseSupportTokenInstead() public {
         // Contract is configured to use support tokens (WETH), not ETH
-        assertTrue(proofOfCapital.jettonSupport());
+        assertTrue(proofOfCapital.tokenSupport());
         
         // Try to deposit with ETH when support tokens should be used
         vm.deal(owner, 10 ether); // Give owner some ETH
@@ -3116,7 +3116,7 @@ contract ProofOfCapitalTest is Test {
     }
     
     function testDepositWithETHInvalidETHAmountZero() public {
-        // Since jettonSupport is true, it will revert with UseSupportTokenInstead first
+        // Since tokenSupport is true, it will revert with UseSupportTokenInstead first
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
         proofOfCapital.depositWithETH{value: 0}();
@@ -3226,16 +3226,16 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.remainingSeconds(), 0);
         assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 30 days is true
         
-        // Test jettonAvailable consistency
-        uint256 totalSold = proofOfCapital.totalJettonsSold();
-        uint256 jettonsEarned = proofOfCapital.jettonsEarned();
-        uint256 expectedAvailable = totalSold - jettonsEarned;
-        assertEq(proofOfCapital.jettonAvailable(), expectedAvailable);
+        // Test tokenAvailable consistency
+        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 expectedAvailable = totalSold - tokensEarned;
+        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
     }
     
-    // Tests for ETH functions with jettonSupport=false configuration
+    // Tests for ETH functions with tokenSupport=false configuration
     function testBuyTokensWithETHInvalidETHAmountWithETHConfig() public {
-        // Deploy contract with jettonSupport = false (ETH configuration)
+        // Deploy contract with tokenSupport = false (ETH configuration)
         vm.startPrank(owner);
         
         ProofOfCapital implementation = new ProofOfCapital();
@@ -3250,15 +3250,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(testWETH), // Use proper WETH mock
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(supportToken), // Different from WETH
+            tokenSupportAddress: address(supportToken), // Different from WETH
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -3271,8 +3271,8 @@ contract ProofOfCapitalTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
-        // Verify jettonSupport is false
-        assertFalse(ethContract.jettonSupport());
+        // Verify tokenSupport is false
+        assertFalse(ethContract.tokenSupport());
         
         // Give tokens to contract and setup market maker
         token.transfer(address(ethContract), 100000e18);
@@ -3288,7 +3288,7 @@ contract ProofOfCapitalTest is Test {
     }
     
     function testBuyTokensWithETHUseDepositFunctionForOwnersWithETHConfig() public {
-        // Deploy contract with jettonSupport = false (ETH configuration)
+        // Deploy contract with tokenSupport = false (ETH configuration)
         vm.startPrank(owner);
         
         ProofOfCapital implementation = new ProofOfCapital();
@@ -3303,15 +3303,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(testWETH), // Use proper WETH mock
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(supportToken), // Different from WETH
+            tokenSupportAddress: address(supportToken), // Different from WETH
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -3337,7 +3337,7 @@ contract ProofOfCapitalTest is Test {
     }
     
     function testDepositWithETHInvalidETHAmountWithETHConfig() public {
-        // Deploy contract with jettonSupport = false (ETH configuration)
+        // Deploy contract with tokenSupport = false (ETH configuration)
         vm.startPrank(owner);
         
         ProofOfCapital implementation = new ProofOfCapital();
@@ -3352,15 +3352,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(testWETH), // Use proper WETH mock
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(supportToken), // Different from WETH
+            tokenSupportAddress: address(supportToken), // Different from WETH
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -3514,15 +3514,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts // Add old contract here
         });
@@ -3559,7 +3559,7 @@ contract ProofOfCapitalTest is Test {
         // Create mock old contract
         address oldContract = address(0x777);
         
-        // Deploy new ProofOfCapital with ETH support (jettonSupport = false)
+        // Deploy new ProofOfCapital with ETH support (tokenSupport = false)
         vm.startPrank(owner);
         
         ProofOfCapital implementation = new ProofOfCapital();
@@ -3569,7 +3569,7 @@ contract ProofOfCapitalTest is Test {
         address[] memory oldContracts = new address[](1);
         oldContracts[0] = oldContract;
         
-        // Use different support token to make jettonSupport = false
+        // Use different support token to make tokenSupport = false
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -3578,15 +3578,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(testWETH), // Use proper WETH mock
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(supportToken), // Different from WETH to enable ETH mode
+            tokenSupportAddress: address(supportToken), // Different from WETH to enable ETH mode
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts // Add old contract here
         });
@@ -3605,8 +3605,8 @@ contract ProofOfCapitalTest is Test {
         
         vm.stopPrank();
         
-        // Verify jettonSupport is false (ETH mode enabled)
-        assertFalse(ethContract.jettonSupport());
+        // Verify tokenSupport is false (ETH mode enabled)
+        assertFalse(ethContract.tokenSupport());
         
         // Old contract deposits ETH
         uint256 depositAmount = 2 ether;
@@ -3640,15 +3640,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
         });
@@ -3693,15 +3693,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(testWETH), // Use proper WETH mock
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(supportToken), // Different from WETH for ETH mode
+            tokenSupportAddress: address(supportToken), // Different from WETH for ETH mode
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
         });
@@ -3745,15 +3745,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
         });
@@ -3823,15 +3823,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(supportToken), // Different for ETH mode
+            tokenSupportAddress: address(supportToken), // Different for ETH mode
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0) // No old contracts
         });
@@ -3879,15 +3879,15 @@ contract ProofOfCapitalTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
         });
@@ -3931,19 +3931,19 @@ contract ProofOfCapitalTest is Test {
         // Test case where deposit amount is greater than deltaSupportBalance
         // and excess amount is returned to owner via _transferSupportTokens
         
-        // Setup: Create a scenario where offsetJettons > jettonsEarned
-        // This is already true in our default setup (offsetJettons = 10000e18, jettonsEarned = 0)
-        assertTrue(proofOfCapital.offsetJettons() > proofOfCapital.jettonsEarned(), "offsetJettons should be greater than jettonsEarned");
+        // Setup: Create a scenario where offsetTokens > tokensEarned
+        // This is already true in our default setup (offsetTokens = 10000e18, tokensEarned = 0)
+        assertTrue(proofOfCapital.offsetTokens() > proofOfCapital.tokensEarned(), "offsetTokens should be greater than tokensEarned");
         
         // Create some tokens in the contract first by selling some tokens back
-        // This will create a base state with some jettons sold
+        // This will create a base state with some tokens sold
         vm.startPrank(owner);
         token.transfer(returnWallet, 5000e18);
         vm.stopPrank();
         
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 5000e18);
-        proofOfCapital.sellTokens(5000e18); // This creates contractJettonBalance
+        proofOfCapital.sellTokens(5000e18); // This creates contractTokenBalance
         vm.stopPrank();
         
         // Now create a scenario where the deposit amount is larger than what can be used
@@ -3959,7 +3959,7 @@ contract ProofOfCapitalTest is Test {
         weth.approve(address(proofOfCapital), depositAmount);
         
         // Deposit will trigger _handleOwnerDeposit
-        // Since offsetJettons > jettonsEarned, it will call _calculateChangeOffsetSupport
+        // Since offsetTokens > tokensEarned, it will call _calculateChangeOffsetSupport
         // If depositAmount > deltaSupportBalance, the excess should be returned
         proofOfCapital.deposit(depositAmount);
         
@@ -3987,7 +3987,7 @@ contract ProofOfCapitalTest is Test {
         // More detailed test to verify the exact mechanism of returning excess amount
         // when value > deltaSupportBalance in _handleOwnerDeposit
         
-        // First, let's create a state where offsetJettons > jettonsEarned
+        // First, let's create a state where offsetTokens > tokensEarned
         // and set up the contract to have some tokens available
         vm.startPrank(owner);
         token.transfer(returnWallet, 8000e18);
@@ -4002,11 +4002,11 @@ contract ProofOfCapitalTest is Test {
         vm.startPrank(owner);
         uint256 ownerBalanceBefore = weth.balanceOf(owner);
         uint256 contractSupportBalanceBefore = proofOfCapital.contractSupportBalance();
-        uint256 offsetJettonsBefore = proofOfCapital.offsetJettons();
-        uint256 jettonsEarnedBefore = proofOfCapital.jettonsEarned();
+        uint256 offsetTokensBefore = proofOfCapital.offsetTokens();
+        uint256 tokensEarnedBefore = proofOfCapital.tokensEarned();
         
         // Verify preconditions
-        assertTrue(offsetJettonsBefore > jettonsEarnedBefore, "offsetJettons must be > jettonsEarned");
+        assertTrue(offsetTokensBefore > tokensEarnedBefore, "offsetTokens must be > tokensEarned");
         
         // Make a strategic deposit that should trigger the return mechanism
         uint256 depositAmount = 25000e18; // Large amount likely to exceed deltaSupportBalance
@@ -4045,7 +4045,7 @@ contract ProofOfCapitalTest is Test {
         // the excess amount is transferred back to owner via _transferSupportTokens
         // We'll check for the Transfer event from WETH token
         
-        // Setup scenario where offsetJettons > jettonsEarned
+        // Setup scenario where offsetTokens > tokensEarned
         vm.startPrank(owner);
         token.transfer(returnWallet, 6000e18);
         vm.stopPrank();
@@ -4106,15 +4106,15 @@ contract ProofOfCapitalProfitTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18, // Add offset to enable trading
+            offsetTokens: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0)
         });
@@ -4235,15 +4235,15 @@ contract ProofOfCapitalInitializationTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0)
         });
@@ -4310,7 +4310,7 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeMultiplierValidAtBoundary() public {
         ProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = Constants.PERCENTAGE_DIVISOR - 1; // Valid: just below divisor
-        params.offsetJettons = 100e18; // Smaller offset to avoid overflow in calculations
+        params.offsetTokens = 100e18; // Smaller offset to avoid overflow in calculations
         
         bytes memory initData = abi.encodeWithSelector(
             ProofOfCapital.initialize.selector,
@@ -4466,13 +4466,13 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeBoundaryValues() public {
         ProofOfCapital.InitParams memory params = getValidParams();
         
-        // Set all parameters to their boundary values with smaller offsetJettons
+        // Set all parameters to their boundary values with smaller offsetTokens
         params.initialPricePerToken = 1; // Minimum valid
         params.levelDecreaseMultiplierafterTrend = 500; // Safe value below divisor
         params.levelIncreaseMultiplier = 1; // Minimum valid
         params.priceIncrementMultiplier = 1; // Minimum valid
         params.royaltyProfitPercent = 2; // Minimum valid
-        params.offsetJettons = 100e18; // Smaller offset to avoid overflow
+        params.offsetTokens = 100e18; // Smaller offset to avoid overflow
         
         bytes memory initData = abi.encodeWithSelector(
             ProofOfCapital.initialize.selector,
@@ -4519,7 +4519,7 @@ contract ProofOfCapitalInitializationTest is Test {
         params.levelIncreaseMultiplier = 10000; // Large but reasonable multiplier
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Maximum royalty
-        params.offsetJettons = 1000e18; // Smaller offset to avoid calculations overflow
+        params.offsetTokens = 1000e18; // Smaller offset to avoid calculations overflow
         
         bytes memory initData = abi.encodeWithSelector(
             ProofOfCapital.initialize.selector,
@@ -4553,15 +4553,15 @@ contract ProofOfCapitalInitializationTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: 1, // Way below minimum
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -4594,15 +4594,15 @@ contract ProofOfCapitalInitializationTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -4638,15 +4638,15 @@ contract ProofOfCapitalInitializationTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 1000e18,
+            offsetTokens: 1000e18,
             controlPeriod: validPeriod, // Within valid range
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
@@ -4679,15 +4679,15 @@ contract ProofOfCapitalInitializationTest is Test {
                 wethAddress: address(weth),
                 lockEndTime: block.timestamp + 365 days,
                 initialPricePerToken: 1e18,
-                firstLevelJettonQuantity: 1000e18,
+                firstLevelTokenQuantity: 1000e18,
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetJettons: 1000e18,
+                offsetTokens: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
-                jettonSupportAddress: address(weth),
+                tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0)
             });
@@ -4714,15 +4714,15 @@ contract ProofOfCapitalInitializationTest is Test {
                 wethAddress: address(weth),
                 lockEndTime: block.timestamp + 365 days,
                 initialPricePerToken: 1e18,
-                firstLevelJettonQuantity: 1000e18,
+                firstLevelTokenQuantity: 1000e18,
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetJettons: 1000e18,
+                offsetTokens: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
-                jettonSupportAddress: address(weth),
+                tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0)
             });

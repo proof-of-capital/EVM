@@ -49,10 +49,10 @@ contract ProofOfCapital is
     error CannotActivateWithdrawalTooCloseToLockEnd();
     error InvalidRecipientOrAmount();
     error DeferredWithdrawalBlocked();
-    error MainJettonDeferredWithdrawalAlreadyScheduled();
+    error MainTokenDeferredWithdrawalAlreadyScheduled();
     error NoDeferredWithdrawalScheduled();
     error WithdrawalDateNotReached();
-    error InsufficientJettonBalance();
+    error InsufficientTokenBalance();
     error InsufficientAmount();
     error InvalidRecipient();
     error SupportDeferredWithdrawalAlreadyScheduled();
@@ -76,7 +76,6 @@ contract ProofOfCapital is
     error ProfitModeNotActive();
     error NoProfitAvailable();
     error TradingNotAllowedOnlyMarketMakers();
-    error InsufficientTokenBalance();
     error InsufficientSupportBalance();
     error NoTokensAvailableForBuyback();
     error InsufficientTokensForBuyback();
@@ -97,15 +96,15 @@ contract ProofOfCapital is
         address wethAddress;
         uint256 lockEndTime;
         uint256 initialPricePerToken;
-        uint256 firstLevelJettonQuantity;
+        uint256 firstLevelTokenQuantity;
         uint256 priceIncrementMultiplier;
         uint256 levelIncreaseMultiplier;
         uint256 trendChangeStep;
         uint256 levelDecreaseMultiplierafterTrend;
         uint256 profitPercentage;
-        uint256 offsetJettons;
+        uint256 offsetTokens;
         uint256 controlPeriod;
-        address jettonSupportAddress;
+        address tokenSupportAddress;
         uint256 royaltyProfitPercent;
         address[] oldContractAddresses; // Array of old contract addresses
     }
@@ -128,9 +127,9 @@ contract ProofOfCapital is
 
     // Pricing and level variables
     uint256 public initialPricePerToken;
-    uint256 public firstLevelJettonQuantity;
+    uint256 public firstLevelTokenQuantity;
     uint256 public override currentPrice;
-    uint256 public quantityJettonsPerLevel;
+    uint256 public quantityTokensPerLevel;
     uint256 public remainderOfStep;
     uint256 public currentStep;
 
@@ -144,29 +143,29 @@ contract ProofOfCapital is
     uint256 public creatorProfitPercent;
 
     // Balances and counters
-    uint256 public override totalJettonsSold;
+    uint256 public override totalTokensSold;
     uint256 public override contractSupportBalance; // WETH balance for backing
-    uint256 public contractJettonBalance; // Main token balance
-    uint256 public jettonsEarned;
+    uint256 public contractTokenBalance; // Main token balance
+    uint256 public tokensEarned;
     uint256 public actualProfit;
 
     // Return tracking variables
     uint256 public currentStepEarned;
     uint256 public remainderOfStepEarned;
-    uint256 public quantityJettonsPerLevelEarned;
+    uint256 public quantityTokensPerLevelEarned;
     uint256 public currentPriceEarned;
 
     // Offset variables
-    uint256 public offsetJettons;
+    uint256 public offsetTokens;
     uint256 public offsetStep;
     uint256 public offsetPrice;
-    uint256 public remainderOffsetJettons;
+    uint256 public remainderOffsetTokens;
     uint256 public sizeOffsetStep;
 
     // Support token variables
-    bool public override jettonSupport; // If true, uses support token instead of WETH
-    address public jettonSupportAddress;
-    address public additionalJettonAddress;
+    bool public override tokenSupport; // If true, uses support token instead of WETH
+    address public tokenSupportAddress;
+    address public additionalTokenAddress;
 
     // Market makers
     mapping(address => bool) public marketMakerAddresses;
@@ -178,11 +177,11 @@ contract ProofOfCapital is
 
     // Deferred withdrawal
     bool public override canWithdrawal;
-    uint256 public mainJettonDeferredWithdrawalDate;
-    uint256 public mainJettonDeferredWithdrawalAmount;
-    address public recipientDeferredWithdrawalMainJetton;
-    uint256 public supportJettonDeferredWithdrawalDate;
-    address public recipientDeferredWithdrawalSupportJetton;
+    uint256 public mainTokenDeferredWithdrawalDate;
+    uint256 public mainTokenDeferredWithdrawalAmount;
+    address public recipientDeferredWithdrawalMainToken;
+    uint256 public supportTokenDeferredWithdrawalDate;
+    address public recipientDeferredWithdrawalSupportToken;
 
     bool public isNeedToUnwrap; // Controls whether to unwrap WETH to ETH when sending
 
@@ -236,23 +235,23 @@ contract ProofOfCapital is
         wethAddress = params.wethAddress;
         lockEndTime = params.lockEndTime;
         initialPricePerToken = params.initialPricePerToken;
-        firstLevelJettonQuantity = params.firstLevelJettonQuantity;
+        firstLevelTokenQuantity = params.firstLevelTokenQuantity;
         priceIncrementMultiplier = params.priceIncrementMultiplier;
         levelIncreaseMultiplier = params.levelIncreaseMultiplier;
         trendChangeStep = params.trendChangeStep;
         levelDecreaseMultiplierafterTrend = params.levelDecreaseMultiplierafterTrend;
         profitPercentage = params.profitPercentage;
-        offsetJettons = params.offsetJettons;
+        offsetTokens = params.offsetTokens;
         controlPeriod = _getPeriod(params.controlPeriod);
-        jettonSupport = params.jettonSupportAddress == wethAddress;
-        jettonSupportAddress = params.jettonSupportAddress;
+        tokenSupport = params.tokenSupportAddress == wethAddress;
+        tokenSupportAddress = params.tokenSupportAddress;
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
 
         // Initialize state variables
         currentStep = 0;
-        remainderOfStep = params.firstLevelJettonQuantity;
-        quantityJettonsPerLevel = params.firstLevelJettonQuantity;
+        remainderOfStep = params.firstLevelTokenQuantity;
+        quantityTokensPerLevel = params.firstLevelTokenQuantity;
         currentPrice = params.initialPricePerToken;
         controlDay = block.timestamp + Constants.THIRTY_DAYS;
         reserveOwner = _msgSender();
@@ -263,24 +262,24 @@ contract ProofOfCapital is
         // Initialize offset variables
         offsetStep = 0;
         offsetPrice = params.initialPricePerToken;
-        remainderOffsetJettons = params.firstLevelJettonQuantity;
-        sizeOffsetStep = params.firstLevelJettonQuantity;
+        remainderOffsetTokens = params.firstLevelTokenQuantity;
+        sizeOffsetStep = params.firstLevelTokenQuantity;
 
         // Initialize earned tracking
         currentStepEarned = 0;
-        remainderOfStepEarned = params.firstLevelJettonQuantity;
-        quantityJettonsPerLevelEarned = params.firstLevelJettonQuantity;
+        remainderOfStepEarned = params.firstLevelTokenQuantity;
+        quantityTokensPerLevelEarned = params.firstLevelTokenQuantity;
         currentPriceEarned = params.initialPricePerToken;
 
-        recipientDeferredWithdrawalMainJetton = _msgSender();
-        recipientDeferredWithdrawalSupportJetton = _msgSender();
+        recipientDeferredWithdrawalMainToken = _msgSender();
+        recipientDeferredWithdrawalSupportToken = _msgSender();
 
         profitInTime = true;
         canWithdrawal = true;
         isNeedToUnwrap = true; // Default to true - unwrap WETH to ETH when sending
 
-        if (params.offsetJettons > 0) {
-            _calculateOffset(params.offsetJettons);
+        if (params.offsetTokens > 0) {
+            _calculateOffset(params.offsetTokens);
         }
 
         // Set old contract addresses
@@ -324,50 +323,50 @@ contract ProofOfCapital is
     }
 
     /**
-     * @dev Schedule deferred withdrawal of main jetton
+     * @dev Schedule deferred withdrawal of main token
      */
-    function jettonDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
+    function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
         require(recipientAddress != address(0) && amount > 0, InvalidRecipientOrAmount());
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(mainJettonDeferredWithdrawalAmount == 0, MainJettonDeferredWithdrawalAlreadyScheduled());
+        require(mainTokenDeferredWithdrawalAmount == 0, MainTokenDeferredWithdrawalAlreadyScheduled());
 
-        recipientDeferredWithdrawalMainJetton = recipientAddress;
-        mainJettonDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
-        mainJettonDeferredWithdrawalAmount = amount;
+        recipientDeferredWithdrawalMainToken = recipientAddress;
+        mainTokenDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
+        mainTokenDeferredWithdrawalAmount = amount;
 
-        emit DeferredWithdrawalScheduled(recipientAddress, amount, mainJettonDeferredWithdrawalDate);
+        emit DeferredWithdrawalScheduled(recipientAddress, amount, mainTokenDeferredWithdrawalDate);
     }
 
     /**
-     * @dev Cancel deferred withdrawal of main jetton
+     * @dev Cancel deferred withdrawal of main token
      */
-    function stopJettonDeferredWithdrawal() external override {
+    function stopTokenDeferredWithdrawal() external override {
         require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
-        require(mainJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(mainTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
-        mainJettonDeferredWithdrawalDate = 0;
-        mainJettonDeferredWithdrawalAmount = 0;
-        recipientDeferredWithdrawalMainJetton = owner();
+        mainTokenDeferredWithdrawalDate = 0;
+        mainTokenDeferredWithdrawalAmount = 0;
+        recipientDeferredWithdrawalMainToken = owner();
     }
 
     /**
-     * @dev Confirm and execute deferred withdrawal of main jetton
+     * @dev Confirm and execute deferred withdrawal of main token
      */
-    function confirmJettonDeferredWithdrawal() external override onlyOwner nonReentrant {
+    function confirmTokenDeferredWithdrawal() external override onlyOwner nonReentrant {
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(mainJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
-        require(block.timestamp >= mainJettonDeferredWithdrawalDate, WithdrawalDateNotReached());
-        require(contractJettonBalance > totalJettonsSold, InsufficientJettonBalance());
-        require(contractJettonBalance - totalJettonsSold >= mainJettonDeferredWithdrawalAmount, InsufficientAmount());
+        require(mainTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(block.timestamp >= mainTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
+        require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
+        require(contractTokenBalance - totalTokensSold >= mainTokenDeferredWithdrawalAmount, InsufficientAmount());
 
         launchToken.safeTransfer(
-            recipientDeferredWithdrawalMainJetton, mainJettonDeferredWithdrawalAmount
+            recipientDeferredWithdrawalMainToken, mainTokenDeferredWithdrawalAmount
         );
 
-        contractJettonBalance -= mainJettonDeferredWithdrawalAmount;
-        mainJettonDeferredWithdrawalDate = 0;
-        mainJettonDeferredWithdrawalAmount = 0;
-        recipientDeferredWithdrawalMainJetton = owner();
+        contractTokenBalance -= mainTokenDeferredWithdrawalAmount;
+        mainTokenDeferredWithdrawalDate = 0;
+        mainTokenDeferredWithdrawalAmount = 0;
+        recipientDeferredWithdrawalMainToken = owner();
     }
 
     /**
@@ -376,12 +375,12 @@ contract ProofOfCapital is
     function supportDeferredWithdrawal(address recipientAddress) external override onlyOwner {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(recipientAddress != address(0), InvalidRecipient());
-        require(supportJettonDeferredWithdrawalDate == 0, SupportDeferredWithdrawalAlreadyScheduled());
+        require(supportTokenDeferredWithdrawalDate == 0, SupportDeferredWithdrawalAlreadyScheduled());
 
-        recipientDeferredWithdrawalSupportJetton = recipientAddress;
-        supportJettonDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
+        recipientDeferredWithdrawalSupportToken = recipientAddress;
+        supportTokenDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
 
-        emit DeferredWithdrawalScheduled(recipientAddress, contractSupportBalance, supportJettonDeferredWithdrawalDate);
+        emit DeferredWithdrawalScheduled(recipientAddress, contractSupportBalance, supportTokenDeferredWithdrawalDate);
     }
 
     /**
@@ -389,10 +388,10 @@ contract ProofOfCapital is
      */
     function stopSupportDeferredWithdrawal() external override {
         require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
-        require(supportJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
-        supportJettonDeferredWithdrawalDate = 0;
-        recipientDeferredWithdrawalSupportJetton = owner();
+        supportTokenDeferredWithdrawalDate = 0;
+        recipientDeferredWithdrawalSupportToken = owner();
     }
 
     /**
@@ -400,14 +399,14 @@ contract ProofOfCapital is
      */
     function confirmSupportDeferredWithdrawal() external override onlyOwner nonReentrant {
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(supportJettonDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
-        require(block.timestamp >= supportJettonDeferredWithdrawalDate, WithdrawalDateNotReached());
+        require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(block.timestamp >= supportTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
 
-        _transferSupportTokens(recipientDeferredWithdrawalSupportJetton, contractSupportBalance);
+        _transferSupportTokens(recipientDeferredWithdrawalSupportToken, contractSupportBalance);
 
         contractSupportBalance = 0;
-        supportJettonDeferredWithdrawalDate = 0;
-        recipientDeferredWithdrawalSupportJetton = owner();
+        supportTokenDeferredWithdrawalDate = 0;
+        recipientDeferredWithdrawalSupportToken = owner();
         isActive = false;
     }
 
@@ -509,7 +508,7 @@ contract ProofOfCapital is
         require(amount > 0, InvalidAmount());
         require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), UseDepositFunctionForOwners());
 
-        IERC20(jettonSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
+        IERC20(tokenSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
         _handleTokenPurchaseCommon(amount);
     }
 
@@ -517,7 +516,7 @@ contract ProofOfCapital is
      * @dev Buy tokens with ETH
      */
     function buyTokensWithETH() external payable override nonReentrant onlyActiveContract {
-        require(!jettonSupport, UseSupportTokenInstead());
+        require(!tokenSupport, UseSupportTokenInstead());
         require(msg.value > 0, InvalidETHAmount());
         require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), UseDepositFunctionForOwners());
 
@@ -538,7 +537,7 @@ contract ProofOfCapital is
     {
         require(amount > 0, InvalidAmount());
 
-        IERC20(jettonSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
+        IERC20(tokenSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
         _handleOwnerDeposit(amount);
     }
 
@@ -553,7 +552,7 @@ contract ProofOfCapital is
         onlyActiveContract
         onlyOwnerOrOldContract
     {
-        require(!jettonSupport, UseSupportTokenInstead());
+        require(!tokenSupport, UseSupportTokenInstead());
         require(msg.value > 0, InvalidETHAmount());
 
         // Wrap received ETH to WETH
@@ -582,22 +581,22 @@ contract ProofOfCapital is
     function withdrawAllTokens() external override onlyOwner nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
 
-        uint256 availableTokens = contractJettonBalance - totalJettonsSold;
+        uint256 availableTokens = contractTokenBalance - totalTokensSold;
         require(availableTokens > 0, NoTokensToWithdraw());
 
         launchToken.safeTransfer(owner(), availableTokens);
 
         // Reset state
         currentStep = 0;
-        contractJettonBalance = 0;
-        totalJettonsSold = 0;
-        jettonsEarned = 0;
-        quantityJettonsPerLevel = firstLevelJettonQuantity;
+        contractTokenBalance = 0;
+        totalTokensSold = 0;
+        tokensEarned = 0;
+        quantityTokensPerLevel = firstLevelTokenQuantity;
         currentPrice = initialPricePerToken;
-        remainderOfStep = firstLevelJettonQuantity;
+        remainderOfStep = firstLevelTokenQuantity;
         currentStepEarned = 0;
-        remainderOfStepEarned = firstLevelJettonQuantity;
-        quantityJettonsPerLevelEarned = firstLevelJettonQuantity;
+        remainderOfStepEarned = firstLevelTokenQuantity;
+        quantityTokensPerLevelEarned = firstLevelTokenQuantity;
         currentPriceEarned = initialPricePerToken;
     }
 
@@ -688,11 +687,11 @@ contract ProofOfCapital is
         return lockEndTime < Constants.THIRTY_DAYS + block.timestamp;
     }
 
-    function jettonAvailable() external view override returns (uint256) {
-        if (totalJettonsSold < jettonsEarned) {
+    function tokenAvailable() external view override returns (uint256) {
+        if (totalTokensSold < tokensEarned) {
             return 0;
         }
-        return totalJettonsSold - jettonsEarned;
+        return totalTokensSold - tokensEarned;
     }
 
     // Internal functions for handling different types of transactions
@@ -726,7 +725,7 @@ contract ProofOfCapital is
     }
 
     function _handleOwnerDeposit(uint256 value) internal {
-        if (offsetJettons > jettonsEarned) {
+        if (offsetTokens > tokensEarned) {
             uint256 deltaSupportBalance = _calculateChangeOffsetSupport(value);
             contractSupportBalance += deltaSupportBalance;
             
@@ -746,9 +745,9 @@ contract ProofOfCapital is
         if (!_checkTradingAccess()) {
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
-        require(contractJettonBalance > totalJettonsSold, InsufficientTokenBalance());
+        require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
 
-        uint256 totalTokens = _calculateJettonsToGiveForSupportAmount(supportAmount);
+        uint256 totalTokens = _calculateTokensToGiveForSupportAmount(supportAmount);
         uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
@@ -766,7 +765,7 @@ contract ProofOfCapital is
             netValue = supportAmount - actualProfit;
         }
         contractSupportBalance += netValue;
-        totalJettonsSold += totalTokens;
+        totalTokensSold += totalTokens;
 
         launchToken.safeTransfer(_msgSender(), totalTokens);
 
@@ -778,14 +777,14 @@ contract ProofOfCapital is
         
         // Check to prevent arithmetic underflow
         uint256 tokensAvailableForReturnBuyback = 0;
-        if (totalJettonsSold > jettonsEarned) {
-            tokensAvailableForReturnBuyback = totalJettonsSold - jettonsEarned;
+        if (totalTokensSold > tokensEarned) {
+            tokensAvailableForReturnBuyback = totalTokensSold - tokensEarned;
         }
         
         uint256 effectiveAmount = amount < tokensAvailableForReturnBuyback ? amount : tokensAvailableForReturnBuyback;
 
-        if (offsetJettons > jettonsEarned) {
-            uint256 offsetAmount = offsetJettons - jettonsEarned;
+        if (offsetTokens > tokensEarned) {
+            uint256 offsetAmount = offsetTokens - tokensEarned;
             if (effectiveAmount > offsetAmount) {
                 _calculateSupportForTokenAmountEarned(offsetAmount);
                 uint256 buybackAmount = effectiveAmount - offsetAmount;
@@ -798,10 +797,10 @@ contract ProofOfCapital is
             supportAmountToPay = _calculateSupportForTokenAmountEarned(effectiveAmount);
         }
 
-        jettonsEarned += effectiveAmount;
+        tokensEarned += effectiveAmount;
         require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
         contractSupportBalance -= supportAmountToPay;
-        contractJettonBalance += amount;
+        contractTokenBalance += amount;
 
         if (supportAmountToPay > 0) {
             _transferSupportTokens(owner(), supportAmountToPay);
@@ -813,20 +812,20 @@ contract ProofOfCapital is
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
 
-        uint256 maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
         
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
-        require(totalJettonsSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
+        require(totalTokensSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
         
-        uint256 tokensAvailableForBuyback = totalJettonsSold - maxEarnedOrOffset;
+        uint256 tokensAvailableForBuyback = totalTokensSold - maxEarnedOrOffset;
         require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
-        require(totalJettonsSold >= amount, InsufficientSoldTokens());
+        require(totalTokensSold >= amount, InsufficientSoldTokens());
 
         uint256 supportAmountToPay = _calculateSupportToPayForTokenAmount(amount);
         require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
 
         contractSupportBalance -= supportAmountToPay;
-        totalJettonsSold -= amount;
+        totalTokensSold -= amount;
 
         _transferSupportTokens(_msgSender(), supportAmountToPay);
 
@@ -834,7 +833,7 @@ contract ProofOfCapital is
     }
 
     function _checkTradingAccess() internal view returns (bool) {
-        return _checkControlDay() || (mainJettonDeferredWithdrawalDate > 0) || (supportJettonDeferredWithdrawalDate > 0);
+        return _checkControlDay() || (mainTokenDeferredWithdrawalDate > 0) || (supportTokenDeferredWithdrawalDate > 0);
     }
 
     function _checkControlDay() internal view returns (bool) {
@@ -859,86 +858,86 @@ contract ProofOfCapital is
         }
     }
 
-    function _calculateJettonsPerLevel(uint256 jettonsPerLevel, uint256 currentStepParam)
+    function _calculateTokensPerLevel(uint256 tokensPerLevel, uint256 currentStepParam)
         internal
         view
         returns (uint256)
     {
         if (currentStepParam > trendChangeStep) {
-            return (jettonsPerLevel * (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend))
+            return (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend))
                 / Constants.PERCENTAGE_DIVISOR;
         } else {
-            return (jettonsPerLevel * (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier))
+            return (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier))
                 / Constants.PERCENTAGE_DIVISOR;
         }
     }
 
     // Full implementation of calculation functions based on Tact contract
-    function _calculateOffset(uint256 amountJettons) internal {
-        int256 remainingOffsetJettons = int256(amountJettons);
+    function _calculateOffset(uint256 amountTokens) internal {
+        int256 remainingOffsetTokens = int256(amountTokens);
         uint256 localCurrentStep = offsetStep;
-        int256 remainderOfStepLocal = int256(remainderOffsetJettons);
-        uint256 jettonsPerLevel = sizeOffsetStep;
+        int256 remainderOfStepLocal = int256(remainderOffsetTokens);
+        uint256 tokensPerLevel = sizeOffsetStep;
         uint256 currentPriceLocal = currentPrice;
 
-        while (remainingOffsetJettons > 0) {
+        while (remainingOffsetTokens > 0) {
             int256 tokensAvailableInStep = remainderOfStepLocal;
 
-            if (remainingOffsetJettons >= tokensAvailableInStep) {
-                remainingOffsetJettons -= int256(tokensAvailableInStep);
+            if (remainingOffsetTokens >= tokensAvailableInStep) {
+                remainingOffsetTokens -= int256(tokensAvailableInStep);
                 localCurrentStep += 1;
 
-                jettonsPerLevel = _calculateJettonsPerLevel(jettonsPerLevel, localCurrentStep);
-                remainderOfStepLocal = int256(jettonsPerLevel);
+                tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
+                remainderOfStepLocal = int256(tokensPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
-                remainderOfStepLocal -= int256(remainingOffsetJettons);
-                remainingOffsetJettons = 0;
+                remainderOfStepLocal -= int256(remainingOffsetTokens);
+                remainingOffsetTokens = 0;
             }
         }
 
         offsetStep = localCurrentStep;
-        remainderOffsetJettons = uint256(remainderOfStepLocal);
-        sizeOffsetStep = jettonsPerLevel;
+        remainderOffsetTokens = uint256(remainderOfStepLocal);
+        sizeOffsetStep = tokensPerLevel;
         offsetPrice = currentPriceLocal;
 
         currentStep = localCurrentStep;
-        quantityJettonsPerLevel = jettonsPerLevel;
+        quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        contractJettonBalance = amountJettons;
-        totalJettonsSold = amountJettons;
+        contractTokenBalance = amountTokens;
+        totalTokensSold = amountTokens;
     }
 
     function _calculateChangeOffsetSupport(uint256 amountSupport) internal returns (uint256) {
         int256 remainingAddSupport = int256(amountSupport);
-        uint256 remainingOffsetJettonsLocal = offsetJettons;
-        int256 remainingAddJettons = int256(offsetJettons) - int256(jettonsEarned);
+        uint256 remainingOffsetTokensLocal = offsetTokens;
+        int256 remainingAddTokens = int256(offsetTokens) - int256(tokensEarned);
         uint256 localCurrentStep = offsetStep;
-        uint256 remainderOfStepLocal = remainderOffsetJettons;
-        uint256 jettonsPerLevel = sizeOffsetStep;
+        uint256 remainderOfStepLocal = remainderOffsetTokens;
+        uint256 tokensPerLevel = sizeOffsetStep;
         uint256 currentPriceLocal = offsetPrice;
 
-        while (remainingAddSupport > 0 && remainingAddJettons > 0) {
-            uint256 tokensAvailableInStep = jettonsPerLevel - remainderOfStepLocal;
+        while (remainingAddSupport > 0 && remainingAddTokens > 0) {
+            uint256 tokensAvailableInStep = tokensPerLevel - remainderOfStepLocal;
             uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
             uint256 tonInStep = (uint256(tokensAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
             uint256 tonRealInStep =
                 (tonInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal)) / Constants.PERCENTAGE_DIVISOR;
 
-            if (remainingAddSupport >= int256(tonRealInStep) && remainingAddJettons >= int256(tokensAvailableInStep)) {
+            if (remainingAddSupport >= int256(tonRealInStep) && remainingAddTokens >= int256(tokensAvailableInStep)) {
                 remainingAddSupport -= int256(tonRealInStep);
-                remainingOffsetJettonsLocal -= tokensAvailableInStep;
-                remainingAddJettons -= int256(tokensAvailableInStep);
+                remainingOffsetTokensLocal -= tokensAvailableInStep;
+                remainingAddTokens -= int256(tokensAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
-                        jettonsPerLevel = (jettonsPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend);
                     } else {
-                        jettonsPerLevel = (jettonsPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
@@ -950,8 +949,8 @@ contract ProofOfCapital is
                     remainderOfStepLocal = 0;
                 } else {
                     localCurrentStep = currentStepEarned;
-                    remainderOfStepLocal = jettonsPerLevel;
-                    remainingAddJettons = 0;
+                    remainderOfStepLocal = tokensPerLevel;
+                    remainingAddTokens = 0;
                 }
             } else {
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
@@ -961,8 +960,8 @@ contract ProofOfCapital is
                 uint256 tokensToBuyInThisStep = 0;
 
                 if (remainingAddSupport >= int256(tonRealInStep)) {
-                    supportToPayForStep = (uint256(remainingAddJettons) * adjustedPrice) / Constants.PRICE_PRECISION;
-                    tokensToBuyInThisStep = uint256(remainingAddJettons);
+                    supportToPayForStep = (uint256(remainingAddTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    tokensToBuyInThisStep = uint256(remainingAddTokens);
                 } else {
                     supportToPayForStep = uint256(remainingAddSupport);
                     tokensToBuyInThisStep = (uint256(remainingAddSupport) * Constants.PRICE_PRECISION) / adjustedPrice;
@@ -970,36 +969,36 @@ contract ProofOfCapital is
 
                 remainderOfStepLocal += tokensToBuyInThisStep;
                 remainingAddSupport -= int256(supportToPayForStep);
-                remainingOffsetJettonsLocal -= tokensToBuyInThisStep;
-                remainingAddJettons = 0;
+                remainingOffsetTokensLocal -= tokensToBuyInThisStep;
+                remainingAddTokens = 0;
             }
         }
 
         offsetStep = localCurrentStep;
-        remainderOffsetJettons = remainderOfStepLocal;
+        remainderOffsetTokens = remainderOfStepLocal;
         offsetPrice = currentPriceLocal;
-        sizeOffsetStep = jettonsPerLevel;
-        offsetJettons = remainingOffsetJettonsLocal;
+        sizeOffsetStep = tokensPerLevel;
+        offsetTokens = remainingOffsetTokensLocal;
 
         return (amountSupport - uint256(remainingAddSupport));
     }
 
-    function _calculateJettonsToGiveForSupportAmount(uint256 supportAmount) internal returns (uint256) {
-        uint256 jettonsToGive = 0;
+    function _calculateTokensToGiveForSupportAmount(uint256 supportAmount) internal returns (uint256) {
+        uint256 tokensToGive = 0;
         int256 remainingSupportAmount = int256(supportAmount);
         uint256 localCurrentStep = currentStep;
         int256 remainderOfStepLocal = int256(remainderOfStep);
-        uint256 jettonsPerLevel = quantityJettonsPerLevel;
+        uint256 tokensPerLevel = quantityTokensPerLevel;
         uint256 currentPriceLocal = currentPrice;
         uint256 totalProfit = 0;
-        uint256 remainderOfJettons = contractJettonBalance - totalJettonsSold;
+        uint256 remainderOfTokens = contractTokenBalance - totalTokensSold;
 
-        while (remainingSupportAmount > 0 && remainderOfJettons >= jettonsToGive) {
+        while (remainingSupportAmount > 0 && remainderOfTokens >= tokensToGive) {
             int256 tokensAvailableInStep = remainderOfStepLocal;
             int256 tonRequiredForStep = (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
             if (remainingSupportAmount >= tonRequiredForStep) {
-                jettonsToGive += uint256(tokensAvailableInStep);
+                tokensToGive += uint256(tokensAvailableInStep);
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
 
                 uint256 profitInStep = (uint256(tonRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
@@ -1008,13 +1007,13 @@ contract ProofOfCapital is
                 remainingSupportAmount -= tonRequiredForStep;
                 localCurrentStep += 1;
 
-                jettonsPerLevel = _calculateJettonsPerLevel(jettonsPerLevel, localCurrentStep);
-                remainderOfStepLocal = int256(jettonsPerLevel);
+                tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
+                remainderOfStepLocal = int256(tokensPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
                 uint256 tokensToBuyInThisStep = (uint256(remainingSupportAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
-                jettonsToGive += tokensToBuyInThisStep;
+                tokensToGive += tokensToBuyInThisStep;
                 uint256 tonSpentInThisStep = uint256(remainingSupportAmount);
 
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
@@ -1026,12 +1025,12 @@ contract ProofOfCapital is
             }
         }
 
-        if (remainderOfJettons < jettonsToGive) {
-            jettonsToGive = remainderOfJettons;
+        if (remainderOfTokens < tokensToGive) {
+            tokensToGive = remainderOfTokens;
         }
 
         currentStep = localCurrentStep;
-        quantityJettonsPerLevel = jettonsPerLevel;
+        quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
         actualProfit = totalProfit;
 
@@ -1041,35 +1040,35 @@ contract ProofOfCapital is
             remainderOfStep = uint256(remainderOfStepLocal);
         }
 
-        return jettonsToGive;
+        return tokensToGive;
     }
 
     function _calculateSupportToPayForTokenAmount(uint256 tokenAmount) internal returns (uint256) {
         uint256 supportAmountToPay = 0;
-        int256 remainingJettonAmount = int256(tokenAmount);
+        int256 remainingTokenAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStep;
         int256 remainderOfStepLocal = int256(remainderOfStep);
-        uint256 jettonsPerLevel = quantityJettonsPerLevel;
+        uint256 tokensPerLevel = quantityTokensPerLevel;
         uint256 currentPriceLocal = currentPrice;
 
-        while (remainingJettonAmount > 0) {
-            int256 tokensAvailableInStep = int256(jettonsPerLevel) - remainderOfStepLocal;
+        while (remainingTokenAmount > 0) {
+            int256 tokensAvailableInStep = int256(tokensPerLevel) - remainderOfStepLocal;
 
-            if (remainingJettonAmount >= int256(tokensAvailableInStep)) {
+            if (remainingTokenAmount >= int256(tokensAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
                 uint256 supportToPayForStep = (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
-                remainingJettonAmount -= int256(tokensAvailableInStep);
+                remainingTokenAmount -= int256(tokensAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
-                        jettonsPerLevel = (jettonsPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend);
                     } else {
-                        jettonsPerLevel = (jettonsPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
@@ -1081,23 +1080,23 @@ contract ProofOfCapital is
                     remainderOfStepLocal = 0;
                 } else {
                     localCurrentStep = currentStepEarned;
-                    remainderOfStepLocal = int256(jettonsPerLevel);
-                    remainingJettonAmount = 0;
+                    remainderOfStepLocal = int256(tokensPerLevel);
+                    remainingTokenAmount = 0;
                 }
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (uint256(remainingJettonAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep = (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
-                remainderOfStepLocal += int256(remainingJettonAmount);
-                remainingJettonAmount = 0;
+                remainderOfStepLocal += int256(remainingTokenAmount);
+                remainingTokenAmount = 0;
             }
         }
 
         currentStep = localCurrentStep;
-        quantityJettonsPerLevel = jettonsPerLevel;
+        quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
 
         if (remainderOfStepLocal < 0) {
@@ -1111,16 +1110,16 @@ contract ProofOfCapital is
 
     function _calculateSupportForTokenAmountEarned(uint256 tokenAmount) internal returns (uint256) {
         uint256 supportAmountToPay = 0;
-        int256 remainingJettonAmount = int256(tokenAmount);
+        int256 remainingTokenAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStepEarned;
         int256 remainderOfStepLocal = int256(remainderOfStepEarned);
-        uint256 jettonsPerLevel = quantityJettonsPerLevelEarned;
+        uint256 tokensPerLevel = quantityTokensPerLevelEarned;
         uint256 currentPriceLocal = currentPriceEarned;
 
-        while (remainingJettonAmount > 0 && localCurrentStep <= currentStep) {
+        while (remainingTokenAmount > 0 && localCurrentStep <= currentStep) {
             int256 tokensAvailableInStep = remainderOfStepLocal;
 
-            if (remainingJettonAmount >= int256(tokensAvailableInStep)) {
+            if (remainingTokenAmount >= int256(tokensAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
@@ -1128,25 +1127,25 @@ contract ProofOfCapital is
                 supportAmountToPay += supportToPayForStep;
 
                 localCurrentStep += 1;
-                jettonsPerLevel = _calculateJettonsPerLevel(jettonsPerLevel, localCurrentStep);
-                remainderOfStepLocal = int256(jettonsPerLevel);
-                remainingJettonAmount -= int256(tokensAvailableInStep);
+                tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
+                remainderOfStepLocal = int256(tokensPerLevel);
+                remainingTokenAmount -= int256(tokensAvailableInStep);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (uint256(remainingJettonAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep = (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
-                remainderOfStepLocal -= remainingJettonAmount;
-                remainingJettonAmount = 0;
+                remainderOfStepLocal -= remainingTokenAmount;
+                remainingTokenAmount = 0;
             }
         }
 
         currentStepEarned = localCurrentStep;
-        quantityJettonsPerLevelEarned = jettonsPerLevel;
+        quantityTokensPerLevelEarned = tokensPerLevel;
         currentPriceEarned = currentPriceLocal;
 
         if (remainderOfStepLocal < 0) {
@@ -1173,12 +1172,12 @@ contract ProofOfCapital is
     function _transferSupportTokens(address to, uint256 amount) internal {
         if (amount == 0) return;
 
-        if (!jettonSupport) {
+        if (!tokenSupport) {
             // Transfer ETH (unwrap WETH first)
             _safeTransferETH(to, amount);
         } else {
             // Transfer support tokens
-            IERC20(jettonSupportAddress).safeTransfer(to, amount);
+            IERC20(tokenSupportAddress).safeTransfer(to, amount);
         }
     }
 

@@ -27,7 +27,7 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
         token = new MockERC20("TestToken", "TT");
         mockWETH = new MockWETH(); // Use MockWETH instead of MockERC20
         
-        // Create params for ETH-based contract (jettonSupport = false)
+        // Create params for ETH-based contract (tokenSupport = false)
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -36,22 +36,22 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
             wethAddress: address(mockWETH),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 0, // No offset to simplify testing
+            offsetTokens: 0, // No offset to simplify testing
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(0x999), // Different from wethAddress to make jettonSupport = false
+            tokenSupportAddress: address(0x999), // Different from wethAddress to make tokenSupport = false
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0)
         });
         
         ethContract = deployWithParams(params);
         
-        // Setup tokens for the return wallet to create contractJettonBalance
+        // Setup tokens for the return wallet to create contractTokenBalance
         token.transfer(returnWallet, 100000e18);
         
         // Give users ETH for testing
@@ -68,7 +68,7 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
         vm.prank(returnWallet);
         token.approve(address(ethContract), type(uint256).max);
         
-        // Return wallet sells tokens to create contractJettonBalance > totalJettonsSold
+        // Return wallet sells tokens to create contractTokenBalance > totalTokensSold
         vm.prank(returnWallet);
         ethContract.sellTokens(50000e18);
     }
@@ -78,14 +78,14 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
         uint256 ethAmount = 1 ether;
         uint256 initialUserBalance = user.balance;
         uint256 initialTokenBalance = token.balanceOf(user);
-        uint256 initialTotalSold = ethContract.totalJettonsSold();
-        uint256 initialContractJettonBalance = ethContract.contractJettonBalance();
+        uint256 initialTotalSold = ethContract.totalTokensSold();
+        uint256 initialContractTokenBalance = ethContract.contractTokenBalance();
         
-        // Verify contract is ETH-based (jettonSupport = false)
-        assertFalse(ethContract.jettonSupport(), "Contract should be ETH-based");
+        // Verify contract is ETH-based (tokenSupport = false)
+        assertFalse(ethContract.tokenSupport(), "Contract should be ETH-based");
         
-        // Verify contract has enough tokens (contractJettonBalance > totalJettonsSold)
-        assertTrue(initialContractJettonBalance > initialTotalSold, "Contract should have tokens available");
+        // Verify contract has enough tokens (contractTokenBalance > totalTokensSold)
+        assertTrue(initialContractTokenBalance > initialTotalSold, "Contract should have tokens available");
         
         // User buys tokens with ETH
         vm.prank(user);
@@ -97,8 +97,8 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
         // Verify tokens were received
         assertTrue(token.balanceOf(user) > initialTokenBalance, "User should receive tokens");
         
-        // Verify totalJettonsSold increased
-        assertTrue(ethContract.totalJettonsSold() > initialTotalSold, "Total sold should increase");
+        // Verify totalTokensSold increased
+        assertTrue(ethContract.totalTokensSold() > initialTotalSold, "Total sold should increase");
         
         // Verify contract support balance increased
         assertTrue(ethContract.contractSupportBalance() > 0, "Contract support balance should increase");

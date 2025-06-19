@@ -60,9 +60,9 @@ interface IProofOfCapital {
     function sellTokens(uint256 amount) external;
 
     // Deferred withdrawals
-    function jettonDeferredWithdrawal(address recipientAddress, uint256 amount) external;
-    function stopJettonDeferredWithdrawal() external;
-    function confirmJettonDeferredWithdrawal() external;
+    function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external;
+    function stopTokenDeferredWithdrawal() external;
+    function confirmTokenDeferredWithdrawal() external;
     function supportDeferredWithdrawal(address recipientAddress) external;
     function stopSupportDeferredWithdrawal() external;
     function confirmSupportDeferredWithdrawal() external;
@@ -75,15 +75,15 @@ interface IProofOfCapital {
     // View functions
     function remainingSeconds() external view returns (uint256);
     function tradingOpportunity() external view returns (bool);
-    function jettonAvailable() external view returns (uint256);
+    function tokenAvailable() external view returns (uint256);
 
     // State variables getters
     function isActive() external view returns (bool);
     function lockEndTime() external view returns (uint256);
     function currentPrice() external view returns (uint256);
-    function totalJettonsSold() external view returns (uint256);
+    function totalTokensSold() external view returns (uint256);
     function contractSupportBalance() external view returns (uint256);
-    function jettonSupport() external view returns (bool);
+    function tokenSupport() external view returns (bool);
     function profitInTime() external view returns (bool);
     function canWithdrawal() external view returns (bool);
 }

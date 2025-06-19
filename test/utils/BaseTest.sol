@@ -48,15 +48,15 @@ contract BaseTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18, // Add offset to enable trading
+            offsetTokens: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0)
         });
@@ -83,15 +83,15 @@ contract BaseTest is Test {
             wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
-            firstLevelJettonQuantity: 1000e18,
+            firstLevelTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetJettons: 10000e18,
+            offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            jettonSupportAddress: address(weth),
+            tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0)
         });
@@ -118,7 +118,7 @@ contract BaseTest is Test {
         
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), amount * 2);
-        proofOfCapital.sellTokens(amount); // This increases contractJettonBalance
+        proofOfCapital.sellTokens(amount); // This increases contractTokenBalance
         vm.stopPrank();
     }
 } 

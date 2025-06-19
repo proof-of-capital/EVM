@@ -68,7 +68,7 @@ contract BaseTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        proofOfCapital = ProofOfCapital(address(proxy));
+        proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         vm.stopPrank();
     }
@@ -107,7 +107,7 @@ contract BaseTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        return ProofOfCapital(address(proxy));
+        return ProofOfCapital(payable(address(proxy)));
     }
     
     // Helper function to create support balance in contract

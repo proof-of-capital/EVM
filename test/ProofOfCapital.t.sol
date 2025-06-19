@@ -90,7 +90,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        proofOfCapital = ProofOfCapital(address(proxy));
+        proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         vm.stopPrank();
     }
@@ -3269,7 +3269,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital ethContract = ProofOfCapital(address(proxy));
+        ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
         // Verify jettonSupport is false
         assertFalse(ethContract.jettonSupport());
@@ -3322,7 +3322,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital ethContract = ProofOfCapital(address(proxy));
+        ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
         // Give tokens to contract
         token.transfer(address(ethContract), 100000e18);
@@ -3371,7 +3371,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital ethContract = ProofOfCapital(address(proxy));
+        ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
         vm.stopPrank();
         
@@ -3533,7 +3533,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital newContract = ProofOfCapital(address(proxy));
+        ProofOfCapital newContract = ProofOfCapital(payable(address(proxy)));
         
         // Give tokens to old contract and set up contract
         token.transfer(address(newContract), 100000e18);
@@ -3597,7 +3597,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital ethContract = ProofOfCapital(address(proxy));
+        ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
         // Give tokens to contract and ETH to old contract
         token.transfer(address(ethContract), 100000e18);
@@ -3659,7 +3659,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital newContract = ProofOfCapital(address(proxy));
+        ProofOfCapital newContract = ProofOfCapital(payable(address(proxy)));
         
         token.transfer(address(newContract), 100000e18);
         
@@ -3712,7 +3712,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital ethContract = ProofOfCapital(address(proxy));
+        ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
         token.transfer(address(ethContract), 100000e18);
         vm.deal(oldContract, 10 ether);
@@ -3764,7 +3764,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital newContract = ProofOfCapital(address(proxy));
+        ProofOfCapital newContract = ProofOfCapital(payable(address(proxy)));
         
         token.transfer(address(newContract), 100000e18);
         weth.transfer(oldContract, 5000e18);
@@ -3842,7 +3842,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital ethContract = ProofOfCapital(address(proxy));
+        ProofOfCapital ethContract = ProofOfCapital(payable(address(proxy)));
         
         token.transfer(address(ethContract), 100000e18);
         
@@ -3898,7 +3898,7 @@ contract ProofOfCapitalTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital newContract = ProofOfCapital(address(proxy));
+        ProofOfCapital newContract = ProofOfCapital(payable(address(proxy)));
         
         // Setup tokens
         token.transfer(address(newContract), 100000e18);
@@ -3925,6 +3925,151 @@ contract ProofOfCapitalTest is Test {
         assertEq(newContract.contractSupportBalance(), initialBalance + 1000e18 + 1500e18);
         assertEq(weth.balanceOf(oldContract1), 2000e18 - 1000e18);
         assertEq(weth.balanceOf(oldContract2), 3000e18 - 1500e18);
+    }
+
+    function testDepositWithExcessAmountReturnsChange() public {
+        // Test case where deposit amount is greater than deltaSupportBalance
+        // and excess amount is returned to owner via _transferSupportTokens
+        
+        // Setup: Create a scenario where offsetJettons > jettonsEarned
+        // This is already true in our default setup (offsetJettons = 10000e18, jettonsEarned = 0)
+        assertTrue(proofOfCapital.offsetJettons() > proofOfCapital.jettonsEarned(), "offsetJettons should be greater than jettonsEarned");
+        
+        // Create some tokens in the contract first by selling some tokens back
+        // This will create a base state with some jettons sold
+        vm.startPrank(owner);
+        token.transfer(returnWallet, 5000e18);
+        vm.stopPrank();
+        
+        vm.startPrank(returnWallet);
+        token.approve(address(proofOfCapital), 5000e18);
+        proofOfCapital.sellTokens(5000e18); // This creates contractJettonBalance
+        vm.stopPrank();
+        
+        // Now create a scenario where the deposit amount is larger than what can be used
+        // to cover the offset difference
+        vm.startPrank(owner);
+        
+        // Record initial balances
+        uint256 initialOwnerBalance = weth.balanceOf(owner);
+        uint256 initialContractSupportBalance = proofOfCapital.contractSupportBalance();
+        
+        // Make a large deposit - much larger than what's needed to cover offset
+        uint256 depositAmount = 50000e18; // Very large amount
+        weth.approve(address(proofOfCapital), depositAmount);
+        
+        // Deposit will trigger _handleOwnerDeposit
+        // Since offsetJettons > jettonsEarned, it will call _calculateChangeOffsetSupport
+        // If depositAmount > deltaSupportBalance, the excess should be returned
+        proofOfCapital.deposit(depositAmount);
+        
+        // Verify that some amount was returned to owner
+        // (owner balance should not decrease by the full deposit amount)
+        uint256 finalOwnerBalance = weth.balanceOf(owner);
+        uint256 finalContractSupportBalance = proofOfCapital.contractSupportBalance();
+        
+        // The owner should have lost less than the full deposit amount
+        // because some was returned as "change"
+        uint256 actualDeposited = initialOwnerBalance - finalOwnerBalance;
+        assertTrue(actualDeposited < depositAmount, "Excess amount should have been returned to owner");
+        
+        // The contract support balance should have increased
+        assertTrue(finalContractSupportBalance > initialContractSupportBalance, "Contract support balance should have increased");
+        
+        // The amount returned should be the difference
+        uint256 returnedAmount = depositAmount - actualDeposited;
+        assertTrue(returnedAmount > 0, "Some amount should have been returned");
+        
+        vm.stopPrank();
+    }
+
+    function testDepositExcessAmountReturnChangeDetailed() public {
+        // More detailed test to verify the exact mechanism of returning excess amount
+        // when value > deltaSupportBalance in _handleOwnerDeposit
+        
+        // First, let's create a state where offsetJettons > jettonsEarned
+        // and set up the contract to have some tokens available
+        vm.startPrank(owner);
+        token.transfer(returnWallet, 8000e18);
+        vm.stopPrank();
+        
+        vm.startPrank(returnWallet);
+        token.approve(address(proofOfCapital), 8000e18);
+        proofOfCapital.sellTokens(8000e18);
+        vm.stopPrank();
+        
+        // Record state before deposit
+        vm.startPrank(owner);
+        uint256 ownerBalanceBefore = weth.balanceOf(owner);
+        uint256 contractSupportBalanceBefore = proofOfCapital.contractSupportBalance();
+        uint256 offsetJettonsBefore = proofOfCapital.offsetJettons();
+        uint256 jettonsEarnedBefore = proofOfCapital.jettonsEarned();
+        
+        // Verify preconditions
+        assertTrue(offsetJettonsBefore > jettonsEarnedBefore, "offsetJettons must be > jettonsEarned");
+        
+        // Make a strategic deposit that should trigger the return mechanism
+        uint256 depositAmount = 25000e18; // Large amount likely to exceed deltaSupportBalance
+        weth.approve(address(proofOfCapital), depositAmount);
+        
+        // Execute deposit - this will call _handleOwnerDeposit internally
+        proofOfCapital.deposit(depositAmount);
+        
+        // Check results
+        uint256 ownerBalanceAfter = weth.balanceOf(owner);
+        uint256 contractSupportBalanceAfter = proofOfCapital.contractSupportBalance();
+        
+        // Calculate what actually happened
+        uint256 ownerActualLoss = ownerBalanceBefore - ownerBalanceAfter;
+        uint256 contractIncrease = contractSupportBalanceAfter - contractSupportBalanceBefore;
+        
+        // Key assertion: owner should have lost less than the full deposit amount
+        // This proves that some amount was returned (excess over deltaSupportBalance)
+        assertTrue(ownerActualLoss < depositAmount, "Owner should have lost less than deposit amount due to returned change");
+        
+        // The contract should have gained some support balance
+        assertTrue(contractIncrease > 0, "Contract support balance should have increased");
+        
+        // The returned amount should be positive
+        uint256 returnedAmount = depositAmount - ownerActualLoss;
+        assertTrue(returnedAmount > 0, "Some amount should have been returned to owner");
+        
+        // Additional verification: the contract increase should be less than or equal to owner's actual loss
+        assertTrue(contractIncrease <= ownerActualLoss, "Contract increase should not exceed owner's loss");
+        
+        vm.stopPrank();
+    }
+
+    function testDepositExcessAmountTransferEvent() public {
+        // Test to verify that when value > deltaSupportBalance, 
+        // the excess amount is transferred back to owner via _transferSupportTokens
+        // We'll check for the Transfer event from WETH token
+        
+        // Setup scenario where offsetJettons > jettonsEarned
+        vm.startPrank(owner);
+        token.transfer(returnWallet, 6000e18);
+        vm.stopPrank();
+        
+        vm.startPrank(returnWallet);
+        token.approve(address(proofOfCapital), 6000e18);
+        proofOfCapital.sellTokens(6000e18);
+        vm.stopPrank();
+        
+        vm.startPrank(owner);
+        
+        // Prepare for deposit
+        uint256 depositAmount = 30000e18; // Large amount to trigger excess return
+        weth.approve(address(proofOfCapital), depositAmount);
+        
+        // We expect a Transfer event from the contract back to owner
+        // This happens when _transferSupportTokens is called with the excess amount
+        vm.expectEmit(true, true, false, false, address(weth));
+        emit IERC20.Transfer(address(proofOfCapital), owner, 0); // Amount will be calculated during execution
+        
+        // Execute deposit - should trigger the if condition and transfer excess back
+        proofOfCapital.deposit(depositAmount);
+        
+        vm.stopPrank();
     }
 } 
 
@@ -3981,7 +4126,7 @@ contract ProofOfCapitalProfitTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        proofOfCapital = ProofOfCapital(address(proxy));
+        proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Setup tokens for users and add market maker permissions
         token.transfer(address(proofOfCapital), 1000000e18);
@@ -4129,7 +4274,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify price was set
         assertEq(proofOfCapital.initialPricePerToken(), 1);
@@ -4174,7 +4319,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify multiplier was set
         assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), Constants.PERCENTAGE_DIVISOR - 1);
@@ -4205,7 +4350,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify multiplier was set
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
@@ -4236,7 +4381,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify multiplier was set
         assertEq(proofOfCapital.priceIncrementMultiplier(), 1);
@@ -4294,7 +4439,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify percentage was set
         assertEq(proofOfCapital.royaltyProfitPercent(), 2);
@@ -4311,7 +4456,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify percentage was set
         assertEq(proofOfCapital.royaltyProfitPercent(), Constants.MAX_ROYALTY_PERCENT);
@@ -4336,7 +4481,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert with all boundary values
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify all parameters were set correctly
         assertEq(proofOfCapital.initialPricePerToken(), 1);
@@ -4383,7 +4528,7 @@ contract ProofOfCapitalInitializationTest is Test {
         
         // Should not revert with maximum values
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify values were set
         assertEq(proofOfCapital.initialPricePerToken(), 1000e18);
@@ -4427,7 +4572,7 @@ contract ProofOfCapitalInitializationTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital testContract = ProofOfCapital(address(proxy));
+        ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
         
         // Should be set to minimum
         assertEq(testContract.controlPeriod(), Constants.MIN_CONTROL_PERIOD);
@@ -4468,7 +4613,7 @@ contract ProofOfCapitalInitializationTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital testContract = ProofOfCapital(address(proxy));
+        ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
         
         // Should be set to maximum
         assertEq(testContract.controlPeriod(), Constants.MAX_CONTROL_PERIOD);
@@ -4512,7 +4657,7 @@ contract ProofOfCapitalInitializationTest is Test {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital testContract = ProofOfCapital(address(proxy));
+        ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
         
         // Should be set to the provided value
         assertEq(testContract.controlPeriod(), validPeriod);
@@ -4553,7 +4698,7 @@ contract ProofOfCapitalInitializationTest is Test {
             );
             
             ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-            ProofOfCapital testContract = ProofOfCapital(address(proxy));
+            ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
             
             assertEq(testContract.controlPeriod(), Constants.MIN_CONTROL_PERIOD);
         }
@@ -4588,7 +4733,7 @@ contract ProofOfCapitalInitializationTest is Test {
             );
             
             ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-            ProofOfCapital testContract = ProofOfCapital(address(proxy));
+            ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
             
             assertEq(testContract.controlPeriod(), Constants.MAX_CONTROL_PERIOD);
         }

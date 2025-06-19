@@ -212,6 +212,8 @@ contract ProofOfCapital is
         _disableInitializers();
     }
 
+    receive() external payable {}
+
     function initialize(InitParams calldata params) public initializer {
         require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
         require(params.levelDecreaseMultiplierafterTrend < Constants.PERCENTAGE_DIVISOR, MultiplierTooHigh());
@@ -683,10 +685,13 @@ contract ProofOfCapital is
     }
 
     function tradingOpportunity() external view override returns (bool) {
-        return lockEndTime - block.timestamp < Constants.THIRTY_DAYS;
+        return lockEndTime < Constants.THIRTY_DAYS + block.timestamp;
     }
 
     function jettonAvailable() external view override returns (uint256) {
+        if (totalJettonsSold < jettonsEarned) {
+            return 0;
+        }
         return totalJettonsSold - jettonsEarned;
     }
 
@@ -724,8 +729,10 @@ contract ProofOfCapital is
         if (offsetJettons > jettonsEarned) {
             uint256 deltaSupportBalance = _calculateChangeOffsetSupport(value);
             contractSupportBalance += deltaSupportBalance;
-            uint256 change = value - deltaSupportBalance;
-            if (change > 0) {
+            
+            // Check to prevent arithmetic underflow
+            if (value > deltaSupportBalance) {
+                uint256 change = value - deltaSupportBalance;
                 _transferSupportTokens(_msgSender(), change);
             }
         }
@@ -753,7 +760,11 @@ contract ProofOfCapital is
             royaltySupportBalance += royaltyProfit;
         }
 
-        uint256 netValue = supportAmount - actualProfit;
+        // Check to prevent arithmetic underflow
+        uint256 netValue = 0;
+        if (supportAmount > actualProfit) {
+            netValue = supportAmount - actualProfit;
+        }
         contractSupportBalance += netValue;
         totalJettonsSold += totalTokens;
 
@@ -764,7 +775,13 @@ contract ProofOfCapital is
 
     function _handleReturnWalletSale(uint256 amount) internal {
         uint256 supportAmountToPay = 0;
-        uint256 tokensAvailableForReturnBuyback = totalJettonsSold - jettonsEarned;
+        
+        // Check to prevent arithmetic underflow
+        uint256 tokensAvailableForReturnBuyback = 0;
+        if (totalJettonsSold > jettonsEarned) {
+            tokensAvailableForReturnBuyback = totalJettonsSold - jettonsEarned;
+        }
+        
         uint256 effectiveAmount = amount < tokensAvailableForReturnBuyback ? amount : tokensAvailableForReturnBuyback;
 
         if (offsetJettons > jettonsEarned) {
@@ -796,14 +813,17 @@ contract ProofOfCapital is
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
 
-        uint256 tokensAvailableForBuyback =
-            totalJettonsSold - (offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned);
-        require(tokensAvailableForBuyback > 0, NoTokensAvailableForBuyback());
+        uint256 maxEarnedOrOffset = offsetJettons > jettonsEarned ? offsetJettons : jettonsEarned;
+        
+        // Check for tokens available for buyback (prevents underflow and ensures > 0)
+        require(totalJettonsSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
+        
+        uint256 tokensAvailableForBuyback = totalJettonsSold - maxEarnedOrOffset;
         require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
+        require(totalJettonsSold >= amount, InsufficientSoldTokens());
 
         uint256 supportAmountToPay = _calculateSupportToPayForTokenAmount(amount);
         require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
-        require(totalJettonsSold >= amount, InsufficientSoldTokens());
 
         contractSupportBalance -= supportAmountToPay;
         totalJettonsSold -= amount;
@@ -819,9 +839,10 @@ contract ProofOfCapital is
 
     function _checkControlDay() internal view returns (bool) {
         return (
-            block.timestamp - controlDay > Constants.THIRTY_DAYS
-                && (block.timestamp - controlDay - Constants.THIRTY_DAYS) < controlPeriod
+            block.timestamp > Constants.THIRTY_DAYS + controlDay
+                && block.timestamp < controlPeriod + controlDay + Constants.THIRTY_DAYS
         );
+       
     }
 
     function _transferReserveOwner(address newOwner) internal {

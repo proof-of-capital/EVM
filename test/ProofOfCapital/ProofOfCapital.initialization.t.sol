@@ -54,7 +54,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify price was set
         assertEq(proofOfCapital.initialPricePerToken(), 1);
@@ -99,7 +99,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify multiplier was set
         assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), Constants.PERCENTAGE_DIVISOR - 1);
@@ -130,7 +130,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify multiplier was set
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
@@ -161,7 +161,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify multiplier was set
         assertEq(proofOfCapital.priceIncrementMultiplier(), 1);
@@ -219,7 +219,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify percentage was set
         assertEq(proofOfCapital.royaltyProfitPercent(), 2);
@@ -236,7 +236,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify percentage was set
         assertEq(proofOfCapital.royaltyProfitPercent(), Constants.MAX_ROYALTY_PERCENT);
@@ -261,7 +261,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert with all boundary values
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify all parameters were set correctly
         assertEq(proofOfCapital.initialPricePerToken(), 1);
@@ -308,7 +308,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         
         // Should not revert with maximum values
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital proofOfCapital = ProofOfCapital(address(proxy));
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
         
         // Verify values were set
         assertEq(proofOfCapital.initialPricePerToken(), 1000e18);
@@ -352,7 +352,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital testContract = ProofOfCapital(address(proxy));
+        ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
         
         // Should be set to minimum
         assertEq(testContract.controlPeriod(), Constants.MIN_CONTROL_PERIOD);
@@ -393,7 +393,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital testContract = ProofOfCapital(address(proxy));
+        ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
         
         // Should be set to maximum
         assertEq(testContract.controlPeriod(), Constants.MAX_CONTROL_PERIOD);
@@ -437,7 +437,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         );
         
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        ProofOfCapital testContract = ProofOfCapital(address(proxy));
+        ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
         
         // Should be set to the provided value
         assertEq(testContract.controlPeriod(), validPeriod);
@@ -478,7 +478,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             );
             
             ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-            ProofOfCapital testContract = ProofOfCapital(address(proxy));
+            ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
             
             assertEq(testContract.controlPeriod(), Constants.MIN_CONTROL_PERIOD);
         }
@@ -513,7 +513,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             );
             
             ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-            ProofOfCapital testContract = ProofOfCapital(address(proxy));
+            ProofOfCapital testContract = ProofOfCapital(payable(address(proxy)));
             
             assertEq(testContract.controlPeriod(), Constants.MAX_CONTROL_PERIOD);
         }

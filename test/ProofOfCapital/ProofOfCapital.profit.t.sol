@@ -9,6 +9,7 @@
 // https://github.com/proof-of-capital/EVMpragma solidity ^0.8.19;
 
 import "../utils/BaseTest.sol";
+import "../mocks/MockWETH.sol";
 
 contract ProofOfCapitalProfitTest is BaseTest {
     address public user = address(0x5);
@@ -19,9 +20,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
         vm.startPrank(owner);
         
         // Setup tokens for users and add market maker permissions
-        token.transfer(address(proofOfCapital), 1000000e18);
-        weth.transfer(user, 10000e18);
-        weth.transfer(marketMaker, 10000e18);
+        token.transfer(address(proofOfCapital), 500000e18);
+        token.transfer(returnWallet, 50000e18);
+        weth.transfer(user, 100000e18);
+        weth.transfer(marketMaker, 100000e18);
         
         // Enable market maker for user to allow trading
         proofOfCapital.setMarketMaker(user, true);
@@ -34,6 +36,9 @@ contract ProofOfCapitalProfitTest is BaseTest {
         
         vm.prank(marketMaker);
         weth.approve(address(proofOfCapital), type(uint256).max);
+        
+        vm.prank(returnWallet);
+        token.approve(address(proofOfCapital), type(uint256).max);
     }
     
     function testGetProfitOnRequestWhenProfitModeNotActive() public {
@@ -88,6 +93,194 @@ contract ProofOfCapitalProfitTest is BaseTest {
         vm.prank(royalty);
         vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
+    }
+    
+    function testGetProfitOnRequestOwnerSuccess() public {
+        // Ensure profit accumulation mode is enabled (should be default)
+        assertTrue(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
+        
+        // Create support balance first to enable token purchases
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18); // Уменьшаем количество
+        
+        // User buys tokens to generate profit that gets accumulated
+        uint256 purchaseAmount = 2000e18; // Уменьшаем количество
+        vm.prank(user);
+        proofOfCapital.buyTokens(purchaseAmount);
+        
+        // Verify that owner has accumulated some profit
+        uint256 ownerProfitBefore = proofOfCapital.ownerSupportBalance();
+        assertTrue(ownerProfitBefore > 0, "Owner should have accumulated profit");
+        
+        // Record owner's WETH balance before requesting profit
+        uint256 ownerWETHBefore = weth.balanceOf(owner);
+        
+        // Owner requests accumulated profit
+        vm.prank(owner);
+        proofOfCapital.getProfitOnRequest();
+        
+        // Verify profit was transferred and balance reset
+        assertEq(proofOfCapital.ownerSupportBalance(), 0, "Owner profit balance should be reset to 0");
+        assertEq(weth.balanceOf(owner), ownerWETHBefore + ownerProfitBefore, "Owner should receive profit in WETH");
+    }
+    
+    function testGetProfitOnRequestRoyaltySuccess() public {
+        // Ensure profit accumulation mode is enabled (should be default)
+        assertTrue(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
+        
+        // Create support balance first to enable token purchases
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18); // Уменьшаем количество
+        
+        // User buys tokens to generate profit that gets accumulated
+        uint256 purchaseAmount = 2000e18; // Уменьшаем количество
+        vm.prank(user);
+        proofOfCapital.buyTokens(purchaseAmount);
+        
+        // Verify that royalty has accumulated some profit
+        uint256 royaltyProfitBefore = proofOfCapital.royaltySupportBalance();
+        assertTrue(royaltyProfitBefore > 0, "Royalty should have accumulated profit");
+        
+        // Record royalty's WETH balance before requesting profit
+        uint256 royaltyWETHBefore = weth.balanceOf(royalty);
+        
+        // Royalty wallet requests accumulated profit
+        vm.prank(royalty);
+        proofOfCapital.getProfitOnRequest();
+        
+        // Verify profit was transferred and balance reset
+        assertEq(proofOfCapital.royaltySupportBalance(), 0, "Royalty profit balance should be reset to 0");
+        assertEq(weth.balanceOf(royalty), royaltyWETHBefore + royaltyProfitBefore, "Royalty should receive profit in WETH");
+    }
+    
+    function testGetProfitOnRequestBothOwnerAndRoyalty() public {
+        // Ensure profit accumulation mode is enabled
+        assertTrue(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
+        
+        // Create support balance first
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18); // Уменьшаем количество
+        
+        // Multiple purchases to accumulate significant profit
+        uint256 purchaseAmount = 1500e18; // Уменьшаем количество
+        
+        vm.prank(user);
+        proofOfCapital.buyTokens(purchaseAmount);
+        
+        vm.prank(marketMaker);
+        proofOfCapital.buyTokens(purchaseAmount);
+        
+        // Record balances before profit withdrawal
+        uint256 ownerProfitBefore = proofOfCapital.ownerSupportBalance();
+        uint256 royaltyProfitBefore = proofOfCapital.royaltySupportBalance();
+        uint256 ownerWETHBefore = weth.balanceOf(owner);
+        uint256 royaltyWETHBefore = weth.balanceOf(royalty);
+        
+        // Verify both have profit
+        assertTrue(ownerProfitBefore > 0, "Owner should have profit");
+        assertTrue(royaltyProfitBefore > 0, "Royalty should have profit");
+        
+        // Owner requests profit first
+        vm.prank(owner);
+        proofOfCapital.getProfitOnRequest();
+        
+        // Verify owner's profit was transferred
+        assertEq(proofOfCapital.ownerSupportBalance(), 0, "Owner profit should be reset");
+        assertEq(weth.balanceOf(owner), ownerWETHBefore + ownerProfitBefore, "Owner should receive profit");
+        
+        // Royalty's profit should remain unchanged
+        assertEq(proofOfCapital.royaltySupportBalance(), royaltyProfitBefore, "Royalty profit should remain");
+        
+        // Royalty requests profit
+        vm.prank(royalty);
+        proofOfCapital.getProfitOnRequest();
+        
+        // Verify royalty's profit was transferred
+        assertEq(proofOfCapital.royaltySupportBalance(), 0, "Royalty profit should be reset");
+        assertEq(weth.balanceOf(royalty), royaltyWETHBefore + royaltyProfitBefore, "Royalty should receive profit");
+    }
+    
+    function testGetProfitOnRequestMultipleTimesOwner() public {
+        // Test that owner can request profit multiple times as it accumulates
+        
+        // Setup
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18); // Уменьшаем количество
+        
+        // First round of profit accumulation
+        vm.prank(user);
+        proofOfCapital.buyTokens(1000e18); // Уменьшаем количество
+        
+        uint256 firstProfitAmount = proofOfCapital.ownerSupportBalance();
+        assertTrue(firstProfitAmount > 0, "Should have first profit");
+        
+        // Owner requests first profit
+        vm.prank(owner);
+        proofOfCapital.getProfitOnRequest();
+        
+        assertEq(proofOfCapital.ownerSupportBalance(), 0, "Profit should be reset after first request");
+        
+        // Second round of profit accumulation
+        vm.prank(marketMaker);
+        proofOfCapital.buyTokens(1000e18); // Уменьшаем количество
+        
+        uint256 secondProfitAmount = proofOfCapital.ownerSupportBalance();
+        assertTrue(secondProfitAmount > 0, "Should have second profit");
+        
+        // Owner requests second profit
+        uint256 ownerWETHBefore = weth.balanceOf(owner);
+        vm.prank(owner);
+        proofOfCapital.getProfitOnRequest();
+        
+        assertEq(proofOfCapital.ownerSupportBalance(), 0, "Profit should be reset after second request");
+        assertEq(weth.balanceOf(owner), ownerWETHBefore + secondProfitAmount, "Should receive second profit");
+    }
+    
+    function testGetProfitOnRequestWithProfitPercentageChange() public {
+        // Test profit withdrawal after changing profit percentage distribution
+        
+        // Setup
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18); // Уменьшаем количество
+        
+        // Generate some profit with default 50/50 split
+        vm.prank(user);
+        proofOfCapital.buyTokens(1000e18); // Уменьшаем количество
+        
+        uint256 initialOwnerProfit = proofOfCapital.ownerSupportBalance();
+        uint256 initialRoyaltyProfit = proofOfCapital.royaltySupportBalance();
+        
+        // Verify roughly equal split (50/50)
+        assertTrue(initialOwnerProfit > 0, "Owner should have profit");
+        assertTrue(initialRoyaltyProfit > 0, "Royalty should have profit");
+        
+        // Owner increases royalty percentage to 60%
+        vm.prank(owner);
+        proofOfCapital.changeProfitPercentage(600);
+        
+        // Generate more profit with new 40/60 split
+        vm.prank(marketMaker);
+        proofOfCapital.buyTokens(1000e18); // Уменьшаем количество
+        
+        // Request all accumulated profit
+        uint256 totalOwnerProfit = proofOfCapital.ownerSupportBalance();
+        uint256 totalRoyaltyProfit = proofOfCapital.royaltySupportBalance();
+        
+        uint256 ownerWETHBefore = weth.balanceOf(owner);
+        uint256 royaltyWETHBefore = weth.balanceOf(royalty);
+        
+        // Both request their profits
+        vm.prank(owner);
+        proofOfCapital.getProfitOnRequest();
+        
+        vm.prank(royalty);
+        proofOfCapital.getProfitOnRequest();
+        
+        // Verify transfers
+        assertEq(weth.balanceOf(owner), ownerWETHBefore + totalOwnerProfit, "Owner should receive total profit");
+        assertEq(weth.balanceOf(royalty), royaltyWETHBefore + totalRoyaltyProfit, "Royalty should receive total profit");
+        assertEq(proofOfCapital.ownerSupportBalance(), 0, "Owner balance should be reset");
+        assertEq(proofOfCapital.royaltySupportBalance(), 0, "Royalty balance should be reset");
     }
     
     // Tests for changeProfitPercentage function
@@ -307,5 +500,182 @@ contract ProofOfCapitalProfitTest is BaseTest {
         vm.prank(newRoyaltyWallet);
         proofOfCapital.changeProfitPercentage(newPercentage);
         assertEq(proofOfCapital.royaltyProfitPercent(), newPercentage);
+    }
+    
+    // Test for TradingNotAllowedOnlyMarketMakers require in _handleTokenPurchaseCommon
+    function testBuyTokensTradingNotAllowedOnlyMarketMakers() public {
+        // Create a regular user (not market maker, not owner)
+        address regularUser = address(0x777);
+        
+        // Give WETH tokens to regular user
+        vm.prank(owner);
+        weth.transfer(regularUser, 10000e18);
+        
+        vm.prank(regularUser);
+        weth.approve(address(proofOfCapital), type(uint256).max);
+        
+        // Verify user is not a market maker
+        assertFalse(proofOfCapital.marketMakerAddresses(regularUser), "Regular user should not be market maker");
+        
+        // Create support balance first to enable token purchases
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18);
+        
+        // Test scenario: Outside of any trading access period (no control day, no deferred withdrawals)
+        // Verify we're not in trading access period
+        assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
+        
+        // Regular user (non-market maker) tries to buy tokens without trading access
+        vm.prank(regularUser);
+        vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
+        proofOfCapital.buyTokens(1000e18);
+    }
+    
+    function testBuyTokensWithETHTradingNotAllowedOnlyMarketMakers() public {
+        // Test the same scenario with buyTokensWithETH for ETH-based contracts
+        
+        // Deploy ETH-based contract (jettonSupport = false)
+        vm.startPrank(owner);
+        
+        // Deploy mock WETH
+        MockWETH mockWETH = new MockWETH();
+        
+        ProofOfCapital.InitParams memory ethParams = ProofOfCapital.InitParams({
+            launchToken: address(token),
+            marketMakerAddress: marketMaker,
+            returnWalletAddress: returnWallet,
+            royaltyWalletAddress: royalty,
+            wethAddress: address(mockWETH),
+            lockEndTime: block.timestamp + 365 days,
+            initialPricePerToken: 1e18,
+            firstLevelJettonQuantity: 1000e18,
+            priceIncrementMultiplier: 50,
+            levelIncreaseMultiplier: 100,
+            trendChangeStep: 5,
+            levelDecreaseMultiplierafterTrend: 50,
+            profitPercentage: 100,
+            offsetJettons: 10000e18,
+            controlPeriod: Constants.MIN_CONTROL_PERIOD,
+            jettonSupportAddress: address(0x999), // Different from wethAddress to make jettonSupport = false
+            royaltyProfitPercent: 500,
+            oldContractAddresses: new address[](0)
+        });
+        
+        ProofOfCapital ethContract = deployWithParams(ethParams);
+        
+        // Setup tokens and balances - reduce amounts
+        token.transfer(address(ethContract), 200000e18); // Reduced from 500000e18
+        token.transfer(returnWallet, 20000e18); // Reduced from 50000e18
+        
+        vm.stopPrank();
+        
+        // Approve tokens for return wallet
+        vm.prank(returnWallet);
+        token.approve(address(ethContract), type(uint256).max);
+        
+        // Create support balance - reduce amount
+        vm.prank(returnWallet);
+        ethContract.sellTokens(10000e18); // Reduced from 15000e18
+        
+        // Create regular user (not market maker)
+        address regularUser = address(0x888);
+        vm.deal(regularUser, 10 ether);
+        
+        // Verify user is not a market maker
+        assertFalse(ethContract.marketMakerAddresses(regularUser), "Regular user should not be market maker");
+        
+        // Regular user tries to buy tokens with ETH without trading access
+        vm.prank(regularUser);
+        vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
+        ethContract.buyTokensWithETH{value: 1 ether}();
+    }
+    
+    function testBuyTokensMarketMakerCanTradeWithoutTradingAccess() public {
+        // Test that market makers can trade even without general trading access
+        
+        // Create a market maker user
+        address marketMakerUser = address(0x999);
+        
+        // Give WETH tokens to market maker
+        vm.prank(owner);
+        weth.transfer(marketMakerUser, 10000e18);
+        
+        vm.prank(marketMakerUser);
+        weth.approve(address(proofOfCapital), type(uint256).max);
+        
+        // Set user as market maker
+        vm.prank(owner);
+        proofOfCapital.setMarketMaker(marketMakerUser, true);
+        
+        // Verify user is a market maker
+        assertTrue(proofOfCapital.marketMakerAddresses(marketMakerUser), "User should be market maker");
+        
+        // Create support balance first to enable token purchases
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18);
+        
+        // Verify we're not in trading access period
+        assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
+        
+        // Market maker should be able to buy tokens even without general trading access
+        uint256 initialTokenBalance = token.balanceOf(marketMakerUser);
+        
+        vm.prank(marketMakerUser);
+        proofOfCapital.buyTokens(1000e18); // Should not revert
+        
+        // Verify tokens were purchased
+        assertTrue(token.balanceOf(marketMakerUser) > initialTokenBalance, "Market maker should receive tokens");
+    }
+    
+    function testBuyTokensWithTradingAccess() public {
+        // Test that regular users can trade when they have trading access
+        
+        // Create a regular user (not market maker)
+        address regularUser = address(0x777);
+        
+        // Give WETH tokens to regular user
+        vm.prank(owner);
+        weth.transfer(regularUser, 10000e18);
+        
+        vm.prank(regularUser);
+        weth.approve(address(proofOfCapital), type(uint256).max);
+        
+        // Verify user is not a market maker
+        assertFalse(proofOfCapital.marketMakerAddresses(regularUser), "Regular user should not be market maker");
+        
+        // Create support balance first to enable token purchases
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(15000e18);
+        
+        // Activate trading access by scheduling deferred withdrawal
+        vm.prank(owner);
+        proofOfCapital.jettonDeferredWithdrawal(owner, 1000e18);
+        
+        // Verify we now have trading access
+        assertTrue(_checkTradingAccessHelper(), "Should have trading access");
+        
+        // Regular user should now be able to buy tokens
+        uint256 initialTokenBalance = token.balanceOf(regularUser);
+        
+        vm.prank(regularUser);
+        proofOfCapital.buyTokens(1000e18); // Should not revert
+        
+        // Verify tokens were purchased
+        assertTrue(token.balanceOf(regularUser) > initialTokenBalance, "Regular user should receive tokens");
+    }
+    
+    // Helper function to check trading access (mimics _checkTradingAccess logic)
+    function _checkTradingAccessHelper() internal view returns (bool) {
+        // Check control day
+        bool controlDayAccess = (
+            block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay()
+                && block.timestamp < proofOfCapital.controlPeriod() + proofOfCapital.controlDay() + Constants.THIRTY_DAYS
+        );
+        
+        // Check deferred withdrawals
+        bool deferredWithdrawalAccess = (proofOfCapital.mainJettonDeferredWithdrawalDate() > 0) || 
+                                      (proofOfCapital.supportJettonDeferredWithdrawalDate() > 0);
+        
+        return controlDayAccess || deferredWithdrawalAccess;
     }
 } 

@@ -7,7 +7,7 @@
 // (c) 2025 https://proofofcapital.org/
 
 // https://github.com/proof-of-capital/EVM
-pragma solidity ^0.8.19;
+pragma solidity 0.8.29;
 
 /**
  * @title IProofOfCapital
@@ -27,7 +27,7 @@ interface IProofOfCapital {
     event ReturnWalletChanged(address indexed newReturnWalletAddress);
     event ProfitPercentageChanged(uint256 newRoyaltyProfitPercentage);
     event UnwrapModeChanged(bool isNeedToUnwrap);
-    
+
     // Upgrade events
     event UpgradeProposed(address indexed implementation, uint256 proposalTime);
     event UpgradeConfirmed(address indexed implementation, uint256 confirmationTime);

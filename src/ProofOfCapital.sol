@@ -7,7 +7,7 @@
 // (c) 2025 https://proofofcapital.org/
 
 // https://github.com/proof-of-capital/EVM
-pragma solidity ^0.8.19;
+pragma solidity 0.8.29;
 
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -229,7 +229,7 @@ contract ProofOfCapital is
 
         isActive = true;
         launchToken = IERC20(params.launchToken);
-        
+
         returnWalletAddress = params.returnWalletAddress;
         royaltyWalletAddress = params.royaltyWalletAddress;
         wethAddress = params.wethAddress;
@@ -288,10 +288,6 @@ contract ProofOfCapital is
         }
     }
 
-
-
-
-
     /**
      * @dev Extend lock period
      */
@@ -314,10 +310,7 @@ contract ProofOfCapital is
         if (canWithdrawal) {
             canWithdrawal = false;
         } else {
-            require(
-                lockEndTime - block.timestamp > Constants.THIRTY_DAYS,
-                CannotActivateWithdrawalTooCloseToLockEnd()
-            );
+            require(lockEndTime - block.timestamp > Constants.THIRTY_DAYS, CannotActivateWithdrawalTooCloseToLockEnd());
             canWithdrawal = true;
         }
     }
@@ -359,9 +352,7 @@ contract ProofOfCapital is
         require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
         require(contractTokenBalance - totalTokensSold >= mainTokenDeferredWithdrawalAmount, InsufficientAmount());
 
-        launchToken.safeTransfer(
-            recipientDeferredWithdrawalMainToken, mainTokenDeferredWithdrawalAmount
-        );
+        launchToken.safeTransfer(recipientDeferredWithdrawalMainToken, mainTokenDeferredWithdrawalAmount);
 
         contractTokenBalance -= mainTokenDeferredWithdrawalAmount;
         mainTokenDeferredWithdrawalDate = 0;
@@ -500,7 +491,6 @@ contract ProofOfCapital is
         emit MarketMakerStatusChanged(marketMakerAddress, isMarketMaker);
     }
 
-
     /**
      * @dev Buy tokens with support tokens
      */
@@ -528,13 +518,7 @@ contract ProofOfCapital is
     /**
      * @dev Deposit support tokens (for owners and old contracts)
      */
-    function deposit(uint256 amount)
-        external
-        override
-        nonReentrant
-        onlyActiveContract
-        onlyOwnerOrOldContract
-    {
+    function deposit(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(amount > 0, InvalidAmount());
 
         IERC20(tokenSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
@@ -544,14 +528,7 @@ contract ProofOfCapital is
     /**
      * @dev Deposit ETH (for owners and old contracts)
      */
-    function depositWithETH()
-        external
-        payable
-        override
-        nonReentrant
-        onlyActiveContract
-        onlyOwnerOrOldContract
-    {
+    function depositWithETH() external payable override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(!tokenSupport, UseSupportTokenInstead());
         require(msg.value > 0, InvalidETHAmount());
 
@@ -659,6 +636,7 @@ contract ProofOfCapital is
     /**
      * @dev Get profit on request
      */
+
     function getProfitOnRequest() external override nonReentrant {
         require(profitInTime, ProfitModeNotActive());
 
@@ -696,7 +674,6 @@ contract ProofOfCapital is
 
     // Internal functions for handling different types of transactions
 
-
     /**
      * @dev Limit period to valid range
      */
@@ -728,7 +705,7 @@ contract ProofOfCapital is
         if (offsetTokens > tokensEarned) {
             uint256 deltaSupportBalance = _calculateChangeOffsetSupport(value);
             contractSupportBalance += deltaSupportBalance;
-            
+
             // Check to prevent arithmetic underflow
             if (value > deltaSupportBalance) {
                 uint256 change = value - deltaSupportBalance;
@@ -774,13 +751,13 @@ contract ProofOfCapital is
 
     function _handleReturnWalletSale(uint256 amount) internal {
         uint256 supportAmountToPay = 0;
-        
+
         // Check to prevent arithmetic underflow
         uint256 tokensAvailableForReturnBuyback = 0;
         if (totalTokensSold > tokensEarned) {
             tokensAvailableForReturnBuyback = totalTokensSold - tokensEarned;
         }
-        
+
         uint256 effectiveAmount = amount < tokensAvailableForReturnBuyback ? amount : tokensAvailableForReturnBuyback;
 
         if (offsetTokens > tokensEarned) {
@@ -813,10 +790,10 @@ contract ProofOfCapital is
         }
 
         uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-        
+
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
         require(totalTokensSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
-        
+
         uint256 tokensAvailableForBuyback = totalTokensSold - maxEarnedOrOffset;
         require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
         require(totalTokensSold >= amount, InsufficientSoldTokens());
@@ -841,7 +818,6 @@ contract ProofOfCapital is
             block.timestamp > Constants.THIRTY_DAYS + controlDay
                 && block.timestamp < controlPeriod + controlDay + Constants.THIRTY_DAYS
         );
-       
     }
 
     function _transferReserveOwner(address newOwner) internal {
@@ -995,13 +971,15 @@ contract ProofOfCapital is
 
         while (remainingSupportAmount > 0 && remainderOfTokens >= tokensToGive) {
             int256 tokensAvailableInStep = remainderOfStepLocal;
-            int256 tonRequiredForStep = (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
+            int256 tonRequiredForStep =
+                (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
             if (remainingSupportAmount >= tonRequiredForStep) {
                 tokensToGive += uint256(tokensAvailableInStep);
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
 
-                uint256 profitInStep = (uint256(tonRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
+                uint256 profitInStep =
+                    (uint256(tonRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
                 totalProfit += profitInStep;
 
                 remainingSupportAmount -= tonRequiredForStep;
@@ -1012,7 +990,8 @@ contract ProofOfCapital is
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
-                uint256 tokensToBuyInThisStep = (uint256(remainingSupportAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
+                uint256 tokensToBuyInThisStep =
+                    (uint256(remainingSupportAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
                 tokensToGive += tokensToBuyInThisStep;
                 uint256 tonSpentInThisStep = uint256(remainingSupportAmount);
 
@@ -1058,7 +1037,8 @@ contract ProofOfCapital is
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep =
+                    (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
                 remainingTokenAmount -= int256(tokensAvailableInStep);
@@ -1087,7 +1067,8 @@ contract ProofOfCapital is
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep =
+                    (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
                 remainderOfStepLocal += int256(remainingTokenAmount);
@@ -1123,7 +1104,8 @@ contract ProofOfCapital is
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep =
+                    (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
                 localCurrentStep += 1;
@@ -1136,7 +1118,8 @@ contract ProofOfCapital is
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep = (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
+                uint256 supportToPayForStep =
+                    (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 supportAmountToPay += supportToPayForStep;
 
                 remainderOfStepLocal -= remainingTokenAmount;
@@ -1181,7 +1164,6 @@ contract ProofOfCapital is
         }
     }
 
-
     /**
      * @dev Authorize upgrade - only owner can upgrade
      */
@@ -1190,8 +1172,7 @@ contract ProofOfCapital is
         require(upgradeConfirmed, UpgradeNotConfirmed());
         require(newImplementation == proposedUpgradeImplementation, InvalidAddress());
         require(
-            block.timestamp >= upgradeConfirmationTime + Constants.THIRTY_DAYS,
-            UpgradeConfirmationPeriodNotPassed()
+            block.timestamp >= upgradeConfirmationTime + Constants.THIRTY_DAYS, UpgradeConfirmationPeriodNotPassed()
         );
 
         // Reset upgrade state after successful upgrade
@@ -1200,10 +1181,6 @@ contract ProofOfCapital is
         upgradeConfirmed = false;
         upgradeConfirmationTime = 0;
     }
-
-
-
-
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

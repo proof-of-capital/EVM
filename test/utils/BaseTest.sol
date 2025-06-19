@@ -6,7 +6,8 @@
 
 // (c) 2025 https://proofofcapital.org/
 
-// https://github.com/proof-of-capital/EVMpragma solidity ^0.8.19;
+// https://github.com/proof-of-capital/EVM
+pragma solidity 0.8.29;
 
 import "forge-std/Test.sol";
 import "../../src/ProofOfCapital.sol";
@@ -20,25 +21,25 @@ contract BaseTest is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
-    
+
     address public owner = address(0x1);
     address public royalty = address(0x2);
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
-    
+
     function setUp() public virtual {
         // Set realistic timestamp to avoid underflow issues
         vm.warp(1672531200); // January 1, 2023
-        
+
         vm.startPrank(owner);
-        
+
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
-        
+
         // Deploy implementation
         ProofOfCapital implementation = new ProofOfCapital();
-        
+
         // Prepare initialization parameters
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
             launchToken: address(token),
@@ -60,19 +61,16 @@ contract BaseTest is Test {
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0)
         });
-        
+
         // Deploy proxy
-        bytes memory initData = abi.encodeWithSelector(
-            ProofOfCapital.initialize.selector,
-            params
-        );
-        
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         proofOfCapital = ProofOfCapital(payable(address(proxy)));
-        
+
         vm.stopPrank();
     }
-    
+
     // Helper function to get valid initialization parameters
     function getValidParams() internal view returns (ProofOfCapital.InitParams memory) {
         return ProofOfCapital.InitParams({
@@ -96,29 +94,26 @@ contract BaseTest is Test {
             oldContractAddresses: new address[](0)
         });
     }
-    
+
     // Helper function to deploy contract with custom parameters
     function deployWithParams(ProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
         ProofOfCapital implementation = new ProofOfCapital();
-        
-        bytes memory initData = abi.encodeWithSelector(
-            ProofOfCapital.initialize.selector,
-            params
-        );
-        
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
         return ProofOfCapital(payable(address(proxy)));
     }
-    
+
     // Helper function to create support balance in contract
     function createSupportBalance(uint256 amount) internal {
         vm.startPrank(owner);
         token.transfer(returnWallet, amount * 2); // Give enough for selling back
         vm.stopPrank();
-        
+
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), amount * 2);
         proofOfCapital.sellTokens(amount); // This increases contractTokenBalance
         vm.stopPrank();
     }
-} 
+}

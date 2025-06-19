@@ -1,4 +1,12 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// All rights reserved.
+
+// This source code is provided for reference purposes only.
+// You may not copy, reproduce, distribute, modify, deploy, or otherwise use this code in whole or in part without explicit written permission from the author.
+
+// (c) 2025 https://proofofcapital.org/
+
+// https://github.com/proof-of-capital/EVM
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
@@ -186,11 +194,6 @@ contract ProofOfCapital is
 
     modifier onlyOwnerOrOldContract() {
         require(_msgSender() == owner() || oldContractAddress[_msgSender()], AccessDenied());
-        _;
-    }
-
-    modifier onlyMarketMaker() {
-        require(marketMakerAddresses[_msgSender()], NotMarketMaker());
         _;
     }
 
@@ -432,8 +435,6 @@ contract ProofOfCapital is
      * @dev Switch profit withdrawal mode
      */
     function switchProfitMode(bool flag) external override onlyOwner {
-        require(flag != profitInTime, SameModeAlreadyActive());
-
         profitInTime = flag;
         emit ProfitModeChanged(flag);
     }
@@ -498,14 +499,6 @@ contract ProofOfCapital is
         emit MarketMakerStatusChanged(marketMakerAddress, isMarketMaker);
     }
 
-    /**
-     * @dev Set old contract address for migration
-     */
-    function setOldContractAddress(address oldContract) external override onlyOwner {
-        require(oldContract != address(0), InvalidAddress());
-        require(oldContract != address(this), CannotBeSelf());
-        oldContractAddress[oldContract] = true;
-    }
 
     /**
      * @dev Buy tokens with support tokens

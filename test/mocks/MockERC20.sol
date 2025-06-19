@@ -7,10 +7,12 @@
 // (c) 2025 https://proofofcapital.org/
 
 // https://github.com/proof-of-capital/EVM
-pragma solidity >=0.5.0;
+pragma solidity ^0.8.19;
 
-interface IWETH {
-    function deposit() external payable;
-    function transfer(address to, uint256 value) external returns (bool);
-    function withdraw(uint256) external;
-}
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract MockERC20 is ERC20 {
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        _mint(msg.sender, 1000000 * 10**18);
+    }
+} 

@@ -1,4 +1,12 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// All rights reserved.
+
+// This source code is provided for reference purposes only.
+// You may not copy, reproduce, distribute, modify, deploy, or otherwise use this code in whole or in part without explicit written permission from the author.
+
+// (c) 2025 https://proofofcapital.org/
+
+// https://github.com/proof-of-capital/EVM
 pragma solidity ^0.8.19;
 
 /**
@@ -38,9 +46,6 @@ interface IProofOfCapital {
 
     // Market maker management
     function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external;
-
-    // Contract migration
-    function setOldContractAddress(address oldContract) external;
 
     // Upgrade management
     function proposeUpgrade(address newImplementation) external;

@@ -41,6 +41,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/IProofOfCapital.sol";
 import "./utils/Constant.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title ProofOfCapital
@@ -1035,12 +1036,8 @@ contract ProofOfCapital is
         quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
         actualProfit = totalProfit;
-
-        if (remainderOfStepLocal < 0) {
-            remainderOfStep = 0;
-        } else {
-            remainderOfStep = uint256(remainderOfStepLocal);
-        }
+     
+        remainderOfStep = uint256(remainderOfStepLocal);
 
         return tokensToGive;
     }
@@ -1103,11 +1100,7 @@ contract ProofOfCapital is
         quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
 
-        if (remainderOfStepLocal < 0) {
-            remainderOfStep = 0;
-        } else {
-            remainderOfStep = uint256(remainderOfStepLocal);
-        }
+        remainderOfStep = uint256(remainderOfStepLocal);
 
         return supportAmountToPay;
     }
@@ -1154,11 +1147,7 @@ contract ProofOfCapital is
         quantityTokensPerLevelEarned = tokensPerLevel;
         currentPriceEarned = currentPriceLocal;
 
-        if (remainderOfStepLocal < 0) {
-            remainderOfStepEarned = 0;
-        } else {
-            remainderOfStepEarned = uint256(remainderOfStepLocal);
-        }
+        remainderOfStepEarned = uint256(remainderOfStepLocal);
 
         return supportAmountToPay;
     }

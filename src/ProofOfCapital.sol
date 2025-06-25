@@ -422,12 +422,16 @@ contract ProofOfCapital is
         require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= supportTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
 
-        _transferSupportTokens(recipientDeferredWithdrawalSupportToken, contractSupportBalance);
-
+        uint256 supportBalance = contractSupportBalance;
         contractSupportBalance = 0;
         supportTokenDeferredWithdrawalDate = 0;
         recipientDeferredWithdrawalSupportToken = owner();
         isActive = false;
+
+        emit SupportDeferredWithdrawalConfirmed(recipientDeferredWithdrawalSupportToken, supportBalance);
+        
+        IERC20(tokenSupportAddress).safeIncreaseAllowance(recipientDeferredWithdrawalSupportToken, supportBalance);
+        IProofOfCapital(recipientDeferredWithdrawalSupportToken).deposit(supportBalance);
     }
 
     /**
@@ -604,6 +608,8 @@ contract ProofOfCapital is
         remainderOfStepEarned = firstLevelTokenQuantity;
         quantityTokensPerLevelEarned = firstLevelTokenQuantity;
         currentPriceEarned = initialPricePerToken;
+
+        emit AllTokensWithdrawn(owner(), availableTokens);
     }
 
     /**
@@ -613,8 +619,11 @@ contract ProofOfCapital is
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
         require(contractSupportBalance > 0, NoSupportTokensToWithdraw());
 
-        _transferSupportTokens(owner(), contractSupportBalance);
+        uint256 withdrawnAmount = contractSupportBalance;
         contractSupportBalance = 0;
+        _transferSupportTokens(owner(), withdrawnAmount);
+
+        emit AllSupportTokensWithdrawn(owner(), withdrawnAmount);
     }
 
     /**
@@ -662,22 +671,26 @@ contract ProofOfCapital is
 
         emit UpgradeCancelled(cancelledImplementation, block.timestamp);
     }
+
     /**
      * @dev Get profit on request
      */
-
     function getProfitOnRequest() external override nonReentrant {
         require(profitInTime, ProfitModeNotActive());
 
         if (_msgSender() == owner()) {
             require(ownerSupportBalance > 0, NoProfitAvailable());
+            uint256 profitAmount = ownerSupportBalance;
             _transferSupportTokens(owner(), ownerSupportBalance);
             ownerSupportBalance = 0;
+            emit ProfitWithdrawn(owner(), profitAmount, true);
         } else {
             require(_msgSender() == royaltyWalletAddress, AccessDenied());
             require(royaltySupportBalance > 0, NoProfitAvailable());
+            uint256 profitAmount = royaltySupportBalance;
             _transferSupportTokens(royaltyWalletAddress, royaltySupportBalance);
             royaltySupportBalance = 0;
+            emit ProfitWithdrawn(royaltyWalletAddress, profitAmount, false);
         }
     }
 
@@ -830,7 +843,6 @@ contract ProofOfCapital is
 
         uint256 tokensAvailableForBuyback = totalTokensSold - maxEarnedOrOffset;
         require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
-        require(totalTokensSold >= amount, InsufficientSoldTokens());
 
         uint256 supportAmountToPay = _calculateSupportToPayForTokenAmount(amount);
         require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());

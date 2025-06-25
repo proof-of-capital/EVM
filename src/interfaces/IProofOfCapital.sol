@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -48,7 +48,10 @@ interface IProofOfCapital {
     event ReturnWalletChanged(address indexed newReturnWalletAddress);
     event ProfitPercentageChanged(uint256 newRoyaltyProfitPercentage);
     event UnwrapModeChanged(bool isNeedToUnwrap);
-
+    event SupportDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
+    event AllTokensWithdrawn(address indexed owner, uint256 amount);
+    event AllSupportTokensWithdrawn(address indexed owner, uint256 amount);
+    event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
     // Upgrade events
     event UpgradeProposed(address indexed implementation, uint256 proposalTime);
     event UpgradeConfirmed(address indexed implementation, uint256 confirmationTime);

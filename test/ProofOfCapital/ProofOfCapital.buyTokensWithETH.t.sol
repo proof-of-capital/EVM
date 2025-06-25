@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -32,8 +32,12 @@ pragma solidity 0.8.29;
 
 import "../utils/BaseTest.sol";
 import "../mocks/MockWETH.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
 contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
+    using stdStorage for StdStorage;
+    
+    StdStorage private _stdStore;
     address public user = address(0x5);
     MockWETH public mockWETH;
     ProofOfCapital public ethContract;
@@ -411,6 +415,61 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
         vm.prank(user);
         vm.expectRevert(ProofOfCapital.ETHTransferFailed.selector);
         ethContract.buyTokensWithETH{value: ethAmount}();
+    }
+
+    // Test InsufficientTokenBalance error in _handleTokenPurchaseCommon
+    function testBuyTokensWithETHInsufficientTokenBalance() public {
+        // Create a scenario where contractTokenBalance <= totalTokensSold
+        // This should trigger InsufficientTokenBalance error
+        
+        // Set contractTokenBalance to a low value (e.g., 1000 tokens)
+        uint256 contractTokenBalanceSlot = _stdStore.target(address(ethContract)).sig("contractTokenBalance()").find();
+        vm.store(address(ethContract), bytes32(contractTokenBalanceSlot), bytes32(uint256(1000e18)));
+            
+        // Set totalTokensSold to same or higher value (e.g., 1000 tokens)
+        uint256 totalTokensSoldSlot = _stdStore.target(address(ethContract)).sig("totalTokensSold()").find();
+        vm.store(address(ethContract), bytes32(totalTokensSoldSlot), bytes32(uint256(1000e18)));
+            
+        // Verify the setup
+        assertEq(ethContract.contractTokenBalance(), 1000e18, "contractTokenBalance should be 1000e18");
+        assertEq(ethContract.totalTokensSold(), 1000e18, "totalTokensSold should be 1000e18");
+        
+        // Now contractTokenBalance == totalTokensSold (condition: contractTokenBalance > totalTokensSold is false)
+        
+        uint256 ethAmount = 1 ether;
+        
+        // User tries to buy tokens with ETH
+        // This should trigger InsufficientTokenBalance error because contractTokenBalance <= totalTokensSold
+        vm.prank(user);
+        vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
+        ethContract.buyTokensWithETH{value: ethAmount}();
+    }
+    
+    // Test edge case where contractTokenBalance is exactly equal to totalTokensSold + 1
+    function testBuyTokensWithETHBarelyEnoughTokens() public {
+        // Set contractTokenBalance to totalTokensSold + 1 (minimal sufficient amount)
+        uint256 contractTokenBalanceSlot = _stdStore.target(address(ethContract)).sig("contractTokenBalance()").find();
+        vm.store(address(ethContract), bytes32(contractTokenBalanceSlot), bytes32(uint256(1001e18)));
+            
+        uint256 totalTokensSoldSlot = _stdStore.target(address(ethContract)).sig("totalTokensSold()").find();
+        vm.store(address(ethContract), bytes32(totalTokensSoldSlot), bytes32(uint256(1000e18)));
+            
+        // Verify the setup
+        assertEq(ethContract.contractTokenBalance(), 1001e18, "contractTokenBalance should be 1001e18");
+        assertEq(ethContract.totalTokensSold(), 1000e18, "totalTokensSold should be 1000e18");
+        
+        // Now contractTokenBalance > totalTokensSold by exactly 1 token (condition should pass)
+        
+        uint256 ethAmount = 0.001 ether; // Very small amount to buy minimal tokens
+        uint256 initialUserTokenBalance = token.balanceOf(user);
+        
+        // User tries to buy tokens with ETH
+        // This should succeed because contractTokenBalance > totalTokensSold
+        vm.prank(user);
+        ethContract.buyTokensWithETH{value: ethAmount}();
+        
+        // Verify tokens were received
+        assertTrue(token.balanceOf(user) > initialUserTokenBalance, "User should receive tokens");
     }
 }
 

@@ -32,8 +32,12 @@
 pragma solidity 0.8.29;
 
 import "../utils/BaseTest.sol";
+import "../mocks/MockRecipient.sol";
+import "forge-std/StdStorage.sol";
 
 contract ProofOfCapitalSellTokensTest is BaseTest {
+    using stdStorage for StdStorage;
+    StdStorage private _stdstore;
     address public user = address(0x5);
 
     function setUp() public override {
@@ -80,15 +84,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
     // Test 2: ContractNotActive error when contract is deactivated
     function testSellTokensContractNotActive() public {
-        // Deactivate contract by withdrawing all support tokens after lock ends
-        vm.warp(proofOfCapital.lockEndTime() + 1);
 
-        vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), 1000e18);
-        proofOfCapital.supportDeferredWithdrawal(owner);
-        vm.warp(block.timestamp + Constants.THIRTY_DAYS + 1);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
-        vm.stopPrank();
+        uint256 slot = _stdstore.target(address(proofOfCapital)).sig("isActive()").find();
+        vm.store(address(proofOfCapital), bytes32(slot), bytes32(uint256(0)));
 
         assertFalse(proofOfCapital.isActive());
 

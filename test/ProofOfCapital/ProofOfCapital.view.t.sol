@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -34,49 +34,49 @@ import "../utils/BaseTest.sol";
 
 contract ProofOfCapitalViewTest is BaseTest {
     function testTradingOpportunityWhenNotInTradingPeriod() public {
-        // Initially, lock ends in 365 days, so we're not in trading period (>30 days remaining)
+        // Initially, lock ends in 365 days, so we're not in trading period (>60 days remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         uint256 currentTime = block.timestamp;
 
-        // Verify we have more than 30 days remaining
-        assertTrue(lockEndTime - currentTime > Constants.THIRTY_DAYS);
+        // Verify we have more than 60 days remaining
+        assertTrue(lockEndTime - currentTime > Constants.SIXTY_DAYS);
 
         // Trading opportunity should be false
         assertFalse(proofOfCapital.tradingOpportunity());
     }
 
     function testTradingOpportunityWhenInTradingPeriod() public {
-        // Move time to within 30 days of lock end
+        // Move time to within 60 days of lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1); // 29 days remaining
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // 59 days remaining
 
         // Trading opportunity should be true
         assertTrue(proofOfCapital.tradingOpportunity());
     }
 
     function testTradingOpportunityAtExactBoundary() public {
-        // Move time to exactly 30 days before lock end
+        // Move time to exactly 60 days before lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS);
 
-        // At exactly 30 days, condition is: remaining < 30 days
-        // 30 days < 30 days = false, so trading opportunity should be false
+        // At exactly 60 days, condition is: remaining < 60 days
+        // 60 days < 60 days = false, so trading opportunity should be false
         assertFalse(proofOfCapital.tradingOpportunity());
     }
 
     function testTradingOpportunityJustInsideBoundary() public {
-        // Move time to just inside 30 days (29 days remaining)
+        // Move time to just inside 60 days (59 days remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1);
 
-        // 29 days < 30 days = true, so trading opportunity should be true
+        // 59 days < 60 days = true, so trading opportunity should be true
         assertTrue(proofOfCapital.tradingOpportunity());
     }
 
     function testTradingOpportunityAfterLockExtension() public {
         // Move to trading period
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1);
 
         // Verify we're in trading period
         assertTrue(proofOfCapital.tradingOpportunity());
@@ -161,8 +161,8 @@ contract ProofOfCapitalViewTest is BaseTest {
         uint256 available = proofOfCapital.tokenAvailable();
 
         // Verify logical consistency
-        // If remaining > 30 days, trading opportunity should be false
-        if (remaining > Constants.THIRTY_DAYS) {
+        // If remaining > 60 days, trading opportunity should be false
+        if (remaining > Constants.SIXTY_DAYS) {
             assertFalse(tradingOpp);
         } else {
             assertTrue(tradingOpp);
@@ -207,7 +207,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         vm.warp(lockEndTime);
 
         assertEq(proofOfCapital.remainingSeconds(), 0);
-        assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 30 days is true
+        assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 60 days is true
 
         // Test tokenAvailable consistency
         uint256 totalSold = proofOfCapital.totalTokensSold();

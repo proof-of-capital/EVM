@@ -24,7 +24,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -310,6 +310,11 @@ contract ProofOfCapital is
         for (uint256 i = 0; i < params.oldContractAddresses.length; i++) {
             oldContractAddress[params.oldContractAddresses[i]] = true;
         }
+
+        // Check that return wallet and royalty wallet addresses don't match old contracts and each other
+        require(!oldContractAddress[params.returnWalletAddress], CannotBeSelf());
+        require(!oldContractAddress[params.royaltyWalletAddress], CannotBeSelf());
+        require(params.returnWalletAddress != params.royaltyWalletAddress, CannotBeSelf());
     }
 
     /**
@@ -334,7 +339,7 @@ contract ProofOfCapital is
         if (canWithdrawal) {
             canWithdrawal = false;
         } else {
-            require(lockEndTime - block.timestamp > Constants.THIRTY_DAYS, CannotActivateWithdrawalTooCloseToLockEnd());
+            require(lockEndTime - block.timestamp > Constants.SIXTY_DAYS, CannotActivateWithdrawalTooCloseToLockEnd());
             canWithdrawal = true;
         }
     }
@@ -686,7 +691,7 @@ contract ProofOfCapital is
     }
 
     function tradingOpportunity() external view override returns (bool) {
-        return lockEndTime < Constants.THIRTY_DAYS + block.timestamp;
+        return lockEndTime < Constants.SIXTY_DAYS + block.timestamp;
     }
 
     function tokenAvailable() external view override returns (uint256) {
@@ -744,6 +749,9 @@ contract ProofOfCapital is
      */
     function _handleTokenPurchaseCommon(uint256 supportAmount) internal {
         if (!_checkTradingAccess()) {
+            if (_checkUnlockWindow()) {
+                controlDay += Constants.THIRTY_DAYS * _calculatePastPeriods();
+            }
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
         require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
@@ -810,9 +818,11 @@ contract ProofOfCapital is
 
     function _handleTokenSale(uint256 amount) internal {
         if (!_checkTradingAccess()) {
+            if (_checkUnlockWindow()) {
+                controlDay += Constants.THIRTY_DAYS * _calculatePastPeriods();
+            }
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
-
         uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
 
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
@@ -834,7 +844,8 @@ contract ProofOfCapital is
     }
 
     function _checkTradingAccess() internal view returns (bool) {
-        return _checkControlDay() || (mainTokenDeferredWithdrawalDate > 0) || (supportTokenDeferredWithdrawalDate > 0);
+        return _checkControlDay() || (mainTokenDeferredWithdrawalDate > 0) || (supportTokenDeferredWithdrawalDate > 0)
+            || (lockEndTime > block.timestamp + Constants.SIXTY_DAYS);
     }
 
     function _checkControlDay() internal view returns (bool) {
@@ -1036,7 +1047,7 @@ contract ProofOfCapital is
         quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
         actualProfit = totalProfit;
-     
+
         remainderOfStep = uint256(remainderOfStepLocal);
 
         return tokensToGive;
@@ -1192,6 +1203,25 @@ contract ProofOfCapital is
         upgradeProposalTime = 0;
         upgradeConfirmed = false;
         upgradeConfirmationTime = 0;
+    }
+
+    /**
+     * @dev Calculate the number of past periods elapsed since controlDay
+     * @return Number of 30-day periods that have passed
+     */
+    function _calculatePastPeriods() internal view returns (uint256) {
+        if (block.timestamp <= controlDay) {
+            return 0;
+        }
+        return (block.timestamp - controlDay) / Constants.THIRTY_DAYS;
+    }
+
+    /**
+     * @dev Check if current time is within unlock window period after lock expires
+     * @return True if in unlock window, false otherwise
+     */
+    function _checkUnlockWindow() internal view returns (bool) {
+        return block.timestamp > controlPeriod + controlDay + Constants.THIRTY_DAYS;
     }
 
     /**

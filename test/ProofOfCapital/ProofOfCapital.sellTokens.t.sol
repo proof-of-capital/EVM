@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -119,6 +119,11 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Remove market maker status from user
         vm.prank(owner);
         proofOfCapital.setMarketMaker(user, false);
+
+        // Перемещаем время на последние 30 дней перед окончанием блокировки,
+        // чтобы _checkTradingAccess() вернул false и торговый доступ был закрыт
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1);
 
         // User (not market maker) tries to sell without trading access
         vm.prank(user);
@@ -411,5 +416,37 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // CONCLUSION: The InsufficientSoldTokens check exists in the code but is mathematically
         // unreachable because the constraint tokensAvailableForBuyback <= totalTokensSold always holds
         // due to the fact that max(offsetTokens, tokensEarned) >= 0
+    }
+
+    // Дополнительный тест: маркет-мейкер может продавать токены даже без общего торгового доступа
+    function testSellTokensMarketMakerWithoutTradingAccessCanSell() public {
+        // Сначала returnWallet продаёт токены, чтобы увеличить contractTokenBalance и сделать покупку возможной
+        vm.prank(returnWallet);
+        proofOfCapital.sellTokens(5000e18);
+
+        // Market maker покупает токены, пока торговля разрешена (> 60 дней до конца lock)
+        uint256 purchaseAmount = 2000e18;
+        vm.prank(marketMaker);
+        proofOfCapital.buyTokens(purchaseAmount);
+
+        // Проверяем, что баланс токенов у маркет-мейкера увеличился
+        assertGt(token.balanceOf(marketMaker), 0, "Market maker should have tokens after purchase");
+
+        // Перемещаемся в последние 30 дней до окончания lock, чтобы _checkTradingAccess() вернул false
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1);
+
+        // Пробуем продать часть токенов – проверка TradingNotAllowedOnlyMarketMakers должна пройти,
+        // а сама сделка выполниться (либо, если нет токенов для выкупа, упадём на другой require).
+        uint256 sellAmount = purchaseAmount / 2; // 1000e18
+        uint256 totalSoldBefore = proofOfCapital.totalTokensSold();
+        uint256 marketMakerTokenBalanceBefore = token.balanceOf(marketMaker);
+
+        vm.prank(marketMaker);
+        proofOfCapital.sellTokens(sellAmount);
+
+        // После успешной продажи баланс маркет-мейкера уменьшился, а totalTokensSold – тоже
+        assertEq(token.balanceOf(marketMaker), marketMakerTokenBalanceBefore - sellAmount, "Token balance should decrease by sellAmount");
+        assertEq(proofOfCapital.totalTokensSold(), totalSoldBefore - sellAmount, "totalTokensSold should decrease by sellAmount");
     }
 }

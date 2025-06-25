@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -475,5 +475,199 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         }
 
         vm.stopPrank();
+    }
+
+    // Tests for address validation requirements
+    
+    // Test CannotBeSelf error - returnWalletAddress matches old contract
+    function testInitializeReturnWalletMatchesOldContract() public {
+        address oldContract = address(0x123);
+        address[] memory oldContracts = new address[](1);
+        oldContracts[0] = oldContract;
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.returnWalletAddress = oldContract; // Invalid: matches old contract
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test CannotBeSelf error - royaltyWalletAddress matches old contract
+    function testInitializeRoyaltyWalletMatchesOldContract() public {
+        address oldContract = address(0x123);
+        address[] memory oldContracts = new address[](1);
+        oldContracts[0] = oldContract;
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.royaltyWalletAddress = oldContract; // Invalid: matches old contract
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test CannotBeSelf error - returnWalletAddress equals royaltyWalletAddress
+    function testInitializeReturnWalletEqualsRoyaltyWallet() public {
+        address sameAddress = address(0x999);
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.returnWalletAddress = sameAddress; // Invalid: same as royalty wallet
+        params.royaltyWalletAddress = sameAddress; // Invalid: same as return wallet
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test multiple old contracts - returnWallet matches one of them
+    function testInitializeReturnWalletMatchesMultipleOldContracts() public {
+        address oldContract1 = address(0x123);
+        address oldContract2 = address(0x456);
+        address oldContract3 = address(0x789);
+        
+        address[] memory oldContracts = new address[](3);
+        oldContracts[0] = oldContract1;
+        oldContracts[1] = oldContract2;
+        oldContracts[2] = oldContract3;
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.returnWalletAddress = oldContract2; // Invalid: matches middle old contract
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test multiple old contracts - royaltyWallet matches one of them
+    function testInitializeRoyaltyWalletMatchesMultipleOldContracts() public {
+        address oldContract1 = address(0x123);
+        address oldContract2 = address(0x456);
+        address oldContract3 = address(0x789);
+        
+        address[] memory oldContracts = new address[](3);
+        oldContracts[0] = oldContract1;
+        oldContracts[1] = oldContract2;
+        oldContracts[2] = oldContract3;
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.royaltyWalletAddress = oldContract3; // Invalid: matches last old contract
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test valid scenario - no conflicts
+    function testInitializeValidAddressesNoConflicts() public {
+        address oldContract1 = address(0x123);
+        address oldContract2 = address(0x456);
+        address uniqueReturnWallet = address(0x777);
+        address uniqueRoyaltyWallet = address(0x888);
+        
+        address[] memory oldContracts = new address[](2);
+        oldContracts[0] = oldContract1;
+        oldContracts[1] = oldContract2;
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.returnWalletAddress = uniqueReturnWallet; // Valid: unique address
+        params.royaltyWalletAddress = uniqueRoyaltyWallet; // Valid: unique address
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        // Should not revert
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
+
+        // Verify addresses were set correctly
+        assertEq(proofOfCapital.returnWalletAddress(), uniqueReturnWallet);
+        assertEq(proofOfCapital.royaltyWalletAddress(), uniqueRoyaltyWallet);
+    }
+
+    // Test edge case - empty old contracts array
+    function testInitializeEmptyOldContractsArray() public {
+        address[] memory emptyOldContracts = new address[](0);
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.oldContractAddresses = emptyOldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        // Should not revert - no old contracts to check against
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
+
+        // Verify addresses were set correctly
+        assertEq(proofOfCapital.returnWalletAddress(), params.returnWalletAddress);
+        assertEq(proofOfCapital.royaltyWalletAddress(), params.royaltyWalletAddress);
+    }
+
+    // Test complex scenario - multiple violations should fail on first one
+    function testInitializeMultipleViolationsFailOnFirst() public {
+        address sameAddress = address(0x999);
+        address[] memory oldContracts = new address[](1);
+        oldContracts[0] = sameAddress;
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        // Multiple violations:
+        // 1. returnWalletAddress matches old contract (checked first)
+        // 2. returnWalletAddress equals royaltyWalletAddress (checked third)
+        params.returnWalletAddress = sameAddress; // Invalid: matches old contract
+        params.royaltyWalletAddress = sameAddress; // Also invalid but won't be reached
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        // Should fail with first error encountered (returnWallet matches old contract)
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test boundary case - exactly one old contract
+    function testInitializeExactlyOneOldContract() public {
+        address oldContract = address(0x123);
+        address[] memory oldContracts = new address[](1);
+        oldContracts[0] = oldContract;
+
+        // Test valid case first
+        ProofOfCapital.InitParams memory paramsValid = getValidParams();
+        paramsValid.oldContractAddresses = oldContracts;
+        paramsValid.returnWalletAddress = address(0x777); // Different from old contract
+        paramsValid.royaltyWalletAddress = address(0x888); // Different from old contract
+
+        bytes memory initDataValid = abi.encodeWithSelector(ProofOfCapital.initialize.selector, paramsValid);
+
+        // Should not revert
+        ERC1967Proxy proxyValid = new ERC1967Proxy(address(implementation), initDataValid);
+        ProofOfCapital proofOfCapitalValid = ProofOfCapital(payable(address(proxyValid)));
+
+        assertEq(proofOfCapitalValid.returnWalletAddress(), address(0x777));
+        assertEq(proofOfCapitalValid.royaltyWalletAddress(), address(0x888));
+    }
+
+    // Test zero address scenario (should pass address validation but may fail other checks)
+    function testInitializeZeroAddressInOldContracts() public {
+        address[] memory oldContracts = new address[](2);
+        oldContracts[0] = address(0);
+        oldContracts[1] = address(0x123);
+
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.returnWalletAddress = address(0); // Zero address - matches old contract
+        params.oldContractAddresses = oldContracts;
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        new ERC1967Proxy(address(implementation), initData);
     }
 }

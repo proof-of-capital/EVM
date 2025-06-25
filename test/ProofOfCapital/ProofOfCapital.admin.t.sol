@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -163,71 +163,67 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
 
     function testBlockDeferredWithdrawalFromFalseToTrueWhenTimeAllows() public {
-        // First block withdrawal
+        // Block withdrawal first
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Now try to unblock when we have enough time (more than 30 days before lock end)
-        // Lock is set to 365 days from start, so we should have enough time
+        // Ensure we're far enough from lock end (more than 60 days)
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1); // 60 days + 1 second remaining
+
+        // Should be able to unblock when we have enough time
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
-
-        // Should now be true again
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
     function testBlockDeferredWithdrawalFailsWhenTooCloseToLockEnd() public {
-        // First block withdrawal
+        // Move time to be close to lock end (within 60 days)
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // 59 days remaining
+
+        // Block withdrawal first
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time forward to be within 30 days of lock end
-        uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1 days); // 29 days before lock end
-
-        // Try to unblock - should fail
+        // Try to unblock when too close to lock end - should fail
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
-
-        // Should still be false
-        assertFalse(proofOfCapital.canWithdrawal());
     }
 
     function testBlockDeferredWithdrawalAtExactBoundary() public {
-        // First block withdrawal
+        // Block withdrawal first
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time forward to be exactly 30 days before lock end
+        // Move time to exactly 60 days before lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS);
 
-        // Try to unblock - should fail (condition is >, not >=)
+        // At exactly 60 days, should NOT be able to unblock (require > 60 days)
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalJustOverBoundary() public {
-        // First block withdrawal
+        // First, block withdrawal to set canWithdrawal to false
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time forward to be just over 30 days before lock end
+        // Move time to just over the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS - 1); // 30 days + 1 second
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1);
 
-        // Try to unblock - should work
+        // Should not be able to activate withdrawal when too close to lock end
         vm.prank(owner);
+        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
-
-        // Should now be true
-        assertTrue(proofOfCapital.canWithdrawal());
     }
 
     function testBlockDeferredWithdrawalUnauthorized() public {

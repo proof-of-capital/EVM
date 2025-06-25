@@ -44,6 +44,7 @@ library Constants {
     uint256 public constant TEN_MINUTES = 10 minutes; // 10 minutes for testing
     uint256 public constant THREE_WEEKS = 3 weeks; // 3 weeks
     uint256 public constant THIRTY_DAYS = 30 days; // 30 days
+    uint256 public constant SIXTY_DAYS = 60 days; // 60 days
 
     // Percentage constants
     uint256 public constant PERCENTAGE_DIVISOR = 1000; // For percentage calculations (0.1% precision)

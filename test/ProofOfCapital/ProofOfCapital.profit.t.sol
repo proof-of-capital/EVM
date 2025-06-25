@@ -23,7 +23,7 @@
 // you specify the royalty wallet address of our project, listed on our website:
 // https://proofofcapital.org
 
-// All royalties collected are automatically used to repurchase the project’s core token, as
+// All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
@@ -545,7 +545,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(15000e18);
 
-        // Test scenario: Outside of any trading access period (no control day, no deferred withdrawals)
+        // Move time to be within 60 days of lock end to remove time-based trading access
+        uint256 mmLockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(mmLockEndTime - Constants.THIRTY_DAYS + 1);
+
         // Verify we're not in trading access period
         assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
 
@@ -608,7 +611,32 @@ contract ProofOfCapitalProfitTest is BaseTest {
         // Verify user is not a market maker
         assertFalse(ethContract.marketMakerAddresses(regularUser), "Regular user should not be market maker");
 
-        // Regular user tries to buy tokens with ETH without trading access
+        // Move time to be within 60 days of lock end to remove time-based trading access
+        uint256 ethLockEndTime = ethContract.lockEndTime();
+        vm.warp(ethLockEndTime - Constants.THIRTY_DAYS + 1);
+
+        // Verify all trading access conditions are false
+        uint256 controlPeriod = ethContract.controlPeriod();
+        uint256 controlDay = ethContract.controlDay();
+        
+        // Control day access should be false (not in the control period)
+        bool controlDayAccess = (
+            block.timestamp > Constants.THIRTY_DAYS + controlDay &&
+            block.timestamp < Constants.THIRTY_DAYS + controlDay + controlPeriod
+        );
+        assertFalse(controlDayAccess, "Control day access should be false");
+        
+        // No deferred withdrawals
+        assertEq(ethContract.mainTokenDeferredWithdrawalDate(), 0, "No main token deferred withdrawal");
+        assertEq(ethContract.supportTokenDeferredWithdrawalDate(), 0, "No support token deferred withdrawal");
+        
+        // Time access should be false (within 60 days of lock end)
+        assertLe(ethLockEndTime - block.timestamp, Constants.SIXTY_DAYS, "Should be within 60 days of lock end");
+
+        // Verify we don't have trading access
+        // Trading access helper references the default contract, so we skip it here.
+
+        // Regular user (non-market maker) tries to buy tokens without trading access
         vm.prank(regularUser);
         vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
         ethContract.buyTokensWithETH{value: 1 ether}();
@@ -637,6 +665,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
         // Create support balance first to enable token purchases
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(15000e18);
+
+        // Move time to be within 60 days of lock end to remove time-based trading access
+        uint256 mmLockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(mmLockEndTime - Constants.THIRTY_DAYS + 1);
 
         // Verify we're not in trading access period
         assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
@@ -692,14 +724,17 @@ contract ProofOfCapitalProfitTest is BaseTest {
     function _checkTradingAccessHelper() internal view returns (bool) {
         // Check control day
         bool controlDayAccess = (
-            block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay()
-                && block.timestamp < proofOfCapital.controlPeriod() + proofOfCapital.controlDay() + Constants.THIRTY_DAYS
+            block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay() &&
+            block.timestamp < Constants.THIRTY_DAYS + proofOfCapital.controlDay() + proofOfCapital.controlPeriod()
         );
 
         // Check deferred withdrawals
         bool deferredWithdrawalAccess = (proofOfCapital.mainTokenDeferredWithdrawalDate() > 0)
             || (proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
 
-        return controlDayAccess || deferredWithdrawalAccess;
+        // Check if more than 60 days remaining until lock end
+        bool timeAccess = (proofOfCapital.lockEndTime() - block.timestamp > Constants.SIXTY_DAYS);
+
+        return controlDayAccess || deferredWithdrawalAccess || timeAccess;
     }
 }

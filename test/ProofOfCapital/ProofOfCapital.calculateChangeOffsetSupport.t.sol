@@ -81,10 +81,10 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // Set approvals
         vm.prank(owner);
         weth.approve(address(proofOfCapital), type(uint256).max);
-        
+
         vm.prank(user);
         weth.approve(address(proofOfCapital), type(uint256).max);
-        
+
         vm.prank(user);
         token.approve(address(proofOfCapital), type(uint256).max);
     }
@@ -93,7 +93,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
      * Test that specifically hits lines 939-940 in _calculateChangeOffsetSupport
      * These lines execute when:
      * - offsetTokens > tokensEarned (enabled by offset)
-     * - localCurrentStep > currentStepEarned 
+     * - localCurrentStep > currentStepEarned
      * - localCurrentStep <= trendChangeStep (5)
      * - Inside the if branch where remainingAddSupport >= tonRealInStep
      */
@@ -104,53 +104,56 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 initialCurrentStepEarned = proofOfCapital.currentStepEarned();
         uint256 trendChangeStep = proofOfCapital.trendChangeStep();
-        
+
         assertTrue(initialOffsetTokens > initialTokensEarned, "offsetTokens must be > tokensEarned");
         assertEq(initialCurrentStepEarned, 0, "currentStepEarned should start at 0");
         assertTrue(initialOffsetStep > initialCurrentStepEarned, "offsetStep should be > currentStepEarned");
-        assertTrue(initialOffsetStep <= trendChangeStep, "offsetStep should be <= trendChangeStep for our target branch");
-        
+        assertTrue(
+            initialOffsetStep <= trendChangeStep, "offsetStep should be <= trendChangeStep for our target branch"
+        );
+
         console2.log("Initial offsetTokens:", initialOffsetTokens);
         console2.log("Initial tokensEarned:", initialTokensEarned);
         console2.log("Initial offsetStep:", initialOffsetStep);
         console2.log("Initial currentStepEarned:", initialCurrentStepEarned);
         console2.log("trendChangeStep:", trendChangeStep);
-        
+
         // Record initial state
         uint256 initialContractSupportBalance = proofOfCapital.contractSupportBalance();
         uint256 initialOwnerWethBalance = weth.balanceOf(owner);
-        
+
         // Make a deposit that will trigger _calculateChangeOffsetSupport
         // This deposit should be large enough to trigger the condition where
         // remainingAddSupport >= tonRealInStep && remainingAddTokens >= tokensAvailableInStep
         // but not so large that it changes offsetStep beyond trendChangeStep
         uint256 depositAmount = 2000e18; // Strategic amount
-        
+
         vm.prank(owner);
         proofOfCapital.deposit(depositAmount);
-        
+
         // Verify that the contract state changed (indicating _calculateChangeOffsetSupport was called)
         uint256 finalContractSupportBalance = proofOfCapital.contractSupportBalance();
         uint256 finalOwnerWethBalance = weth.balanceOf(owner);
         uint256 finalOffsetTokens = proofOfCapital.offsetTokens();
-        
+
         // The contract support balance should have increased
-        assertTrue(finalContractSupportBalance > initialContractSupportBalance, 
-                  "Contract support balance should increase");
-        
+        assertTrue(
+            finalContractSupportBalance > initialContractSupportBalance, "Contract support balance should increase"
+        );
+
         // Owner's WETH balance should have decreased
-        assertTrue(finalOwnerWethBalance < initialOwnerWethBalance, 
-                  "Owner WETH balance should decrease");
-        
+        assertTrue(finalOwnerWethBalance < initialOwnerWethBalance, "Owner WETH balance should decrease");
+
         // Offset tokens should have decreased (some were "consumed" by the offset calculation)
-        assertTrue(finalOffsetTokens < initialOffsetTokens, 
-                  "Offset tokens should decrease after deposit");
-        
+        assertTrue(finalOffsetTokens < initialOffsetTokens, "Offset tokens should decrease after deposit");
+
         console2.log("Deposit executed successfully - _calculateChangeOffsetSupport was called");
-        console2.log("Contract support balance increased by:", finalContractSupportBalance - initialContractSupportBalance);
+        console2.log(
+            "Contract support balance increased by:", finalContractSupportBalance - initialContractSupportBalance
+        );
         console2.log("Owner WETH balance decreased by:", initialOwnerWethBalance - finalOwnerWethBalance);
         console2.log("Offset tokens decreased by:", initialOffsetTokens - finalOffsetTokens);
-        
+
         // This confirms that lines 939-940 were executed:
         // tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR) / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
         // This calculation occurs in the branch where localCurrentStep <= trendChangeStep
@@ -166,29 +169,30 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // 2. In _calculateChangeOffsetSupport loop: localCurrentStep > currentStepEarned ✓
         // 3. localCurrentStep <= trendChangeStep (5) ✓
         // 4. The if condition: remainingAddSupport >= tonRealInStep && remainingAddTokens >= tokensAvailableInStep ✓
-        
+
         // Verify preconditions are met
         assertEq(proofOfCapital.currentStepEarned(), 0, "currentStepEarned should be 0");
         assertTrue(proofOfCapital.offsetStep() > 0, "offsetStep should be > 0");
-        assertTrue(proofOfCapital.offsetStep() <= proofOfCapital.trendChangeStep(), 
-                  "offsetStep should be <= trendChangeStep");
-        
+        assertTrue(
+            proofOfCapital.offsetStep() <= proofOfCapital.trendChangeStep(), "offsetStep should be <= trendChangeStep"
+        );
+
         // Calculate a deposit amount that will trigger the target branch
         // We need enough to satisfy: remainingAddSupport >= tonRealInStep
         uint256 depositAmount = 1500e18;
-        
+
         // Record gas before to ensure we're hitting the target code path
         uint256 gasBefore = gasleft();
-        
+
         vm.prank(owner);
         proofOfCapital.deposit(depositAmount);
-        
+
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
-        
+
         // Verify the function executed (gas was consumed)
         assertTrue(gasUsed > 100000, "Significant gas should be used indicating complex calculations");
-        
+
         // Log success - this test path definitely goes through _calculateChangeOffsetSupport
         // and due to our careful setup, it hits the branch with lines 939-940
         console2.log("Test completed - lines 939-940 executed in _calculateChangeOffsetSupport");
@@ -202,38 +206,42 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
     function testMultipleDepositsHitLevelIncreaseMultiplier() public {
         // Make several smaller deposits to step through the offset levels
         // Each deposit should trigger _calculateChangeOffsetSupport
-        
+
         uint256[] memory depositAmounts = new uint256[](3);
         depositAmounts[0] = 600e18;
         depositAmounts[1] = 700e18;
         depositAmounts[2] = 800e18;
-        
+
         for (uint256 i = 0; i < depositAmounts.length; i++) {
             uint256 beforeOffsetTokens = proofOfCapital.offsetTokens();
             uint256 beforeContractBalance = proofOfCapital.contractSupportBalance();
-            
+
             vm.prank(owner);
             proofOfCapital.deposit(depositAmounts[i]);
-            
+
             uint256 afterOffsetTokens = proofOfCapital.offsetTokens();
             uint256 afterContractBalance = proofOfCapital.contractSupportBalance();
-            
+
             // Each deposit should modify the offset state
-            assertTrue(afterOffsetTokens < beforeOffsetTokens, 
-                      string(abi.encodePacked("Deposit ", vm.toString(i), " should reduce offsetTokens")));
-            assertTrue(afterContractBalance > beforeContractBalance, 
-                      string(abi.encodePacked("Deposit ", vm.toString(i), " should increase contract balance")));
-            
+            assertTrue(
+                afterOffsetTokens < beforeOffsetTokens,
+                string(abi.encodePacked("Deposit ", vm.toString(i), " should reduce offsetTokens"))
+            );
+            assertTrue(
+                afterContractBalance > beforeContractBalance,
+                string(abi.encodePacked("Deposit ", vm.toString(i), " should increase contract balance"))
+            );
+
             console2.log("Deposit", i, "- offsetTokens reduced by:", beforeOffsetTokens - afterOffsetTokens);
         }
-        
+
         console2.log("Multiple deposits completed successfully - lines 939-940 hit multiple times");
     }
 
     /**
      * Test that specifically hits lines 1074-1075 in _calculateSupportToPayForTokenAmount
      * These lines execute when:
-     * - localCurrentStep > currentStepEarned 
+     * - localCurrentStep > currentStepEarned
      * - localCurrentStep <= trendChangeStep (5)
      * - Called via sellTokens -> _handleTokenSale -> _calculateSupportToPayForTokenAmount
      */
@@ -241,7 +249,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // First, set user as market maker to allow trading
         vm.prank(owner);
         proofOfCapital.setMarketMaker(user, true);
-        
+
         // Create contractTokenBalance by having return wallet sell tokens
         vm.startPrank(owner);
         token.transfer(returnWallet, 50000e18);
@@ -251,55 +259,55 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         token.approve(address(proofOfCapital), 50000e18);
         proofOfCapital.sellTokens(50000e18); // This creates contractTokenBalance > totalTokensSold
         vm.stopPrank();
-        
+
         // First, we need to create some tokens sold and some contract support balance
         // by having users buy some tokens first
-        
+
         // User buys tokens to create totalTokensSold and contractSupportBalance
         vm.prank(user);
         proofOfCapital.buyTokens(1000e18);
-        
+
         uint256 tokensSoldAfterBuy = proofOfCapital.totalTokensSold();
         uint256 contractSupportAfterBuy = proofOfCapital.contractSupportBalance();
         uint256 currentStepAfterBuy = proofOfCapital.currentStep();
         uint256 currentStepEarned = proofOfCapital.currentStepEarned();
         uint256 trendChangeStep = proofOfCapital.trendChangeStep();
-        
+
         console2.log("After buy - totalTokensSold:", tokensSoldAfterBuy);
         console2.log("After buy - contractSupportBalance:", contractSupportAfterBuy);
         console2.log("After buy - currentStep:", currentStepAfterBuy);
         console2.log("After buy - currentStepEarned:", currentStepEarned);
         console2.log("trendChangeStep:", trendChangeStep);
-        
+
         // Verify we have the right conditions:
         // currentStep > currentStepEarned and currentStep <= trendChangeStep
         assertTrue(currentStepAfterBuy > currentStepEarned, "currentStep should be > currentStepEarned");
         assertTrue(currentStepAfterBuy <= trendChangeStep, "currentStep should be <= trendChangeStep for target branch");
-        
+
         // Now user sells some tokens back, which will trigger _calculateSupportToPayForTokenAmount
         // This should hit lines 1074-1075 because:
         // - localCurrentStep starts as currentStep (> currentStepEarned)
         // - localCurrentStep <= trendChangeStep
         // - The function decrements localCurrentStep in the loop
-        
+
         uint256 sellAmount = 200e18; // Sell some tokens back
         uint256 userTokenBalanceBefore = token.balanceOf(user);
         uint256 userWethBalanceBefore = weth.balanceOf(user);
-        
+
         vm.prank(user);
         proofOfCapital.sellTokens(sellAmount);
-        
+
         uint256 userTokenBalanceAfter = token.balanceOf(user);
         uint256 userWethBalanceAfter = weth.balanceOf(user);
-        
+
         // Verify the sell transaction worked
         assertTrue(userTokenBalanceAfter < userTokenBalanceBefore, "User should have fewer tokens after selling");
         assertTrue(userWethBalanceAfter > userWethBalanceBefore, "User should have more WETH after selling");
-        
+
         console2.log("Sell executed successfully - _calculateSupportToPayForTokenAmount was called");
         console2.log("User sold tokens:", sellAmount);
         console2.log("User WETH balance increased by:", userWethBalanceAfter - userWethBalanceBefore);
-        
+
         // This confirms that lines 1074-1075 were executed:
         // tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR) / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
         // This calculation occurs in _calculateSupportToPayForTokenAmount when localCurrentStep <= trendChangeStep
@@ -314,7 +322,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // First, set user as market maker to allow trading
         vm.prank(owner);
         proofOfCapital.setMarketMaker(user, true);
-        
+
         // Create contractTokenBalance by having return wallet sell tokens
         vm.startPrank(owner);
         token.transfer(returnWallet, 50000e18);
@@ -324,57 +332,65 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         token.approve(address(proofOfCapital), 50000e18);
         proofOfCapital.sellTokens(50000e18); // This creates contractTokenBalance > totalTokensSold
         vm.stopPrank();
-        
+
         // First, user needs to buy tokens
         vm.prank(user);
         proofOfCapital.buyTokens(2000e18);
-        
+
         uint256 initialCurrentStep = proofOfCapital.currentStep();
         uint256 currentStepEarned = proofOfCapital.currentStepEarned();
         uint256 trendChangeStep = proofOfCapital.trendChangeStep();
-        
+
         // Verify conditions for hitting our target lines
         assertTrue(initialCurrentStep > currentStepEarned, "currentStep should be > currentStepEarned");
         assertTrue(initialCurrentStep <= trendChangeStep, "currentStep should be <= trendChangeStep");
-        
+
         // Make several sell transactions
         uint256[] memory sellAmounts = new uint256[](3);
         sellAmounts[0] = 150e18;
         sellAmounts[1] = 200e18;
         sellAmounts[2] = 250e18;
-        
+
         for (uint256 i = 0; i < sellAmounts.length; i++) {
             uint256 beforeUserWeth = weth.balanceOf(user);
             uint256 beforeContractSupport = proofOfCapital.contractSupportBalance();
             uint256 beforeTotalSold = proofOfCapital.totalTokensSold();
-            
+
             vm.prank(user);
             proofOfCapital.sellTokens(sellAmounts[i]);
-            
+
             uint256 afterUserWeth = weth.balanceOf(user);
             uint256 afterContractSupport = proofOfCapital.contractSupportBalance();
             uint256 afterTotalSold = proofOfCapital.totalTokensSold();
-            
+
             // Each sell should pay user WETH and reduce contract support balance
-            assertTrue(afterUserWeth > beforeUserWeth, 
-                      string(abi.encodePacked("Sell ", vm.toString(i), " should increase user WETH")));
-            assertTrue(afterContractSupport < beforeContractSupport, 
-                      string(abi.encodePacked("Sell ", vm.toString(i), " should decrease contract support")));
-            assertTrue(afterTotalSold < beforeTotalSold, 
-                      string(abi.encodePacked("Sell ", vm.toString(i), " should decrease total sold")));
-            
+            assertTrue(
+                afterUserWeth > beforeUserWeth,
+                string(abi.encodePacked("Sell ", vm.toString(i), " should increase user WETH"))
+            );
+            assertTrue(
+                afterContractSupport < beforeContractSupport,
+                string(abi.encodePacked("Sell ", vm.toString(i), " should decrease contract support"))
+            );
+            assertTrue(
+                afterTotalSold < beforeTotalSold,
+                string(abi.encodePacked("Sell ", vm.toString(i), " should decrease total sold"))
+            );
+
             console2.log("Sell", i, "- user WETH increased by:", afterUserWeth - beforeUserWeth);
             console2.log("Sell", i, "- contract support decreased by:", beforeContractSupport - afterContractSupport);
         }
-        
-        console2.log("Multiple sells completed successfully - lines 1074-1075 hit multiple times in _calculateSupportToPayForTokenAmount");
+
+        console2.log(
+            "Multiple sells completed successfully - lines 1074-1075 hit multiple times in _calculateSupportToPayForTokenAmount"
+        );
     }
 
     /**
      * Test that specifically hits lines 789-791 in _handleReturnWalletSale
      * These lines execute when:
      * - returnWallet sells tokens back to contract
-     * - offsetTokens > tokensEarned 
+     * - offsetTokens > tokensEarned
      * - effectiveAmount > offsetAmount
      * The lines are:
      * 789: _calculateSupportForTokenAmountEarned(offsetAmount);
@@ -394,10 +410,10 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // Verify initial state for hitting our target lines
         uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
         uint256 initialTokensEarned = proofOfCapital.tokensEarned();
-        
+
         // Condition 1: offsetTokens > tokensEarned (should be true from setup)
         assertTrue(initialOffsetTokens > initialTokensEarned, "offsetTokens must be > tokensEarned");
-        
+
         console2.log("Initial offsetTokens:", initialOffsetTokens);
         console2.log("Initial tokensEarned:", initialTokensEarned);
         console2.log("Offset difference:", initialOffsetTokens - initialTokensEarned);
@@ -406,7 +422,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // We need: amount > (offsetTokens - tokensEarned) to hit lines 789-791
         uint256 offsetAmount = initialOffsetTokens - initialTokensEarned;
         uint256 sellAmount = offsetAmount + 1000e18; // Sell more than offset to trigger the condition
-        
+
         console2.log("Calculated offsetAmount:", offsetAmount);
         console2.log("Planned sellAmount:", sellAmount);
 
@@ -428,7 +444,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // Verify state changes indicating lines 789-791 were executed
         assertTrue(tokensEarnedAfter > tokensEarnedBefore, "tokensEarned should increase");
         assertTrue(ownerWethBalanceAfter >= ownerWethBalanceBefore, "Owner WETH balance should increase or stay same");
-        
+
         // The key verification: tokensEarned should have increased by effectiveAmount
         // where effectiveAmount was calculated based on the logic in _handleReturnWalletSale
         uint256 tokensEarnedIncrease = tokensEarnedAfter - tokensEarnedBefore;
@@ -438,10 +454,10 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         console2.log("tokensEarned increased by:", tokensEarnedIncrease);
         console2.log("Owner WETH balance change:", ownerWethBalanceAfter - ownerWethBalanceBefore);
         console2.log("Contract support balance change:", contractSupportBalanceBefore - contractSupportBalanceAfter);
-        
+
         // This confirms that lines 789-791 were executed:
         // 789: _calculateSupportForTokenAmountEarned(offsetAmount);
-        // 790: uint256 buybackAmount = effectiveAmount - offsetAmount;  
+        // 790: uint256 buybackAmount = effectiveAmount - offsetAmount;
         // 791: supportAmountToPay = _calculateSupportForTokenAmountEarned(buybackAmount);
         assertTrue(true, "Successfully executed path through lines 789-791 in _handleReturnWalletSale");
     }
@@ -463,18 +479,18 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         // Get initial offset state
         uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
         uint256 initialTokensEarned = proofOfCapital.tokensEarned();
-        
+
         // Verify conditions for hitting lines 789-791
         assertTrue(initialOffsetTokens > initialTokensEarned, "offsetTokens > tokensEarned required");
 
         // Make multiple sales, each designed to hit lines 789-791
         uint256[] memory sellAmounts = new uint256[](3);
         uint256 offsetAmount = initialOffsetTokens - initialTokensEarned;
-        
+
         // Each sale amount is larger than current offset to ensure effectiveAmount > offsetAmount
-        sellAmounts[0] = offsetAmount / 3 + 500e18;  // Partial offset + extra
-        sellAmounts[1] = offsetAmount / 3 + 600e18;  // Partial offset + extra  
-        sellAmounts[2] = offsetAmount / 3 + 700e18;  // Partial offset + extra
+        sellAmounts[0] = offsetAmount / 3 + 500e18; // Partial offset + extra
+        sellAmounts[1] = offsetAmount / 3 + 600e18; // Partial offset + extra
+        sellAmounts[2] = offsetAmount / 3 + 700e18; // Partial offset + extra
 
         for (uint256 i = 0; i < sellAmounts.length; i++) {
             uint256 beforeTokensEarned = proofOfCapital.tokensEarned();
@@ -484,7 +500,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
             // Verify we still have the right conditions before each sale
             if (beforeOffsetTokens > beforeTokensEarned) {
                 uint256 currentOffsetAmount = beforeOffsetTokens - beforeTokensEarned;
-                
+
                 // Adjust sell amount if needed to ensure effectiveAmount > offsetAmount
                 uint256 adjustedSellAmount = sellAmounts[i];
                 if (adjustedSellAmount <= currentOffsetAmount) {
@@ -498,10 +514,14 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
                 uint256 afterOwnerWeth = weth.balanceOf(owner);
 
                 // Verify each sale worked
-                assertTrue(afterTokensEarned > beforeTokensEarned, 
-                          string(abi.encodePacked("Sale ", vm.toString(i), " should increase tokensEarned")));
-                assertTrue(afterOwnerWeth >= beforeOwnerWeth, 
-                          string(abi.encodePacked("Sale ", vm.toString(i), " should increase or maintain owner WETH")));
+                assertTrue(
+                    afterTokensEarned > beforeTokensEarned,
+                    string(abi.encodePacked("Sale ", vm.toString(i), " should increase tokensEarned"))
+                );
+                assertTrue(
+                    afterOwnerWeth >= beforeOwnerWeth,
+                    string(abi.encodePacked("Sale ", vm.toString(i), " should increase or maintain owner WETH"))
+                );
 
                 console2.log("Sale", i, "- tokensEarned increased by:", afterTokensEarned - beforeTokensEarned);
                 console2.log("Sale", i, "- owner WETH increased by:", afterOwnerWeth - beforeOwnerWeth);
@@ -530,7 +550,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
 
         uint256 offsetTokens = proofOfCapital.offsetTokens();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
-        
+
         // Calculate exact boundary: effectiveAmount = offsetAmount + 1
         uint256 offsetAmount = offsetTokens - tokensEarned;
         uint256 preciseSellAmount = offsetAmount + 1; // Minimum to trigger lines 789-791
@@ -625,28 +645,28 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
 
         uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
         uint256 initialTokensEarned = proofOfCapital.tokensEarned();
-        
+
         console2.log("=== INITIAL STATE FOR LINES 789-791 TEST ===");
         console2.log("offsetTokens:", initialOffsetTokens);
         console2.log("tokensEarned:", initialTokensEarned);
         console2.log("offsetTokens > tokensEarned:", initialOffsetTokens > initialTokensEarned);
-        
+
         // Calculate offsetAmount = offsetTokens - tokensEarned
         uint256 expectedOffsetAmount = initialOffsetTokens - initialTokensEarned;
         console2.log("Expected offsetAmount (offsetTokens - tokensEarned):", expectedOffsetAmount);
-        
+
         // We want effectiveAmount > offsetAmount
         // So sellAmount should be > offsetAmount
         uint256 sellAmount = expectedOffsetAmount + 1000e18; // Sell more than offset
-        
+
         console2.log("Planned sellAmount:", sellAmount);
         console2.log("Expected effectiveAmount:", sellAmount); // Should equal sellAmount if enough tokens available
         console2.log("Condition check: effectiveAmount > offsetAmount:", sellAmount > expectedOffsetAmount);
-        
+
         // Execute the return wallet sale
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(sellAmount);
-        
+
         console2.log("=== TEST COMPLETED - CHECK LOGS ABOVE FOR LINES 789-791 EXECUTION ===");
     }
 
@@ -705,20 +725,24 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         uint256 finalTokensEarned = proofOfCapital.tokensEarned();
 
         // Key verification: owner WETH balance should increase (line 807 executed)
-        assertTrue(finalOwnerWethBalance > initialOwnerWethBalance,
-                  "Owner WETH balance should increase when supportAmountToPay > 0");
+        assertTrue(
+            finalOwnerWethBalance > initialOwnerWethBalance,
+            "Owner WETH balance should increase when supportAmountToPay > 0"
+        );
 
         // Contract support balance should decrease
-        assertTrue(finalContractSupportBalance < initialContractSupportBalance,
-                  "Contract support balance should decrease");
+        assertTrue(
+            finalContractSupportBalance < initialContractSupportBalance, "Contract support balance should decrease"
+        );
 
         // tokensEarned should increase
-        assertTrue(finalTokensEarned > initialTokensEarned,
-                  "tokensEarned should increase");
+        assertTrue(finalTokensEarned > initialTokensEarned, "tokensEarned should increase");
 
         uint256 ownerReceived = finalOwnerWethBalance - initialOwnerWethBalance;
         console2.log("Owner received WETH (supportAmountToPay):", ownerReceived);
-        console2.log("Contract support balance decreased by:", initialContractSupportBalance - finalContractSupportBalance);
+        console2.log(
+            "Contract support balance decreased by:", initialContractSupportBalance - finalContractSupportBalance
+        );
 
         // This confirms that lines 806-808 were executed with supportAmountToPay > 0
         assertTrue(ownerReceived > 0, "supportAmountToPay was > 0 and owner received tokens");
@@ -767,20 +791,23 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         uint256 finalTokensEarned = proofOfCapital.tokensEarned();
 
         // Key verification: owner WETH balance should NOT change (lines 806-808 skipped)
-        assertEq(finalOwnerWethBalance, initialOwnerWethBalance,
-                "Owner WETH balance should NOT change when supportAmountToPay = 0");
+        assertEq(
+            finalOwnerWethBalance,
+            initialOwnerWethBalance,
+            "Owner WETH balance should NOT change when supportAmountToPay = 0"
+        );
 
         // tokensEarned should still increase (this happens regardless)
-        assertTrue(finalTokensEarned > initialTokensEarned,
-                  "tokensEarned should increase even when supportAmountToPay = 0");
+        assertTrue(
+            finalTokensEarned > initialTokensEarned, "tokensEarned should increase even when supportAmountToPay = 0"
+        );
 
         console2.log("Final owner WETH balance:", finalOwnerWethBalance);
         console2.log("Final tokensEarned:", finalTokensEarned);
         console2.log("Owner WETH balance change:", finalOwnerWethBalance - initialOwnerWethBalance);
 
         // This confirms that lines 806-808 were NOT executed (supportAmountToPay = 0)
-        assertEq(finalOwnerWethBalance - initialOwnerWethBalance, 0,
-                "supportAmountToPay was 0, no transfer occurred");
+        assertEq(finalOwnerWethBalance - initialOwnerWethBalance, 0, "supportAmountToPay was 0, no transfer occurred");
         console2.log("SUCCESS: Lines 806-808 condition check verified: supportAmountToPay = 0 case confirmed");
     }
 
@@ -826,5 +853,4 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
             console2.log("SUCCESS: Lines 806-808 condition correctly evaluated to false");
         }
     }
-
-} 
+}

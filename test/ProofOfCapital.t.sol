@@ -4020,6 +4020,123 @@ contract ProofOfCapitalTest is Test {
 
         vm.stopPrank();
     }
+
+    function testInsufficientSupportBalanceSimpleScenario() public {
+        // This test demonstrates the scenario described in the user's prompt:
+        // 1. Market maker buys tokens successfully
+        // 2. After lock period, owner withdraws all support tokens
+        // 3. Market maker tries to sell tokens back but gets InsufficientSupportBalance
+
+        // The key insight: we need to use returnWallet to create contractTokenBalance
+        // because returnWallet sales increase contractTokenBalance via _handleReturnWalletSale
+
+        // Step 1: Give tokens to returnWallet and make them sell to create contractTokenBalance
+        vm.startPrank(owner);
+        token.transfer(returnWallet, 20000e18);
+        vm.stopPrank();
+
+        vm.startPrank(returnWallet);
+        token.approve(address(proofOfCapital), 20000e18);
+        proofOfCapital.sellTokens(20000e18); // This increases contractTokenBalance
+        vm.stopPrank();
+
+        // Step 2: Now market maker can successfully buy tokens
+        vm.startPrank(owner);
+        weth.transfer(marketMaker, 5000e18);
+        vm.stopPrank();
+
+        vm.startPrank(marketMaker);
+        weth.approve(address(proofOfCapital), 5000e18);
+        proofOfCapital.buyTokens(1000e18); // This should work now
+        vm.stopPrank();
+
+        // Verify we have contractSupportBalance > 0 after purchase
+        uint256 supportBalance = proofOfCapital.contractSupportBalance();
+        assertTrue(supportBalance > 0, "Should have support balance after purchase");
+
+        // Step 3: Wait for lock period to end
+        vm.warp(proofOfCapital.lockEndTime() + 1);
+
+        // Step 4: Owner withdraws all support tokens, making contractSupportBalance = 0
+        vm.prank(owner);
+        proofOfCapital.withdrawAllSupportTokens();
+
+        // Verify contractSupportBalance is now zero
+        assertEq(proofOfCapital.contractSupportBalance(), 0, "Support balance should be zero");
+
+        // Step 5: Market maker tries to sell tokens back - should fail with InsufficientSupportBalance
+        vm.startPrank(marketMaker);
+        uint256 marketMakerTokens = token.balanceOf(marketMaker);
+        assertTrue(marketMakerTokens > 0, "Market maker should have tokens");
+
+        token.approve(address(proofOfCapital), marketMakerTokens);
+
+        // This should revert with InsufficientSupportBalance because:
+        // - contractSupportBalance = 0 (after withdrawal)
+        // - supportAmountToPay > 0 (calculated for buyback)
+        vm.expectRevert(ProofOfCapital.InsufficientSupportBalance.selector);
+        proofOfCapital.sellTokens(marketMakerTokens / 2);
+
+        vm.stopPrank();
+    }
+
+    function testInsufficientSupportBalanceInReturnWalletSale() public {
+        // This test demonstrates the InsufficientSupportBalance error in _handleReturnWalletSale function
+        // Scenario: returnWallet tries to sell tokens back but contractSupportBalance is insufficient
+
+        // Step 1: Create initial setup by having returnWallet sell tokens to build contractTokenBalance
+        vm.startPrank(owner);
+        token.transfer(returnWallet, 15000e18);
+        vm.stopPrank();
+
+        vm.startPrank(returnWallet);
+        token.approve(address(proofOfCapital), 15000e18);
+        proofOfCapital.sellTokens(15000e18); // This increases contractTokenBalance
+        vm.stopPrank();
+
+        // Step 2: Market maker buys tokens to create contractSupportBalance > 0
+        vm.startPrank(owner);
+        weth.transfer(marketMaker, 3000e18);
+        vm.stopPrank();
+
+        vm.startPrank(marketMaker);
+        weth.approve(address(proofOfCapital), 3000e18);
+        proofOfCapital.buyTokens(1000e18); // This creates contractSupportBalance
+        vm.stopPrank();
+
+        // Verify we have contractSupportBalance > 0 after purchase
+        uint256 supportBalance = proofOfCapital.contractSupportBalance();
+        assertTrue(supportBalance > 0, "Should have support balance after market maker purchase");
+
+        // Step 3: Owner withdraws all support tokens, making contractSupportBalance = 0
+        // First wait for lock period to end
+        vm.warp(proofOfCapital.lockEndTime() + 1);
+
+        vm.prank(owner);
+        proofOfCapital.withdrawAllSupportTokens();
+
+        // Verify contractSupportBalance is now zero
+        assertEq(proofOfCapital.contractSupportBalance(), 0, "Support balance should be zero");
+
+        // Step 4: Give more tokens to returnWallet to sell
+        vm.startPrank(owner);
+        token.transfer(returnWallet, 5000e18);
+        vm.stopPrank();
+
+        // Step 5: returnWallet tries to sell tokens back - should fail with InsufficientSupportBalance
+        // This goes through _handleReturnWalletSale since msg.sender == returnWalletAddress
+        vm.startPrank(returnWallet);
+        token.approve(address(proofOfCapital), 5000e18);
+
+        // This should revert with InsufficientSupportBalance because:
+        // - contractSupportBalance = 0 (after withdrawal)
+        // - supportAmountToPay > 0 (calculated in _handleReturnWalletSale)
+        // - The require at line 823 fails: require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance())
+        vm.expectRevert(ProofOfCapital.InsufficientSupportBalance.selector);
+        proofOfCapital.sellTokens(2000e18);
+
+        vm.stopPrank();
+    }
 }
 
 contract ProofOfCapitalProfitTest is Test {
@@ -4621,4 +4738,3 @@ contract ProofOfCapitalInitializationTest is Test {
         vm.stopPrank();
     }
 }
-

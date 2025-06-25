@@ -429,7 +429,7 @@ contract ProofOfCapital is
         isActive = false;
 
         emit SupportDeferredWithdrawalConfirmed(recipientDeferredWithdrawalSupportToken, supportBalance);
-        
+
         IERC20(tokenSupportAddress).safeIncreaseAllowance(recipientDeferredWithdrawalSupportToken, supportBalance);
         IProofOfCapital(recipientDeferredWithdrawalSupportToken).deposit(supportBalance);
     }
@@ -807,6 +807,7 @@ contract ProofOfCapital is
 
         if (offsetTokens > tokensEarned) {
             uint256 offsetAmount = offsetTokens - tokensEarned;
+
             if (effectiveAmount > offsetAmount) {
                 _calculateSupportForTokenAmountEarned(offsetAmount);
                 uint256 buybackAmount = effectiveAmount - offsetAmount;

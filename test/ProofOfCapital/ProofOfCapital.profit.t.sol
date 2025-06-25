@@ -618,18 +618,18 @@ contract ProofOfCapitalProfitTest is BaseTest {
         // Verify all trading access conditions are false
         uint256 controlPeriod = ethContract.controlPeriod();
         uint256 controlDay = ethContract.controlDay();
-        
+
         // Control day access should be false (not in the control period)
         bool controlDayAccess = (
-            block.timestamp > Constants.THIRTY_DAYS + controlDay &&
-            block.timestamp < Constants.THIRTY_DAYS + controlDay + controlPeriod
+            block.timestamp > Constants.THIRTY_DAYS + controlDay
+                && block.timestamp < Constants.THIRTY_DAYS + controlDay + controlPeriod
         );
         assertFalse(controlDayAccess, "Control day access should be false");
-        
+
         // No deferred withdrawals
         assertEq(ethContract.mainTokenDeferredWithdrawalDate(), 0, "No main token deferred withdrawal");
         assertEq(ethContract.supportTokenDeferredWithdrawalDate(), 0, "No support token deferred withdrawal");
-        
+
         // Time access should be false (within 60 days of lock end)
         assertLe(ethLockEndTime - block.timestamp, Constants.SIXTY_DAYS, "Should be within 60 days of lock end");
 
@@ -724,8 +724,8 @@ contract ProofOfCapitalProfitTest is BaseTest {
     function _checkTradingAccessHelper() internal view returns (bool) {
         // Check control day
         bool controlDayAccess = (
-            block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay() &&
-            block.timestamp < Constants.THIRTY_DAYS + proofOfCapital.controlDay() + proofOfCapital.controlPeriod()
+            block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay()
+                && block.timestamp < Constants.THIRTY_DAYS + proofOfCapital.controlDay() + proofOfCapital.controlPeriod()
         );
 
         // Check deferred withdrawals

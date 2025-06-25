@@ -478,7 +478,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     }
 
     // Tests for address validation requirements
-    
+
     // Test CannotBeSelf error - returnWalletAddress matches old contract
     function testInitializeReturnWalletMatchesOldContract() public {
         address oldContract = address(0x123);
@@ -530,7 +530,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         address oldContract1 = address(0x123);
         address oldContract2 = address(0x456);
         address oldContract3 = address(0x789);
-        
+
         address[] memory oldContracts = new address[](3);
         oldContracts[0] = oldContract1;
         oldContracts[1] = oldContract2;
@@ -551,7 +551,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         address oldContract1 = address(0x123);
         address oldContract2 = address(0x456);
         address oldContract3 = address(0x789);
-        
+
         address[] memory oldContracts = new address[](3);
         oldContracts[0] = oldContract1;
         oldContracts[1] = oldContract2;
@@ -573,7 +573,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         address oldContract2 = address(0x456);
         address uniqueReturnWallet = address(0x777);
         address uniqueRoyaltyWallet = address(0x888);
-        
+
         address[] memory oldContracts = new address[](2);
         oldContracts[0] = oldContract1;
         oldContracts[1] = oldContract2;

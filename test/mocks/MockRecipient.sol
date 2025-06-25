@@ -10,4 +10,4 @@ contract MockRecipient {
     // because tests do not rely on any specific behaviour, only on the fact
     // that the call does not revert.
     function deposit(uint256 /*amount*/ ) external payable {}
-} 
+}

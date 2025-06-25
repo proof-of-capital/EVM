@@ -37,6 +37,7 @@ import "forge-std/StdStorage.sol";
 
 contract ProofOfCapitalSellTokensTest is BaseTest {
     using stdStorage for StdStorage;
+
     StdStorage private _stdstore;
     address public user = address(0x5);
 
@@ -84,7 +85,6 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
     // Test 2: ContractNotActive error when contract is deactivated
     function testSellTokensContractNotActive() public {
-
         uint256 slot = _stdstore.target(address(proofOfCapital)).sig("isActive()").find();
         vm.store(address(proofOfCapital), bytes32(slot), bytes32(uint256(0)));
 
@@ -444,7 +444,15 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.sellTokens(sellAmount);
 
         // После успешной продажи баланс маркет-мейкера уменьшился, а totalTokensSold – тоже
-        assertEq(token.balanceOf(marketMaker), marketMakerTokenBalanceBefore - sellAmount, "Token balance should decrease by sellAmount");
-        assertEq(proofOfCapital.totalTokensSold(), totalSoldBefore - sellAmount, "totalTokensSold should decrease by sellAmount");
+        assertEq(
+            token.balanceOf(marketMaker),
+            marketMakerTokenBalanceBefore - sellAmount,
+            "Token balance should decrease by sellAmount"
+        );
+        assertEq(
+            proofOfCapital.totalTokensSold(),
+            totalSoldBefore - sellAmount,
+            "totalTokensSold should decrease by sellAmount"
+        );
     }
 }

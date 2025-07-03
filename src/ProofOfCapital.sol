@@ -110,6 +110,12 @@ contract ProofOfCapital is
     error UpgradeConfirmationPeriodNotPassed();
     error UpgradeNotConfirmed();
     error OnlyRoyaltyCanProposeUpgrade();
+    error LockIsActive();
+    error OldContractAddressZero();
+    error OldContractAddressConflict();
+
+    // Events
+    event OldContractRegistered(address indexed oldContractAddress);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
@@ -345,6 +351,27 @@ contract ProofOfCapital is
     }
 
     /**
+     * @dev Verifies and registers the old contract address.
+     * Requires that the address is non-zero and does not match the main contract addresses.
+     * @param oldContractAddr Address of the old contract to register
+     */
+    function registerOldContract(address oldContractAddr) external onlyOwner {
+        require(!_checkTradingAccess(), LockIsActive());
+        require(oldContractAddr != address(0), OldContractAddressZero());
+        require(
+            oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)
+                && oldContractAddr != wethAddress && oldContractAddr != tokenSupportAddress
+                && oldContractAddr != additionalTokenAddress && oldContractAddr != returnWalletAddress
+                && oldContractAddr != royaltyWalletAddress && oldContractAddr != recipientDeferredWithdrawalMainToken
+                && oldContractAddr != recipientDeferredWithdrawalSupportToken && !marketMakerAddresses[oldContractAddr],
+            OldContractAddressConflict()
+        );
+
+        oldContractAddress[oldContractAddr] = true;
+        emit OldContractRegistered(oldContractAddr);
+    }
+
+    /**
      * @dev Schedule deferred withdrawal of main token
      */
     function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
@@ -380,6 +407,7 @@ contract ProofOfCapital is
         require(block.timestamp >= mainTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
         require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
         require(contractTokenBalance - totalTokensSold >= mainTokenDeferredWithdrawalAmount, InsufficientAmount());
+        require(block.timestamp <= mainTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS, WithdrawalDateNotReached());
 
         launchToken.safeTransfer(recipientDeferredWithdrawalMainToken, mainTokenDeferredWithdrawalAmount);
 
@@ -421,6 +449,9 @@ contract ProofOfCapital is
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= supportTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
+        require(
+            block.timestamp <= supportTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS, WithdrawalDateNotReached()
+        );
 
         uint256 supportBalance = contractSupportBalance;
         contractSupportBalance = 0;

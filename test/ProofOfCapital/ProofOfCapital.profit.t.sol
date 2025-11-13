@@ -93,8 +93,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
     }
 
     function testGetProfitOnRequestOwnerSimple() public {
-        // Enable profit on request mode (should be enabled by default)
-        assertTrue(proofOfCapital.profitInTime());
+        // Enable profit on request mode (profitInTime = false for accumulation)
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+        assertFalse(proofOfCapital.profitInTime());
 
         // Manually set owner profit balance for testing
         // We'll use the deposit function to simulate profit accumulation
@@ -118,8 +120,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
     }
 
     function testGetProfitOnRequestOwnerSuccess() public {
-        // Ensure profit accumulation mode is enabled (should be default)
-        assertTrue(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
+        // Ensure profit accumulation mode is enabled (profitInTime = false)
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+        assertFalse(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
 
         // Create support balance first to enable token purchases
         vm.prank(returnWallet);
@@ -147,8 +151,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
     }
 
     function testGetProfitOnRequestRoyaltySuccess() public {
-        // Ensure profit accumulation mode is enabled (should be default)
-        assertTrue(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
+        // Ensure profit accumulation mode is enabled (profitInTime = false)
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+        assertFalse(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
 
         // Create support balance first to enable token purchases
         vm.prank(returnWallet);
@@ -178,8 +184,10 @@ contract ProofOfCapitalProfitTest is BaseTest {
     }
 
     function testGetProfitOnRequestBothOwnerAndRoyalty() public {
-        // Ensure profit accumulation mode is enabled
-        assertTrue(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
+        // Ensure profit accumulation mode is enabled (profitInTime = false)
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+        assertFalse(proofOfCapital.profitInTime(), "Profit accumulation mode should be enabled");
 
         // Create support balance first
         vm.prank(returnWallet);
@@ -545,9 +553,9 @@ contract ProofOfCapitalProfitTest is BaseTest {
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(15000e18);
 
-        // Move time to be within 60 days of lock end to remove time-based trading access
+        // Move time to be more than 60 days before lock end to remove time-based trading access
         uint256 mmLockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(mmLockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(mmLockEndTime - Constants.SIXTY_DAYS - 1);
 
         // Verify we're not in trading access period
         assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
@@ -585,7 +593,9 @@ contract ProofOfCapitalProfitTest is BaseTest {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(0x999), // Different from wethAddress to make tokenSupport = false
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         ProofOfCapital ethContract = deployWithParams(ethParams);
@@ -611,27 +621,25 @@ contract ProofOfCapitalProfitTest is BaseTest {
         // Verify user is not a market maker
         assertFalse(ethContract.marketMakerAddresses(regularUser), "Regular user should not be market maker");
 
-        // Move time to be within 60 days of lock end to remove time-based trading access
+        // Move time to be more than 60 days before lock end to remove time-based trading access
         uint256 ethLockEndTime = ethContract.lockEndTime();
-        vm.warp(ethLockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(ethLockEndTime - Constants.SIXTY_DAYS - 1);
 
         // Verify all trading access conditions are false
         uint256 controlPeriod = ethContract.controlPeriod();
         uint256 controlDay = ethContract.controlDay();
 
         // Control day access should be false (not in the control period)
-        bool controlDayAccess = (
-            block.timestamp > Constants.THIRTY_DAYS + controlDay
-                && block.timestamp < Constants.THIRTY_DAYS + controlDay + controlPeriod
-        );
+        bool controlDayAccess = (block.timestamp > Constants.THIRTY_DAYS + controlDay
+                && block.timestamp < Constants.THIRTY_DAYS + controlDay + controlPeriod);
         assertFalse(controlDayAccess, "Control day access should be false");
 
         // No deferred withdrawals
         assertEq(ethContract.mainTokenDeferredWithdrawalDate(), 0, "No main token deferred withdrawal");
         assertEq(ethContract.supportTokenDeferredWithdrawalDate(), 0, "No support token deferred withdrawal");
 
-        // Time access should be false (within 60 days of lock end)
-        assertLe(ethLockEndTime - block.timestamp, Constants.SIXTY_DAYS, "Should be within 60 days of lock end");
+        // Time access should be false (more than 60 days before lock end)
+        assertGt(ethLockEndTime - block.timestamp, Constants.SIXTY_DAYS, "Should be more than 60 days before lock end");
 
         // Verify we don't have trading access
         // Trading access helper references the default contract, so we skip it here.
@@ -666,9 +674,9 @@ contract ProofOfCapitalProfitTest is BaseTest {
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(15000e18);
 
-        // Move time to be within 60 days of lock end to remove time-based trading access
+        // Move time to be more than 60 days before lock end to remove time-based trading access
         uint256 mmLockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(mmLockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(mmLockEndTime - Constants.SIXTY_DAYS - 1);
 
         // Verify we're not in trading access period
         assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
@@ -723,17 +731,17 @@ contract ProofOfCapitalProfitTest is BaseTest {
     // Helper function to check trading access (mimics _checkTradingAccess logic)
     function _checkTradingAccessHelper() internal view returns (bool) {
         // Check control day
-        bool controlDayAccess = (
-            block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay()
-                && block.timestamp < Constants.THIRTY_DAYS + proofOfCapital.controlDay() + proofOfCapital.controlPeriod()
-        );
+        bool controlDayAccess = (block.timestamp > Constants.THIRTY_DAYS + proofOfCapital.controlDay()
+                && block.timestamp
+                    < Constants.THIRTY_DAYS + proofOfCapital.controlDay() + proofOfCapital.controlPeriod());
 
         // Check deferred withdrawals
-        bool deferredWithdrawalAccess = (proofOfCapital.mainTokenDeferredWithdrawalDate() > 0)
+        bool deferredWithdrawalAccess =
+            (proofOfCapital.mainTokenDeferredWithdrawalDate() > 0)
             || (proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
 
-        // Check if more than 60 days remaining until lock end
-        bool timeAccess = (proofOfCapital.lockEndTime() - block.timestamp > Constants.SIXTY_DAYS);
+        // Check if less than 60 days remaining until lock end (more freedom for trading)
+        bool timeAccess = (proofOfCapital.lockEndTime() < block.timestamp + Constants.SIXTY_DAYS);
 
         return controlDayAccess || deferredWithdrawalAccess || timeAccess;
     }

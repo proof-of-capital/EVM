@@ -17,14 +17,14 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         // Move time far from lock end to deactivate trading
         // vm.warp(proofOfCapital.lockEndTime() - 1 days);
     }
-    
+
     // Test successful registration of old contract
     function testRegisterOldContract() public {
         vm.warp(proofOfCapital.lockEndTime() - 1 days);
         vm.warp(proofOfCapital.lockEndTime() - 1 days);
         vm.prank(owner);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
-        
+
         assertTrue(proofOfCapital.oldContractAddress(MOCK_OLD_CONTRACT));
     }
 
@@ -38,8 +38,6 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails when trading is active
     function testRegisterOldContractWhenTradingActive() public {
-
-        
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.LockIsActive.selector);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
@@ -93,11 +91,11 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
     function testRegisterOldContractWithMarketMakerAddress() public {
         vm.warp(proofOfCapital.lockEndTime() - 1 days);
         address marketMaker = address(0x9999);
-        
+
         // First register a market maker
         vm.prank(owner);
         proofOfCapital.setMarketMaker(marketMaker, true);
-        
+
         // Try to register the same address as old contract
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
@@ -126,15 +124,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(proofOfCapital.lockEndTime() - 1 days);
         address oldContract1 = address(0x1111);
         address oldContract2 = address(0x2222);
-        
+
         vm.startPrank(owner);
-        
+
         proofOfCapital.registerOldContract(oldContract1);
         assertTrue(proofOfCapital.oldContractAddress(oldContract1));
-        
+
         proofOfCapital.registerOldContract(oldContract2);
         assertTrue(proofOfCapital.oldContractAddress(oldContract2));
-        
+
         vm.stopPrank();
     }
-} 
+}

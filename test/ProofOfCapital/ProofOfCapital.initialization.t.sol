@@ -314,7 +314,9 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             controlPeriod: 1, // Way below minimum
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -352,7 +354,9 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -393,7 +397,9 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             controlPeriod: validPeriod, // Within valid range
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -431,8 +437,10 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
                 tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
-                oldContractAddresses: new address[](0)
-            });
+                oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
+        });
 
             bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
 
@@ -463,8 +471,10 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
                 tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
-                oldContractAddresses: new address[](0)
-            });
+                oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
+        });
 
             bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
 
@@ -669,5 +679,30 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
         vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
         new ERC1967Proxy(address(implementation), initData);
+    }
+
+    // Test ProfitBeforeTrendChangeMustBePositive error
+    function testInitializeProfitBeforeTrendChangeMustBePositiveZero() public {
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.profitBeforeTrendChange = 0; // Invalid: zero value
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        vm.expectRevert(ProofOfCapital.ProfitBeforeTrendChangeMustBePositive.selector);
+        new ERC1967Proxy(address(implementation), initData);
+    }
+
+    function testInitializeProfitBeforeTrendChangeMustBePositiveValid() public {
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.profitBeforeTrendChange = 1; // Valid: minimum positive value
+
+        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
+
+        // Should not revert
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ProofOfCapital proofOfCapital = ProofOfCapital(payable(address(proxy)));
+
+        // Verify value was set
+        assertEq(proofOfCapital.profitBeforeTrendChange(), 1);
     }
 }

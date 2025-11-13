@@ -102,7 +102,9 @@ contract ProofOfCapitalTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         // Deploy proxy
@@ -324,23 +326,14 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 
-    function testExtendLockExceedsTwoYears() public {
-        // We start with 365 days, limit is 730 days (TWO_YEARS)
-        // HALF_YEAR = 182.5 days approximately
-        // So 365 + 182.5 = 547.5 days (still within 730 limit)
-        // But 365 + 182.5 + 182.5 = 730 days (at the limit)
+    function testExtendLockExceedsFiveYears() public {
+        for (uint256 i = 0; i < 7; i++) {
+            vm.prank(owner);
+            proofOfCapital.extendLock(Constants.HALF_YEAR);
+        }
 
-        // First extend by HALF_YEAR - should work
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
-
-        // Second extend by THREE_MONTHS to get closer to limit - should work
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS);
-
-        // Now try to extend by HALF_YEAR - this should exceed the limit
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
+        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 
@@ -401,7 +394,7 @@ contract ProofOfCapitalTest is Test {
 
         // But HALF_YEAR should fail now
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
+        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 
@@ -424,8 +417,11 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Now try to unblock when we have enough time (more than 30 days before lock end)
-        // Lock is set to 365 days from start, so we should have enough time
+        // Move time to less than 60 days before lock end (activation allowed when < 60 days)
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // 59 days + 1 second remaining
+
+        // Now try to unblock when less than 60 days remain
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
 
@@ -433,15 +429,15 @@ contract ProofOfCapitalTest is Test {
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
-    function testBlockDeferredWithdrawalFailsWhenTooCloseToLockEnd() public {
+    function testBlockDeferredWithdrawalFailsWhenTooFarFromLockEnd() public {
         // First block withdrawal
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time forward to be within 30 days of lock end
+        // Move time forward to be more than 60 days before lock end (activation blocked when >= 60 days)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1 days); // 29 days before lock end
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1 days); // 60 days + 1 day remaining
 
         // Try to unblock - should fail
         vm.prank(owner);
@@ -458,11 +454,11 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time forward to be exactly 30 days before lock end
+        // Move time forward to be exactly 60 days before lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS);
 
-        // Try to unblock - should fail (condition is >, not >=)
+        // Try to unblock - should fail (condition is <, not <=)
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
@@ -474,14 +470,14 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time to just over the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
+        // Move time to just under the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1);
 
-        // Should not be able to activate withdrawal when too close to lock end
+        // Should be able to activate withdrawal when less than 60 days remain
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
+        assertTrue(proofOfCapital.canWithdrawal());
     }
 
     function testBlockDeferredWithdrawalUnauthorized() public {
@@ -2543,17 +2539,18 @@ contract ProofOfCapitalTest is Test {
         uint256 contractBalance = proofOfCapital.contractTokenBalance();
         uint256 totalSold = proofOfCapital.totalTokensSold();
         uint256 availableTokens = contractBalance - totalSold;
-        uint256 ownerBalanceBefore = token.balanceOf(owner);
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = token.balanceOf(dao);
 
         // Ensure there are tokens available for withdrawal
         assertTrue(availableTokens > 0);
 
-        // Withdraw all tokens
-        vm.prank(owner);
+        // Withdraw all tokens (only DAO can call this)
+        vm.prank(dao);
         proofOfCapital.withdrawAllTokens();
 
-        // Verify tokens transferred to owner
-        assertEq(token.balanceOf(owner), ownerBalanceBefore + availableTokens);
+        // Verify tokens transferred to DAO
+        assertEq(token.balanceOf(dao), daoBalanceBefore + availableTokens);
 
         // Verify state reset
         assertEq(proofOfCapital.currentStep(), 0);
@@ -2567,7 +2564,8 @@ contract ProofOfCapitalTest is Test {
 
     function testWithdrawAllTokensLockPeriodNotEnded() public {
         // Try to withdraw before lock period ends
-        vm.prank(owner);
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         vm.expectRevert(ProofOfCapital.LockPeriodNotEnded.selector);
         proofOfCapital.withdrawAllTokens();
     }
@@ -2580,12 +2578,13 @@ contract ProofOfCapitalTest is Test {
         // In initial state: contractTokenBalance = 0, totalTokensSold = 10000e18 (offset)
         // So availableTokens = 0 - 10000e18 = negative, but function checks > 0
 
-        vm.prank(owner);
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         vm.expectRevert(ProofOfCapital.NoTokensToWithdraw.selector);
         proofOfCapital.withdrawAllTokens();
     }
 
-    function testWithdrawAllTokensOnlyOwner() public {
+    function testWithdrawAllTokensOnlyDAO() public {
         // Setup tokens in contract first
         vm.startPrank(owner);
         token.transfer(returnWallet, 50000e18);
@@ -2600,7 +2599,11 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // Non-owner tries to withdraw
+        // Non-DAO tries to withdraw (should fail)
+        vm.prank(owner);
+        vm.expectRevert();
+        proofOfCapital.withdrawAllTokens();
+
         vm.prank(royalty);
         vm.expectRevert();
         proofOfCapital.withdrawAllTokens();
@@ -2633,8 +2636,9 @@ contract ProofOfCapitalTest is Test {
         uint256 firstLevelQuantity = proofOfCapital.firstLevelTokenQuantity();
         uint256 initialPrice = proofOfCapital.initialPricePerToken();
 
-        // Withdraw all tokens
-        vm.prank(owner);
+        // Withdraw all tokens (only DAO can call this)
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.withdrawAllTokens();
 
         // Verify complete state reset
@@ -2699,14 +2703,15 @@ contract ProofOfCapitalTest is Test {
         uint256 totalSold = proofOfCapital.totalTokensSold();
         uint256 expectedAvailable = contractBalance - totalSold;
 
-        uint256 ownerBalanceBefore = token.balanceOf(owner);
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = token.balanceOf(dao);
 
-        // Withdraw
-        vm.prank(owner);
+        // Withdraw (only DAO can call this)
+        vm.prank(dao);
         proofOfCapital.withdrawAllTokens();
 
-        // Verify correct amount transferred
-        assertEq(token.balanceOf(owner), ownerBalanceBefore + expectedAvailable);
+        // Verify correct amount transferred to DAO
+        assertEq(token.balanceOf(dao), daoBalanceBefore + expectedAvailable);
     }
 
     // Tests for withdrawAllSupportTokens function
@@ -2729,17 +2734,18 @@ contract ProofOfCapitalTest is Test {
 
         // Record initial state
         uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        uint256 ownerBalanceBefore = weth.balanceOf(owner);
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = weth.balanceOf(dao);
 
         // Ensure there are support tokens to withdraw
         assertTrue(supportBalance > 0);
 
-        // Withdraw all support tokens
-        vm.prank(owner);
+        // Withdraw all support tokens (only DAO can call this)
+        vm.prank(dao);
         proofOfCapital.withdrawAllSupportTokens();
 
-        // Verify tokens transferred to owner
-        assertEq(weth.balanceOf(owner), ownerBalanceBefore + supportBalance);
+        // Verify tokens transferred to DAO
+        assertEq(weth.balanceOf(dao), daoBalanceBefore + supportBalance);
 
         // Verify support balance reset
         assertEq(proofOfCapital.contractSupportBalance(), 0);
@@ -2747,7 +2753,8 @@ contract ProofOfCapitalTest is Test {
 
     function testWithdrawAllSupportTokensLockPeriodNotEnded() public {
         // Try to withdraw before lock period ends
-        vm.prank(owner);
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         vm.expectRevert(ProofOfCapital.LockPeriodNotEnded.selector);
         proofOfCapital.withdrawAllSupportTokens();
     }
@@ -2760,12 +2767,13 @@ contract ProofOfCapitalTest is Test {
         // In initial state, contractSupportBalance = 0
         assertEq(proofOfCapital.contractSupportBalance(), 0);
 
-        vm.prank(owner);
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         vm.expectRevert(ProofOfCapital.NoSupportTokensToWithdraw.selector);
         proofOfCapital.withdrawAllSupportTokens();
     }
 
-    function testWithdrawAllSupportTokensOnlyOwner() public {
+    function testWithdrawAllSupportTokensOnlyDAO() public {
         // Add support tokens to contract
         vm.startPrank(owner);
         weth.approve(address(proofOfCapital), 1000e18);
@@ -2776,7 +2784,11 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // Non-owner tries to withdraw
+        // Non-DAO tries to withdraw (should fail)
+        vm.prank(owner);
+        vm.expectRevert();
+        proofOfCapital.withdrawAllSupportTokens();
+
         vm.prank(royalty);
         vm.expectRevert();
         proofOfCapital.withdrawAllSupportTokens();
@@ -2801,8 +2813,9 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime);
 
-        // Should work at exact lock end time
-        vm.prank(owner);
+        // Should work at exact lock end time (only DAO can call this)
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.withdrawAllSupportTokens();
 
         // Verify withdrawal succeeded
@@ -2815,7 +2828,8 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
 
         // Try to withdraw with zero balance
-        vm.prank(owner);
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         vm.expectRevert(ProofOfCapital.NoSupportTokensToWithdraw.selector);
         proofOfCapital.withdrawAllSupportTokens();
     }
@@ -2834,15 +2848,16 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
 
         uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        uint256 ownerBalanceBefore = weth.balanceOf(owner);
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = weth.balanceOf(dao);
 
-        // Withdraw
-        vm.prank(owner);
+        // Withdraw (only DAO can call this)
+        vm.prank(dao);
         proofOfCapital.withdrawAllSupportTokens();
 
         // The function should call _transferSupportTokens which handles WETH/ETH conversion
         // In our test setup, tokenSupport = true, so it should transfer WETH directly
-        assertEq(weth.balanceOf(owner), ownerBalanceBefore + supportBalance);
+        assertEq(weth.balanceOf(dao), daoBalanceBefore + supportBalance);
         assertEq(proofOfCapital.contractSupportBalance(), 0);
     }
 
@@ -2866,18 +2881,19 @@ contract ProofOfCapitalTest is Test {
 
         // Test main token withdrawal
         uint256 mainTokenBalance = proofOfCapital.contractTokenBalance() - proofOfCapital.totalTokensSold();
-        uint256 ownerMainBalanceBefore = token.balanceOf(owner);
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoMainBalanceBefore = token.balanceOf(dao);
 
-        vm.prank(owner);
+        vm.prank(dao);
         proofOfCapital.withdrawAllTokens();
 
         // Verify main tokens withdrawn and state reset
-        assertEq(token.balanceOf(owner), ownerMainBalanceBefore + mainTokenBalance);
+        assertEq(token.balanceOf(dao), daoMainBalanceBefore + mainTokenBalance);
         assertEq(proofOfCapital.contractTokenBalance(), 0);
         assertEq(proofOfCapital.totalTokensSold(), 0);
 
         // Second test: test support token withdrawal with zero balance (expected to fail)
-        vm.prank(owner);
+        vm.prank(dao);
         vm.expectRevert(ProofOfCapital.NoSupportTokensToWithdraw.selector);
         proofOfCapital.withdrawAllSupportTokens();
 
@@ -3231,7 +3247,9 @@ contract ProofOfCapitalTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(supportToken), // Different from WETH
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3281,7 +3299,9 @@ contract ProofOfCapitalTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(supportToken), // Different from WETH
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3327,7 +3347,9 @@ contract ProofOfCapitalTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(supportToken), // Different from WETH
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3486,7 +3508,9 @@ contract ProofOfCapitalTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts // Add old contract here
+            oldContractAddresses: oldContracts,
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3547,7 +3571,9 @@ contract ProofOfCapitalTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(supportToken), // Different from WETH to enable ETH mode
             royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts // Add old contract here
+            oldContractAddresses: oldContracts,
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3607,6 +3633,9 @@ contract ProofOfCapitalTest is Test {
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
+        ,
+            profitBeforeTrendChange: 200,
+            daoAddress: address(0)
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3657,6 +3686,9 @@ contract ProofOfCapitalTest is Test {
             tokenSupportAddress: address(supportToken), // Different from WETH for ETH mode
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
+        ,
+            profitBeforeTrendChange: 200,
+            daoAddress: address(0)
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3781,6 +3813,9 @@ contract ProofOfCapitalTest is Test {
             tokenSupportAddress: address(supportToken), // Different for ETH mode
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0) // No old contracts
+        ,
+            profitBeforeTrendChange: 200,
+            daoAddress: address(0)
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -3834,6 +3869,9 @@ contract ProofOfCapitalTest is Test {
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: oldContracts
+        ,
+            profitBeforeTrendChange: 200,
+            daoAddress: address(0)
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -4057,8 +4095,9 @@ contract ProofOfCapitalTest is Test {
         // Step 3: Wait for lock period to end
         vm.warp(proofOfCapital.lockEndTime() + 1);
 
-        // Step 4: Owner withdraws all support tokens, making contractSupportBalance = 0
-        vm.prank(owner);
+        // Step 4: DAO withdraws all support tokens, making contractSupportBalance = 0
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.withdrawAllSupportTokens();
 
         // Verify contractSupportBalance is now zero
@@ -4108,11 +4147,12 @@ contract ProofOfCapitalTest is Test {
         uint256 supportBalance = proofOfCapital.contractSupportBalance();
         assertTrue(supportBalance > 0, "Should have support balance after market maker purchase");
 
-        // Step 3: Owner withdraws all support tokens, making contractSupportBalance = 0
+        // Step 3: DAO withdraws all support tokens, making contractSupportBalance = 0
         // First wait for lock period to end
         vm.warp(proofOfCapital.lockEndTime() + 1);
 
-        vm.prank(owner);
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.withdrawAllSupportTokens();
 
         // Verify contractSupportBalance is now zero
@@ -4182,7 +4222,9 @@ contract ProofOfCapitalProfitTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         // Deploy proxy
@@ -4239,8 +4281,10 @@ contract ProofOfCapitalProfitTest is Test {
     }
 
     function testGetProfitOnRequestOwnerSimple() public {
-        // Enable profit on request mode (should be enabled by default)
-        assertTrue(proofOfCapital.profitInTime());
+        // Enable profit on request mode (profitInTime = false for accumulation)
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+        assertFalse(proofOfCapital.profitInTime());
 
         // Manually set owner profit balance for testing
         // We'll use the deposit function to simulate profit accumulation
@@ -4308,7 +4352,9 @@ contract ProofOfCapitalInitializationTest is Test {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
     }
 
@@ -4575,7 +4621,9 @@ contract ProofOfCapitalInitializationTest is Test {
             controlPeriod: 1, // Way below minimum
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -4613,7 +4661,9 @@ contract ProofOfCapitalInitializationTest is Test {
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -4654,7 +4704,9 @@ contract ProofOfCapitalInitializationTest is Test {
             controlPeriod: validPeriod, // Within valid range
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
@@ -4692,8 +4744,10 @@ contract ProofOfCapitalInitializationTest is Test {
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
                 tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
-                oldContractAddresses: new address[](0)
-            });
+                oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
+        });
 
             bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
 
@@ -4724,8 +4778,10 @@ contract ProofOfCapitalInitializationTest is Test {
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
                 tokenSupportAddress: address(weth),
                 royaltyProfitPercent: 500,
-                oldContractAddresses: new address[](0)
-            });
+                oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
+        });
 
             bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
 

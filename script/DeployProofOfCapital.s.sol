@@ -36,6 +36,8 @@ contract DeployProofOfCapital is Script {
     address public tokenSupportAddress;
     uint256 public royaltyProfitPercent;
     address[] public oldContractAddresses;
+    uint256 public profitBeforeTrendChange;
+    address public daoAddress;
 
     function run() external {
         _loadEnvironmentVariables();
@@ -74,6 +76,19 @@ contract DeployProofOfCapital is Script {
         offsetTokens = vm.envUint("OFFSET_TOKENS");
         controlPeriod = vm.envUint("CONTROL_PERIOD");
         royaltyProfitPercent = vm.envUint("ROYALTY_PROFIT_PERCENT");
+
+        // Load optional parameters with defaults
+        try vm.envUint("PROFIT_BEFORE_TREND_CHANGE") returns (uint256 value) {
+            profitBeforeTrendChange = value;
+        } catch {
+            profitBeforeTrendChange = profitPercentage * 2; // Default: double profit before trend
+        }
+
+        try vm.envAddress("DAO_ADDRESS") returns (address value) {
+            daoAddress = value;
+        } catch {
+            daoAddress = address(0); // Will default to owner in initialize
+        }
 
         // Parse old contract addresses (optional)
         try vm.envString("OLD_CONTRACT_ADDRESSES") returns (string memory oldContractsStr) {
@@ -164,7 +179,9 @@ contract DeployProofOfCapital is Script {
             controlPeriod: controlPeriod,
             tokenSupportAddress: tokenSupportAddress,
             royaltyProfitPercent: royaltyProfitPercent,
-            oldContractAddresses: oldContractAddresses
+            oldContractAddresses: oldContractAddresses,
+            profitBeforeTrendChange: profitBeforeTrendChange,
+            daoAddress: daoAddress
         });
     }
 

@@ -68,7 +68,7 @@ contract ProofOfCapital is
     error PriceIncrementTooLow();
     error InvalidRoyaltyProfitPercentage();
     error ETHTransferFailed();
-    error LockCannotExceedTwoYears();
+    error LockCannotExceedFiveYears();
     error InvalidTimePeriod();
     error CannotActivateWithdrawalTooCloseToLockEnd();
     error InvalidRecipientOrAmount();
@@ -113,9 +113,25 @@ contract ProofOfCapital is
     error LockIsActive();
     error OldContractAddressZero();
     error OldContractAddressConflict();
+    error OldContractUpdateTooFrequent();
+    error NoReturnWalletChangeProposed();
+    error ReturnWalletChangeDelayNotPassed();
+    error InvalidDAOAddress();
+    error InsufficientUnaccountedCollateralBalance();
+    error InsufficientUnaccountedOffsetBalance();
+    error InsufficientUnaccountedOffsetTokenBalance();
+    error UnaccountedOffsetBalanceNotSet();
+    error ContractAlreadyInitialized();
+    error ProfitBeforeTrendChangeMustBePositive();
 
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
+    event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
+    event UnaccountedOffsetBalanceProcessed(uint256 amount);
+    event UnaccountedOffsetTokenBalanceProcessed(uint256 amount);
+    event ReturnWalletChangeProposed(address indexed newReturnWalletAddress, uint256 proposalTime);
+    event ReturnWalletChangeConfirmed(address indexed newReturnWalletAddress);
+    event DAOAddressChanged(address indexed newDAOAddress);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
@@ -137,6 +153,8 @@ contract ProofOfCapital is
         address tokenSupportAddress;
         uint256 royaltyProfitPercent;
         address[] oldContractAddresses; // Array of old contract addresses
+        uint256 profitBeforeTrendChange; // Profit percentage before trend change
+        address daoAddress; // DAO address for governance
     }
 
     // Contract state
@@ -149,6 +167,7 @@ contract ProofOfCapital is
     address public returnWalletAddress;
     address public royaltyWalletAddress;
     address public wethAddress;
+    address public daoAddress; // DAO address for governance
 
     // Time and control variables
     uint256 public override lockEndTime;
@@ -171,6 +190,7 @@ contract ProofOfCapital is
     uint256 public profitPercentage;
     uint256 public royaltyProfitPercent;
     uint256 public creatorProfitPercent;
+    uint256 public profitBeforeTrendChange; // Profit percentage before trend change
 
     // Balances and counters
     uint256 public override totalTokensSold;
@@ -203,7 +223,7 @@ contract ProofOfCapital is
     // Profit tracking
     uint256 public ownerSupportBalance; // Owner's profit balance (universal for both ETH and support tokens)
     uint256 public royaltySupportBalance; // Royalty profit balance (universal for both ETH and support tokens)
-    bool public override profitInTime; // true = on request, false = immediate
+    bool public override profitInTime; // true = immediate, false = on request
 
     // Deferred withdrawal
     bool public override canWithdrawal;
@@ -221,6 +241,22 @@ contract ProofOfCapital is
     uint256 public upgradeConfirmationTime; // When upgrade was confirmed by owner
     bool public upgradeConfirmed; // Whether upgrade is confirmed by owner
 
+    // Return wallet change proposal
+    address public proposedReturnWalletAddress; // Proposed return wallet address
+    uint256 public proposedReturnWalletChangeTime; // Time when return wallet change was proposed
+
+    // Old contract address change control
+    uint256 public lastOldContractAddressChangeTime; // Time of the last old contract address change
+
+    // Unaccounted balances for gradual processing
+    uint256 public unaccountedCollateralBalance; // Unaccounted collateral balance
+    uint256 public unaccountedOffsetBalance; // Unaccounted offset balance
+    uint256 public unaccountedOffsetTokenBalance; // Unaccounted offset token balance for gradual processing
+    uint256 public unaccountedReturnBuybackBalance; // Unaccounted return buyback balance for gradual processing
+
+    // Initialization flag
+    bool public isInitialized; // Flag indicating whether the contract's initialization is complete
+
     modifier onlyOwnerOrOldContract() {
         require(_msgSender() == owner() || oldContractAddress[_msgSender()], AccessDenied());
         _;
@@ -233,6 +269,11 @@ contract ProofOfCapital is
 
     modifier onlyReserveOwner() {
         require(_msgSender() == reserveOwner, OnlyReserveOwner());
+        _;
+    }
+
+    modifier onlyDAO() {
+        require(_msgSender() == daoAddress, AccessDenied());
         _;
     }
 
@@ -252,6 +293,7 @@ contract ProofOfCapital is
             params.royaltyProfitPercent > 1 && params.royaltyProfitPercent <= Constants.MAX_ROYALTY_PERCENT,
             InvalidRoyaltyProfitPercentage()
         );
+        require(params.profitBeforeTrendChange > 0, ProfitBeforeTrendChangeMustBePositive());
 
         __Ownable_init(_msgSender());
         __UUPSUpgradeable_init();
@@ -277,6 +319,8 @@ contract ProofOfCapital is
         tokenSupportAddress = params.tokenSupportAddress;
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
+        profitBeforeTrendChange = params.profitBeforeTrendChange;
+        daoAddress = params.daoAddress != address(0) ? params.daoAddress : _msgSender();
 
         // Initialize state variables
         currentStep = 0;
@@ -309,7 +353,10 @@ contract ProofOfCapital is
         isNeedToUnwrap = true; // Default to true - unwrap WETH to ETH when sending
 
         if (params.offsetTokens > 0) {
-            _calculateOffset(params.offsetTokens);
+            unaccountedOffsetBalance = params.offsetTokens;
+            isInitialized = false; // Will be set to true after processing offset
+        } else {
+            isInitialized = true; // No offset to process
         }
 
         // Set old contract addresses
@@ -327,7 +374,7 @@ contract ProofOfCapital is
      * @dev Extend lock period
      */
     function extendLock(uint256 additionalTime) external override onlyOwner {
-        require((lockEndTime + additionalTime) - block.timestamp < Constants.TWO_YEARS, LockCannotExceedTwoYears());
+        require((lockEndTime + additionalTime) - block.timestamp < Constants.FIVE_YEARS, LockCannotExceedFiveYears());
         require(
             additionalTime == Constants.HALF_YEAR || additionalTime == Constants.TEN_MINUTES
                 || additionalTime == Constants.THREE_MONTHS,
@@ -340,12 +387,14 @@ contract ProofOfCapital is
 
     /**
      * @dev Block or unblock deferred withdrawal
+     * @notice If called when less than 60 days remain until the end of the lock (i.e., when users can already interact with the contract),
+     * the owner can re-enable withdrawal—for example, to transfer tokens to another contract with a lock (for a safe migration).
      */
     function blockDeferredWithdrawal() external override onlyOwner {
         if (canWithdrawal) {
             canWithdrawal = false;
         } else {
-            require(lockEndTime - block.timestamp > Constants.SIXTY_DAYS, CannotActivateWithdrawalTooCloseToLockEnd());
+            require(lockEndTime - block.timestamp < Constants.SIXTY_DAYS, CannotActivateWithdrawalTooCloseToLockEnd());
             canWithdrawal = true;
         }
     }
@@ -353,10 +402,16 @@ contract ProofOfCapital is
     /**
      * @dev Verifies and registers the old contract address.
      * Requires that the address is non-zero and does not match the main contract addresses.
+     * Can be changed no more than once every 40 days.
      * @param oldContractAddr Address of the old contract to register
      */
     function registerOldContract(address oldContractAddr) external onlyOwner {
         require(!_checkTradingAccess(), LockIsActive());
+        require(
+            lastOldContractAddressChangeTime == 0
+                || block.timestamp >= lastOldContractAddressChangeTime + Constants.FORTY_DAYS,
+            OldContractUpdateTooFrequent()
+        );
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
             oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)
@@ -368,6 +423,7 @@ contract ProofOfCapital is
         );
 
         oldContractAddress[oldContractAddr] = true;
+        lastOldContractAddressChangeTime = block.timestamp;
         emit OldContractRegistered(oldContractAddr);
     }
 
@@ -390,7 +446,10 @@ contract ProofOfCapital is
      * @dev Cancel deferred withdrawal of main token
      */
     function stopTokenDeferredWithdrawal() external override {
-        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
+        require(
+            _msgSender() == owner() || _msgSender() == royaltyWalletAddress || _msgSender() == daoAddress,
+            AccessDenied()
+        );
         require(mainTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
         mainTokenDeferredWithdrawalDate = 0;
@@ -435,7 +494,10 @@ contract ProofOfCapital is
      * @dev Cancel deferred withdrawal of support tokens
      */
     function stopSupportDeferredWithdrawal() external override {
-        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
+        require(
+            _msgSender() == owner() || _msgSender() == royaltyWalletAddress || _msgSender() == daoAddress,
+            AccessDenied()
+        );
         require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
         supportTokenDeferredWithdrawalDate = 0;
@@ -470,12 +532,17 @@ contract ProofOfCapital is
      */
     function assignNewOwner(address newOwner) external override onlyReserveOwner {
         require(newOwner != address(0), InvalidNewOwner());
+        require(!oldContractAddress[newOwner], OldContractAddressConflict());
 
         if (owner() == reserveOwner) {
             _transferOwnership(newOwner);
             _transferReserveOwner(newOwner);
         } else {
             _transferOwnership(newOwner);
+        }
+
+        if (owner() == daoAddress) {
+            daoAddress = newOwner;
         }
     }
 
@@ -506,7 +573,45 @@ contract ProofOfCapital is
     }
 
     /**
-     * @dev Change return wallet address
+     * @dev Propose return wallet address change (requires lock to be active)
+     */
+    function proposeReturnWalletChange(address newReturnWalletAddress) external onlyOwner {
+        require(!_checkTradingAccess(), LockIsActive());
+        require(newReturnWalletAddress != address(0), InvalidAddress());
+        require(
+            newReturnWalletAddress != owner() && newReturnWalletAddress != reserveOwner
+                && newReturnWalletAddress != address(launchToken) && newReturnWalletAddress != wethAddress
+                && newReturnWalletAddress != tokenSupportAddress && newReturnWalletAddress != additionalTokenAddress
+                && newReturnWalletAddress != returnWalletAddress && newReturnWalletAddress != royaltyWalletAddress
+                && newReturnWalletAddress != recipientDeferredWithdrawalMainToken
+                && newReturnWalletAddress != recipientDeferredWithdrawalSupportToken
+                && !marketMakerAddresses[newReturnWalletAddress] && !oldContractAddress[newReturnWalletAddress],
+            OldContractAddressConflict()
+        );
+
+        proposedReturnWalletAddress = newReturnWalletAddress;
+        proposedReturnWalletChangeTime = block.timestamp;
+        emit ReturnWalletChangeProposed(newReturnWalletAddress, block.timestamp);
+    }
+
+    /**
+     * @dev Confirm proposed return wallet address change after 24 hours
+     */
+    function confirmReturnWalletChange() external onlyOwner {
+        require(!_checkTradingAccess(), LockIsActive());
+        require(proposedReturnWalletAddress != address(0), NoReturnWalletChangeProposed());
+        require(
+            block.timestamp >= proposedReturnWalletChangeTime + Constants.ONE_DAY, ReturnWalletChangeDelayNotPassed()
+        );
+
+        returnWalletAddress = proposedReturnWalletAddress;
+        proposedReturnWalletAddress = address(0);
+        proposedReturnWalletChangeTime = 0;
+        emit ReturnWalletChangeConfirmed(returnWalletAddress);
+    }
+
+    /**
+     * @dev Change return wallet address (legacy function for backwards compatibility)
      */
     function changeReturnWallet(address newReturnWalletAddress) external override onlyOwner {
         require(newReturnWalletAddress != address(0), InvalidAddress());
@@ -602,6 +707,23 @@ contract ProofOfCapital is
     }
 
     /**
+     * @dev Deposit launch tokens back to contract (for owners and old contracts)
+     * Used when owner needs to return tokens and potentially trigger offset reduction
+     */
+    function depositTokens(uint256 amount) external nonReentrant onlyActiveContract onlyOwnerOrOldContract {
+        require(amount > 0, InvalidAmount());
+        
+        launchToken.safeTransferFrom(_msgSender(), address(this), amount);
+        
+        // Check if we should accumulate in unaccountedOffsetTokenBalance for gradual offset reduction
+        if (totalTokensSold == offsetTokens && (offsetTokens - tokensEarned) >= amount) {
+            unaccountedOffsetTokenBalance += amount;
+        } else {
+            contractTokenBalance += amount;
+        }
+    }
+
+    /**
      * @dev Sell tokens back to contract
      */
     function sellTokens(uint256 amount) external override nonReentrant onlyActiveContract {
@@ -618,14 +740,15 @@ contract ProofOfCapital is
 
     /**
      * @dev Withdraw all tokens after lock period
+     * @notice Only DAO can withdraw all tokens after lock period ends
      */
-    function withdrawAllTokens() external override onlyOwner nonReentrant {
+    function withdrawAllTokens() external override onlyDAO nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
 
         uint256 availableTokens = contractTokenBalance - totalTokensSold;
         require(availableTokens > 0, NoTokensToWithdraw());
 
-        launchToken.safeTransfer(owner(), availableTokens);
+        launchToken.safeTransfer(daoAddress, availableTokens);
 
         // Reset state
         currentStep = 0;
@@ -639,22 +762,25 @@ contract ProofOfCapital is
         remainderOfStepEarned = firstLevelTokenQuantity;
         quantityTokensPerLevelEarned = firstLevelTokenQuantity;
         currentPriceEarned = initialPricePerToken;
+        isActive = false;
 
-        emit AllTokensWithdrawn(owner(), availableTokens);
+        emit AllTokensWithdrawn(daoAddress, availableTokens);
     }
 
     /**
      * @dev Withdraw all support tokens after lock period
+     * @notice Only DAO can withdraw all support tokens after lock period ends
      */
-    function withdrawAllSupportTokens() external override onlyOwner nonReentrant {
+    function withdrawAllSupportTokens() external override onlyDAO nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
         require(contractSupportBalance > 0, NoSupportTokensToWithdraw());
 
         uint256 withdrawnAmount = contractSupportBalance;
         contractSupportBalance = 0;
-        _transferSupportTokens(owner(), withdrawnAmount);
+        isActive = false;
+        _transferSupportTokens(daoAddress, withdrawnAmount);
 
-        emit AllSupportTokensWithdrawn(owner(), withdrawnAmount);
+        emit AllSupportTokensWithdrawn(daoAddress, withdrawnAmount);
     }
 
     /**
@@ -704,11 +830,89 @@ contract ProofOfCapital is
     }
 
     /**
+     * @dev Set DAO address (can only be called by current DAO)
+     */
+    function setDAO(address newDAOAddress) external {
+        require(_msgSender() == daoAddress, AccessDenied());
+        require(newDAOAddress != address(0), InvalidDAOAddress());
+        daoAddress = newDAOAddress;
+        emit DAOAddressChanged(newDAOAddress);
+    }
+
+    /**
+     * @dev Calculate unaccounted collateral balance gradually
+     * @param amount Amount of collateral to process
+     */
+    function calculateUnaccountedCollateralBalance(uint256 amount) external onlyOwner nonReentrant {
+        if (!_checkTradingAccess()) {
+            if (_checkUnlockWindow()) {
+                controlDay += Constants.THIRTY_DAYS;
+            }
+        }
+
+        require(unaccountedCollateralBalance >= amount, InsufficientUnaccountedCollateralBalance());
+        
+        uint256 deltaCollateralBalance = _calculateChangeOffsetSupport(amount);
+        unaccountedCollateralBalance -= amount;
+        contractSupportBalance += deltaCollateralBalance;
+        
+        uint256 change = amount - deltaCollateralBalance;
+        if (change > 0) {
+            _transferSupportTokens(daoAddress, change);
+        }
+
+        emit UnaccountedCollateralBalanceProcessed(amount, deltaCollateralBalance, change);
+    }
+
+    /**
+     * @dev Calculate unaccounted offset balance gradually
+     * @param amount Amount of offset tokens to process
+     */
+    function calculateUnaccountedOffsetBalance(uint256 amount) external onlyOwner nonReentrant {
+        if (!_checkTradingAccess()) {
+            if (_checkUnlockWindow()) {
+                controlDay += Constants.THIRTY_DAYS;
+            }
+        }
+
+        require(unaccountedOffsetBalance > 0, UnaccountedOffsetBalanceNotSet());
+        require(!isInitialized, ContractAlreadyInitialized());
+        require(unaccountedOffsetBalance >= amount, InsufficientUnaccountedOffsetBalance());
+
+        _calculateOffset(amount);
+        unaccountedOffsetBalance -= amount;
+
+        // Check if all offset has been processed
+        if (unaccountedOffsetBalance == 0) {
+            isInitialized = true;
+        }
+
+        emit UnaccountedOffsetBalanceProcessed(amount);
+    }
+
+    /**
+     * @dev Calculate unaccounted offset token balance gradually (for reducing offset when tokens are returned)
+     * @param amount Amount of tokens to process
+     */
+    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external onlyOwner nonReentrant {
+        if (!_checkTradingAccess()) {
+            if (_checkUnlockWindow()) {
+                controlDay += Constants.THIRTY_DAYS;
+            }
+        }
+
+        require(unaccountedOffsetTokenBalance >= amount, InsufficientUnaccountedOffsetTokenBalance());
+
+        _calculateChangeOffsetToken(amount);
+        unaccountedOffsetTokenBalance -= amount;
+
+        emit UnaccountedOffsetTokenBalanceProcessed(amount);
+    }
+
+    /**
      * @dev Get profit on request
      */
     function getProfitOnRequest() external override nonReentrant {
-        require(profitInTime, ProfitModeNotActive());
-
         if (_msgSender() == owner()) {
             require(ownerSupportBalance > 0, NoProfitAvailable());
             uint256 profitAmount = ownerSupportBalance;
@@ -776,14 +980,8 @@ contract ProofOfCapital is
 
     function _handleOwnerDeposit(uint256 value) internal {
         if (offsetTokens > tokensEarned) {
-            uint256 deltaSupportBalance = _calculateChangeOffsetSupport(value);
-            contractSupportBalance += deltaSupportBalance;
-
-            // Check to prevent arithmetic underflow
-            if (value > deltaSupportBalance) {
-                uint256 change = value - deltaSupportBalance;
-                _transferSupportTokens(_msgSender(), change);
-            }
+            // Accumulate in unaccounted balance for gradual processing
+            unaccountedCollateralBalance += value;
         }
     }
 
@@ -794,7 +992,7 @@ contract ProofOfCapital is
     function _handleTokenPurchaseCommon(uint256 supportAmount) internal {
         if (!_checkTradingAccess()) {
             if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS * _calculatePastPeriods();
+                controlDay += Constants.THIRTY_DAYS;
             }
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
@@ -804,7 +1002,7 @@ contract ProofOfCapital is
         uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
-        if (!profitInTime) {
+        if (profitInTime) {
             _transferSupportTokens(owner(), creatorProfit);
             _transferSupportTokens(royaltyWalletAddress, royaltyProfit);
         } else {
@@ -834,7 +1032,13 @@ contract ProofOfCapital is
             tokensAvailableForReturnBuyback = totalTokensSold - tokensEarned;
         }
 
-        uint256 effectiveAmount = amount < tokensAvailableForReturnBuyback ? amount : tokensAvailableForReturnBuyback;
+        // Add unaccounted balance from previous calls
+        uint256 totalAmount = amount + unaccountedReturnBuybackBalance;
+        uint256 effectiveAmount = totalAmount < tokensAvailableForReturnBuyback ? totalAmount : tokensAvailableForReturnBuyback;
+        
+        // Store the difference for future processing
+        uint256 remainingAmount = totalAmount - effectiveAmount;
+        unaccountedReturnBuybackBalance = remainingAmount;
 
         if (offsetTokens > tokensEarned) {
             uint256 offsetAmount = offsetTokens - tokensEarned;
@@ -857,14 +1061,14 @@ contract ProofOfCapital is
         contractTokenBalance += amount;
 
         if (supportAmountToPay > 0) {
-            _transferSupportTokens(owner(), supportAmountToPay);
+            _transferSupportTokens(daoAddress, supportAmountToPay);
         }
     }
 
     function _handleTokenSale(uint256 amount) internal {
         if (!_checkTradingAccess()) {
             if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS * _calculatePastPeriods();
+                controlDay += Constants.THIRTY_DAYS;
             }
             require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
         }
@@ -889,14 +1093,21 @@ contract ProofOfCapital is
 
     function _checkTradingAccess() internal view returns (bool) {
         return _checkControlDay() || (mainTokenDeferredWithdrawalDate > 0) || (supportTokenDeferredWithdrawalDate > 0)
-            || (lockEndTime > block.timestamp + Constants.SIXTY_DAYS);
+            || (lockEndTime < block.timestamp + Constants.SIXTY_DAYS);
     }
 
     function _checkControlDay() internal view returns (bool) {
-        return (
-            block.timestamp > Constants.THIRTY_DAYS + controlDay
-                && block.timestamp < controlPeriod + controlDay + Constants.THIRTY_DAYS
-        );
+        uint256 timeSinceControlDay = block.timestamp - controlDay;
+        
+        // Check if we are in the current window
+        if (timeSinceControlDay < controlPeriod) {
+            return true;
+        }
+        
+        // Check if we are in one of the following windows (every 30 days)
+        uint256 periodsSinceControlDay = timeSinceControlDay / Constants.THIRTY_DAYS;
+        uint256 timeInCurrentPeriod = timeSinceControlDay - (periodsSinceControlDay * Constants.THIRTY_DAYS);
+        return timeInCurrentPeriod < controlPeriod;
     }
 
     function _transferReserveOwner(address newOwner) internal {
@@ -909,7 +1120,7 @@ contract ProofOfCapital is
         if (currentStepParam > trendChangeStep) {
             return profitPercentage;
         } else {
-            return profitPercentage * 2;
+            return profitBeforeTrendChange;
         }
     }
 
@@ -962,8 +1173,65 @@ contract ProofOfCapital is
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        contractTokenBalance = amountTokens;
-        totalTokensSold = amountTokens;
+        contractTokenBalance += amountTokens;
+        totalTokensSold += amountTokens;
+    }
+
+    /**
+     * @dev Calculate change in offset when adding tokens (reducing offset)
+     * @param amountToken Amount of tokens being added
+     * @return Current step after recalculation
+     */
+    function _calculateChangeOffsetToken(uint256 amountToken) internal returns (uint256) {
+        int256 remainingAddTokens = int256(amountToken);
+        uint256 localCurrentStep = offsetStep;
+        int256 remainderOfStepLocal = int256(remainderOffsetTokens);
+        uint256 tokensPerLevel = sizeOffsetStep;
+        uint256 currentPriceLocal = offsetPrice;
+
+        while (remainingAddTokens > 0) {
+            int256 tokensAvailableInStep = int256(tokensPerLevel) - remainderOfStepLocal;
+
+            if (remainingAddTokens >= tokensAvailableInStep) {
+                remainingAddTokens -= tokensAvailableInStep;
+
+                if (localCurrentStep > currentStepEarned) {
+                    if (localCurrentStep > trendChangeStep) {
+                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            / (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend);
+                    } else {
+                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
+                    }
+                    currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
+                        / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
+                    localCurrentStep -= 1;
+                    remainderOfStepLocal = 0;
+                } else {
+                    remainderOfStepLocal = int256(tokensPerLevel);
+                    remainingAddTokens = 0;
+                }
+            } else {
+                remainderOfStepLocal += remainingAddTokens;
+                remainingAddTokens = 0;
+            }
+        }
+
+        offsetStep = localCurrentStep;
+        remainderOffsetTokens = uint256(remainderOfStepLocal);
+        offsetPrice = currentPriceLocal;
+        sizeOffsetStep = tokensPerLevel;
+
+        offsetTokens -= amountToken;
+
+        currentStep = localCurrentStep;
+        quantityTokensPerLevel = tokensPerLevel;
+        currentPrice = currentPriceLocal;
+
+        remainderOfStep = uint256(remainderOfStepLocal);
+        totalTokensSold -= amountToken;
+
+        return localCurrentStep;
     }
 
     function _calculateChangeOffsetSupport(uint256 amountSupport) internal returns (uint256) {
@@ -1262,10 +1530,21 @@ contract ProofOfCapital is
 
     /**
      * @dev Check if current time is within unlock window period after lock expires
+     * Accounts for the fact that we might be in one of the following windows, not the current one
      * @return True if in unlock window, false otherwise
      */
     function _checkUnlockWindow() internal view returns (bool) {
-        return block.timestamp > controlPeriod + controlDay + Constants.THIRTY_DAYS;
+        uint256 timeSinceControlDay = block.timestamp - controlDay;
+        
+        // If more than controlPeriod has passed since the last controlDay, we are not in the current window
+        if (timeSinceControlDay > controlPeriod) {
+            // Check if we are in one of the following windows (every 30 days)
+            uint256 periodsSinceControlDay = timeSinceControlDay / Constants.THIRTY_DAYS;
+            uint256 timeInCurrentPeriod = timeSinceControlDay - (periodsSinceControlDay * Constants.THIRTY_DAYS);
+            // If we are still not in a window, return true (need to add 30 days)
+            return timeInCurrentPeriod > controlPeriod;
+        }
+        return false;
     }
 
     /**

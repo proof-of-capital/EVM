@@ -68,23 +68,17 @@ contract ProofOfCapitalAdminTest is BaseTest {
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 
-    function testExtendLockExceedsTwoYears() public {
-        // We start with 365 days, limit is 730 days (TWO_YEARS)
-        // HALF_YEAR = 182.5 days approximately
-        // So 365 + 182.5 = 547.5 days (still within 730 limit)
-        // But 365 + 182.5 + 182.5 = 730 days (at the limit)
+    function testExtendLockExceedsFiveYears() public {
+    
 
-        // First extend by HALF_YEAR - should work
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        for (uint256 i = 0; i < 7; i++) {
+            vm.prank(owner);
+            proofOfCapital.extendLock(Constants.HALF_YEAR);
+        }
 
-        // Second extend by THREE_MONTHS to get closer to limit - should work
+        // Now try to extend by HALF_YEAR one more time - this should exceed the limit
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS);
-
-        // Now try to extend by HALF_YEAR - this should exceed the limit
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
+        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 
@@ -145,7 +139,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // But HALF_YEAR should fail now
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedTwoYears.selector);
+        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
 
@@ -168,27 +162,27 @@ contract ProofOfCapitalAdminTest is BaseTest {
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Ensure we're far enough from lock end (more than 60 days)
+        // Move time to less than 60 days before lock end (activation allowed when < 60 days)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1); // 60 days + 1 second remaining
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // 59 days + 1 second remaining
 
-        // Should be able to unblock when we have enough time
+        // Should be able to unblock when less than 60 days remain
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
-    function testBlockDeferredWithdrawalFailsWhenTooCloseToLockEnd() public {
-        // Move time to be close to lock end (within 60 days)
+    function testBlockDeferredWithdrawalFailsWhenTooFarFromLockEnd() public {
+        // Move time to be more than 60 days before lock end (activation blocked when >= 60 days)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // 59 days remaining
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1); // 60 days + 1 second remaining
 
         // Block withdrawal first
         vm.prank(owner);
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Try to unblock when too close to lock end - should fail
+        // Try to unblock when more than 60 days remain - should fail
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
@@ -204,7 +198,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime - Constants.SIXTY_DAYS);
 
-        // At exactly 60 days, should NOT be able to unblock (require > 60 days)
+        // At exactly 60 days, should NOT be able to unblock (require < 60 days)
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
@@ -216,14 +210,14 @@ contract ProofOfCapitalAdminTest is BaseTest {
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Move time to just over the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
+        // Move time to just under the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1);
 
-        // Should not be able to activate withdrawal when too close to lock end
+        // Should be able to activate withdrawal when less than 60 days remain
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
+        assertTrue(proofOfCapital.canWithdrawal());
     }
 
     function testBlockDeferredWithdrawalUnauthorized() public {

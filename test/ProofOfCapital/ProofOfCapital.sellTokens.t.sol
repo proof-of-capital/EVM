@@ -118,10 +118,8 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         proofOfCapital.setMarketMaker(user, false);
 
-        // Перемещаем время на последние 30 дней перед окончанием блокировки,
-        // чтобы _checkTradingAccess() вернул false и торговый доступ был закрыт
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1);
 
         // User (not market maker) tries to sell without trading access
         vm.prank(user);
@@ -305,7 +303,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         1. Major profit distributions drain most support balance
         2. Direct manipulation of contract state (only possible in testing)
         3. Edge cases in the economic calculation functions
-        
+
         For now, we acknowledge that this require statement exists and is important
         for contract safety, even if it's hard to trigger in normal conditions.
         */
@@ -422,7 +420,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(5000e18);
 
-        // Market maker покупает токены, пока торговля разрешена (> 60 дней до конца lock)
+        // Market maker покупает токены (может торговать в любое время)
         uint256 purchaseAmount = 2000e18;
         vm.prank(marketMaker);
         proofOfCapital.buyTokens(purchaseAmount);
@@ -430,9 +428,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Проверяем, что баланс токенов у маркет-мейкера увеличился
         assertGt(token.balanceOf(marketMaker), 0, "Market maker should have tokens after purchase");
 
-        // Перемещаемся в последние 30 дней до окончания lock, чтобы _checkTradingAccess() вернул false
+        // Перемещаемся так, чтобы осталось больше 60 дней до окончания lock, чтобы _checkTradingAccess() вернул false
         uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.THIRTY_DAYS + 1);
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1);
 
         // Пробуем продать часть токенов – проверка TradingNotAllowedOnlyMarketMakers должна пройти,
         // а сама сделка выполниться (либо, если нет токенов для выкупа, упадём на другой require).

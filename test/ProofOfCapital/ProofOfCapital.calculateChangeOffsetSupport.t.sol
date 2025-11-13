@@ -65,7 +65,9 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(weth),
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         proofOfCapital = deployWithParams(params);

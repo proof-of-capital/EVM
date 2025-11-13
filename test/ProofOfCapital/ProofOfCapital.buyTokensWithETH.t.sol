@@ -71,7 +71,9 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             tokenSupportAddress: address(0x999), // Different from wethAddress to make tokenSupport = false
             royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0)
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
         });
 
         ethContract = deployWithParams(params);
@@ -216,8 +218,10 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
 
     // Test successful purchase with profit accumulation
     function testBuyTokensWithETHProfitAccumulation() public {
-        // Set profit mode to accumulation (profitInTime = true) - should be default
-        assertTrue(ethContract.profitInTime(), "Profit should be in time mode by default");
+        // Set profit mode to accumulation (profitInTime = false)
+        vm.prank(owner);
+        ethContract.switchProfitMode(false);
+        assertFalse(ethContract.profitInTime(), "Profit should be in accumulation mode");
 
         uint256 ethAmount = 2 ether;
         uint256 initialOwnerSupportBalance = ethContract.ownerSupportBalance();
@@ -246,7 +250,7 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
 
         // Set profit mode to immediate distribution
         vm.prank(owner);
-        ethContract.switchProfitMode(false);
+        ethContract.switchProfitMode(true);
 
         uint256 ethAmount = 1 ether;
         uint256 initialOwnerWETHBalance = mockWETH.balanceOf(owner);
@@ -475,6 +479,7 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
 
 // Helper contract that rejects all ETH transfers to test ETHTransferFailed
 contract RejectETHContract {
-// This contract will reject all ETH transfers by not having a receive/fallback function
-// This will cause the ETH transfer in _safeTransferETH to fail
-}
+    // This contract will reject all ETH transfers by not having a receive/fallback function
+    // This will cause the ETH transfer in _safeTransferETH to fail
+
+    }

@@ -9,5 +9,9 @@ contract MockRecipient {
     // Accepts an amount of support tokens from the caller. The body is empty
     // because tests do not rely on any specific behaviour, only on the fact
     // that the call does not revert.
-    function deposit(uint256 /*amount*/ ) external payable {}
+    function deposit(
+        uint256 /*amount*/
+    )
+        external
+        payable {}
 }

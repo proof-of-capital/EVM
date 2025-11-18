@@ -90,18 +90,19 @@ contract ProofOfCapitalViewTest is BaseTest {
     }
 
     function testTokenAvailableInitialState() public {
-        // Initially: totalTokensSold = 10000e18 (from offset), tokensEarned = 0
+        // Initially: offsetTokens go to unaccountedOffsetBalance, not totalTokensSold
+        // So totalTokensSold = 0, tokensEarned = 0
         uint256 totalSold = proofOfCapital.totalTokensSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
 
         // Verify initial state
-        assertEq(totalSold, 10000e18); // offsetTokens
+        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffsetBalance, not totalTokensSold
         assertEq(tokensEarned, 0);
 
         // tokenAvailable should be totalTokensSold - tokensEarned
         uint256 expectedAvailable = totalSold - tokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
-        assertEq(proofOfCapital.tokenAvailable(), 10000e18);
+        assertEq(proofOfCapital.tokenAvailable(), 0); // No tokens available until offset is processed
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {

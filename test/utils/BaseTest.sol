@@ -34,7 +34,6 @@ import "forge-std/Test.sol";
 import "../../src/ProofOfCapital.sol";
 import "../../src/interfaces/IProofOfCapital.sol";
 import "../../src/utils/Constant.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../mocks/MockERC20.sol";
 import "../mocks/MockWETH.sol";
 
@@ -58,11 +57,9 @@ contract BaseTest is Test {
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
 
-        // Deploy implementation
-        ProofOfCapital implementation = new ProofOfCapital();
-
         // Prepare initialization parameters
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+            initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
@@ -85,11 +82,8 @@ contract BaseTest is Test {
             daoAddress: address(0) // Will default to owner
         });
 
-        // Deploy proxy
-        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
-
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        proofOfCapital = ProofOfCapital(payable(address(proxy)));
+        // Deploy contract directly (no proxy needed)
+        proofOfCapital = new ProofOfCapital(params);
 
         vm.stopPrank();
     }
@@ -97,6 +91,7 @@ contract BaseTest is Test {
     // Helper function to get valid initialization parameters
     function getValidParams() internal view returns (ProofOfCapital.InitParams memory) {
         return ProofOfCapital.InitParams({
+            initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
@@ -122,12 +117,7 @@ contract BaseTest is Test {
 
     // Helper function to deploy contract with custom parameters
     function deployWithParams(ProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
-        ProofOfCapital implementation = new ProofOfCapital();
-
-        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
-
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
-        return ProofOfCapital(payable(address(proxy)));
+        return new ProofOfCapital(params);
     }
 
     // Helper function to create support balance in contract
@@ -140,5 +130,32 @@ contract BaseTest is Test {
         token.approve(address(proofOfCapital), amount * 2);
         proofOfCapital.sellTokens(amount); // This increases contractTokenBalance
         vm.stopPrank();
+    }
+
+    // Helper function to get initialization parameters without offset
+    function getParamsWithoutOffset() internal view returns (ProofOfCapital.InitParams memory) {
+        return ProofOfCapital.InitParams({
+            initialOwner: owner,
+            launchToken: address(token),
+            marketMakerAddress: marketMaker,
+            returnWalletAddress: returnWallet,
+            royaltyWalletAddress: royalty,
+            wethAddress: address(weth),
+            lockEndTime: block.timestamp + 365 days,
+            initialPricePerToken: 1e18,
+            firstLevelTokenQuantity: 1000e18,
+            priceIncrementMultiplier: 50,
+            levelIncreaseMultiplier: 100,
+            trendChangeStep: 5,
+            levelDecreaseMultiplierafterTrend: 50,
+            profitPercentage: 100,
+            offsetTokens: 0, // No offset
+            controlPeriod: Constants.MIN_CONTROL_PERIOD,
+            tokenSupportAddress: address(weth),
+            royaltyProfitPercent: 500, // 50%
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
+            daoAddress: address(0) // Will default to owner
+        });
     }
 }

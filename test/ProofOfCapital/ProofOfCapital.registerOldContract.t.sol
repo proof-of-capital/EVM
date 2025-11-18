@@ -20,8 +20,18 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test successful registration of old contract
     function testRegisterOldContract() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        // Need to be outside control window and more than 60 days before lock end
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        // Move to after control window but before lock end - 60 days
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        // Make sure we're still more than 60 days before lock end
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         vm.prank(owner);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
 
@@ -30,7 +40,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with zero address
     function testRegisterOldContractZeroAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressZero.selector);
         proofOfCapital.registerOldContract(address(0));
@@ -38,6 +56,14 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails when trading is active
     function testRegisterOldContractWhenTradingActive() public {
+        // Don't move time - trading should be active initially
+        // (lockEndTime is in future, but controlDay might make trading active)
+        // Actually, if we're before controlDay, _checkControlDay() returns false
+        // But lockEndTime is far in future, so last condition is false
+        // So _checkTradingAccess() should return false initially
+        // Let's move to within 60 days of lock end to make trading active
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // Within 60 days
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.LockIsActive.selector);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
@@ -45,7 +71,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with owner address
     function testRegisterOldContractWithOwnerAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(owner);
@@ -53,7 +87,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with reserve owner address
     function testRegisterOldContractWithReserveOwnerAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         address reserveOwner = proofOfCapital.reserveOwner();
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
@@ -62,7 +104,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with launch token address
     function testRegisterOldContractWithLaunchTokenAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         address launchToken = address(token); // Using token from BaseTest
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
@@ -71,7 +121,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with WETH address
     function testRegisterOldContractWithWethAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         address wethAddress = address(weth); // Using weth from BaseTest
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
@@ -80,7 +138,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with token support address
     function testRegisterOldContractWithTokenSupportAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         address tokenSupportAddress = proofOfCapital.tokenSupportAddress();
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
@@ -89,7 +155,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails with market maker address
     function testRegisterOldContractWithMarketMakerAddress() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         address marketMaker = address(0x9999);
 
         // First register a market maker
@@ -104,7 +178,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test registration fails when called by non-owner
     function testRegisterOldContractUnauthorized() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", alice));
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
@@ -112,7 +194,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test event emission
     function testRegisterOldContractEvent() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
         emit ProofOfCapital.OldContractRegistered(MOCK_OLD_CONTRACT);
@@ -121,7 +211,15 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
     // Test multiple registrations
     function testRegisterMultipleOldContracts() public {
-        vm.warp(proofOfCapital.lockEndTime() - 1 days);
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
         address oldContract1 = address(0x1111);
         address oldContract2 = address(0x2222);
 
@@ -130,8 +228,41 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         proofOfCapital.registerOldContract(oldContract1);
         assertTrue(proofOfCapital.oldContractAddress(oldContract1));
 
+        // Need to wait 40 days between registrations
+        vm.warp(block.timestamp + Constants.FORTY_DAYS + 1);
+
         proofOfCapital.registerOldContract(oldContract2);
         assertTrue(proofOfCapital.oldContractAddress(oldContract2));
+
+        vm.stopPrank();
+    }
+
+    // Test registration fails when trying to update too frequently (before 40 days)
+    function testRegisterOldContractUpdateTooFrequent() public {
+        // Move time so that _checkTradingAccess() returns false
+        uint256 controlDay = proofOfCapital.controlDay();
+        uint256 controlPeriod = proofOfCapital.controlPeriod();
+        uint256 targetTime = controlDay + controlPeriod + Constants.THIRTY_DAYS + 1;
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        if (targetTime >= lockEndTime - Constants.SIXTY_DAYS) {
+            targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
+        }
+        vm.warp(targetTime);
+
+        address oldContract1 = address(0x1111);
+        address oldContract2 = address(0x2222);
+
+        vm.startPrank(owner);
+
+        // First registration should succeed
+        proofOfCapital.registerOldContract(oldContract1);
+        assertTrue(proofOfCapital.oldContractAddress(oldContract1));
+
+        // Try to register another contract before 40 days have passed (after 39 days)
+        vm.warp(block.timestamp + Constants.FORTY_DAYS - 1);
+
+        vm.expectRevert(ProofOfCapital.OldContractUpdateTooFrequent.selector);
+        proofOfCapital.registerOldContract(oldContract2);
 
         vm.stopPrank();
     }

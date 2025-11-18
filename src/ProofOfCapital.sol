@@ -32,29 +32,20 @@
 
 pragma solidity 0.8.29;
 
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/IProofOfCapital.sol";
 import "./utils/Constant.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title ProofOfCapital
- * @dev Upgradeable Proof of Capital contract using UUPS proxy pattern
+ * @dev Proof of Capital contract
  * @notice This contract allows locking desired part of token issuance for selected period with guaranteed buyback
  */
-contract ProofOfCapital is
-    Initializable,
-    ReentrancyGuardTransientUpgradeable,
-    OwnableUpgradeable,
-    UUPSUpgradeable,
-    IProofOfCapital
-{
+contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     using SafeERC20 for IERC20;
 
     // Custom errors
@@ -76,6 +67,7 @@ contract ProofOfCapital is
     error MainTokenDeferredWithdrawalAlreadyScheduled();
     error NoDeferredWithdrawalScheduled();
     error WithdrawalDateNotReached();
+    error SupportTokenWithdrawalWindowExpired();
     error InsufficientTokenBalance();
     error InsufficientAmount();
     error InvalidRecipient();
@@ -104,12 +96,6 @@ contract ProofOfCapital is
     error NoTokensAvailableForBuyback();
     error InsufficientTokensForBuyback();
     error InsufficientSoldTokens();
-    error UpgradeAlreadyProposed();
-    error NoUpgradeProposed();
-    error UpgradeProposalExpired();
-    error UpgradeConfirmationPeriodNotPassed();
-    error UpgradeNotConfirmed();
-    error OnlyRoyaltyCanProposeUpgrade();
     error LockIsActive();
     error OldContractAddressZero();
     error OldContractAddressConflict();
@@ -135,6 +121,7 @@ contract ProofOfCapital is
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
+        address initialOwner; // Initial owner address
         address launchToken;
         address marketMakerAddress;
         address returnWalletAddress;
@@ -235,12 +222,6 @@ contract ProofOfCapital is
 
     bool public isNeedToUnwrap; // Controls whether to unwrap WETH to ETH when sending
 
-    // Upgrade control variables
-    address public proposedUpgradeImplementation; // Proposed new implementation address
-    uint256 public upgradeProposalTime; // When upgrade was proposed by royalty wallet
-    uint256 public upgradeConfirmationTime; // When upgrade was confirmed by owner
-    bool public upgradeConfirmed; // Whether upgrade is confirmed by owner
-
     // Return wallet change proposal
     address public proposedReturnWalletAddress; // Proposed return wallet address
     uint256 public proposedReturnWalletChangeTime; // Time when return wallet change was proposed
@@ -258,7 +239,7 @@ contract ProofOfCapital is
     bool public isInitialized; // Flag indicating whether the contract's initialization is complete
 
     modifier onlyOwnerOrOldContract() {
-        require(_msgSender() == owner() || oldContractAddress[_msgSender()], AccessDenied());
+        require(msg.sender == owner() || oldContractAddress[msg.sender], AccessDenied());
         _;
     }
 
@@ -268,23 +249,16 @@ contract ProofOfCapital is
     }
 
     modifier onlyReserveOwner() {
-        require(_msgSender() == reserveOwner, OnlyReserveOwner());
+        require(msg.sender == reserveOwner, OnlyReserveOwner());
         _;
     }
 
     modifier onlyDAO() {
-        require(_msgSender() == daoAddress, AccessDenied());
+        require(msg.sender == daoAddress, AccessDenied());
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
-    receive() external payable {}
-
-    function initialize(InitParams calldata params) public initializer {
+    constructor(InitParams memory params) Ownable(params.initialOwner) {
         require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
         require(params.levelDecreaseMultiplierafterTrend < Constants.PERCENTAGE_DIVISOR, MultiplierTooHigh());
         require(params.levelIncreaseMultiplier > 0, MultiplierTooLow());
@@ -294,10 +268,6 @@ contract ProofOfCapital is
             InvalidRoyaltyProfitPercentage()
         );
         require(params.profitBeforeTrendChange > 0, ProfitBeforeTrendChangeMustBePositive());
-
-        __Ownable_init(_msgSender());
-        __UUPSUpgradeable_init();
-        __ReentrancyGuardTransient_init();
 
         isActive = true;
         launchToken = IERC20(params.launchToken);
@@ -320,7 +290,7 @@ contract ProofOfCapital is
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
         profitBeforeTrendChange = params.profitBeforeTrendChange;
-        daoAddress = params.daoAddress != address(0) ? params.daoAddress : _msgSender();
+        daoAddress = params.daoAddress != address(0) ? params.daoAddress : params.initialOwner;
 
         // Initialize state variables
         currentStep = 0;
@@ -328,7 +298,7 @@ contract ProofOfCapital is
         quantityTokensPerLevel = params.firstLevelTokenQuantity;
         currentPrice = params.initialPricePerToken;
         controlDay = block.timestamp + Constants.THIRTY_DAYS;
-        reserveOwner = _msgSender();
+        reserveOwner = params.initialOwner;
 
         // Initialize market makers
         marketMakerAddresses[params.marketMakerAddress] = true;
@@ -345,8 +315,8 @@ contract ProofOfCapital is
         quantityTokensPerLevelEarned = params.firstLevelTokenQuantity;
         currentPriceEarned = params.initialPricePerToken;
 
-        recipientDeferredWithdrawalMainToken = _msgSender();
-        recipientDeferredWithdrawalSupportToken = _msgSender();
+        recipientDeferredWithdrawalMainToken = params.initialOwner;
+        recipientDeferredWithdrawalSupportToken = params.initialOwner;
 
         profitInTime = true;
         canWithdrawal = true;
@@ -369,6 +339,8 @@ contract ProofOfCapital is
         require(!oldContractAddress[params.royaltyWalletAddress], CannotBeSelf());
         require(params.returnWalletAddress != params.royaltyWalletAddress, CannotBeSelf());
     }
+
+    receive() external payable {}
 
     /**
      * @dev Extend lock period
@@ -446,10 +418,7 @@ contract ProofOfCapital is
      * @dev Cancel deferred withdrawal of main token
      */
     function stopTokenDeferredWithdrawal() external override {
-        require(
-            _msgSender() == owner() || _msgSender() == royaltyWalletAddress || _msgSender() == daoAddress,
-            AccessDenied()
-        );
+        require(msg.sender == owner() || msg.sender == royaltyWalletAddress || msg.sender == daoAddress, AccessDenied());
         require(mainTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
         mainTokenDeferredWithdrawalDate = 0;
@@ -494,10 +463,7 @@ contract ProofOfCapital is
      * @dev Cancel deferred withdrawal of support tokens
      */
     function stopSupportDeferredWithdrawal() external override {
-        require(
-            _msgSender() == owner() || _msgSender() == royaltyWalletAddress || _msgSender() == daoAddress,
-            AccessDenied()
-        );
+        require(msg.sender == owner() || msg.sender == royaltyWalletAddress || msg.sender == daoAddress, AccessDenied());
         require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
         supportTokenDeferredWithdrawalDate = 0;
@@ -512,7 +478,8 @@ contract ProofOfCapital is
         require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= supportTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
         require(
-            block.timestamp <= supportTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS, WithdrawalDateNotReached()
+            block.timestamp <= supportTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS,
+            SupportTokenWithdrawalWindowExpired()
         );
 
         uint256 supportBalance = contractSupportBalance;
@@ -623,7 +590,7 @@ contract ProofOfCapital is
      * @dev Change royalty wallet address
      */
     function changeRoyaltyWallet(address newRoyaltyWalletAddress) external override {
-        require(_msgSender() == royaltyWalletAddress, OnlyRoyaltyWalletCanChange());
+        require(msg.sender == royaltyWalletAddress, OnlyRoyaltyWalletCanChange());
         require(newRoyaltyWalletAddress != address(0), InvalidAddress());
         royaltyWalletAddress = newRoyaltyWalletAddress;
         emit RoyaltyWalletChanged(newRoyaltyWalletAddress);
@@ -633,13 +600,13 @@ contract ProofOfCapital is
      * @dev Change profit percentage distribution
      */
     function changeProfitPercentage(uint256 newRoyaltyProfitPercentage) external override {
-        require(_msgSender() == owner() || _msgSender() == royaltyWalletAddress, AccessDenied());
+        require(msg.sender == owner() || msg.sender == royaltyWalletAddress, AccessDenied());
         require(
             newRoyaltyProfitPercentage > 0 && newRoyaltyProfitPercentage <= Constants.PERCENTAGE_DIVISOR,
             InvalidPercentage()
         );
 
-        if (_msgSender() == owner()) {
+        if (msg.sender == owner()) {
             require(newRoyaltyProfitPercentage > royaltyProfitPercent, CannotDecreaseRoyalty());
         } else {
             require(newRoyaltyProfitPercentage < royaltyProfitPercent, CannotIncreaseRoyalty());
@@ -665,9 +632,9 @@ contract ProofOfCapital is
      */
     function buyTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
-        require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), UseDepositFunctionForOwners());
+        require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
-        IERC20(tokenSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
+        IERC20(tokenSupportAddress).safeTransferFrom(msg.sender, address(this), amount);
         _handleTokenPurchaseCommon(amount);
     }
 
@@ -677,7 +644,7 @@ contract ProofOfCapital is
     function buyTokensWithETH() external payable override nonReentrant onlyActiveContract {
         require(!tokenSupport, UseSupportTokenInstead());
         require(msg.value > 0, InvalidETHAmount());
-        require(!(_msgSender() == owner() || oldContractAddress[_msgSender()]), UseDepositFunctionForOwners());
+        require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
         // Wrap received ETH to WETH
         _wrapETH(msg.value);
@@ -690,7 +657,7 @@ contract ProofOfCapital is
     function deposit(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(amount > 0, InvalidAmount());
 
-        IERC20(tokenSupportAddress).safeTransferFrom(_msgSender(), address(this), amount);
+        IERC20(tokenSupportAddress).safeTransferFrom(msg.sender, address(this), amount);
         _handleOwnerDeposit(amount);
     }
 
@@ -712,9 +679,9 @@ contract ProofOfCapital is
      */
     function depositTokens(uint256 amount) external nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(amount > 0, InvalidAmount());
-        
-        launchToken.safeTransferFrom(_msgSender(), address(this), amount);
-        
+
+        launchToken.safeTransferFrom(msg.sender, address(this), amount);
+
         // Check if we should accumulate in unaccountedOffsetTokenBalance for gradual offset reduction
         if (totalTokensSold == offsetTokens && (offsetTokens - tokensEarned) >= amount) {
             unaccountedOffsetTokenBalance += amount;
@@ -729,9 +696,9 @@ contract ProofOfCapital is
     function sellTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
 
-        launchToken.safeTransferFrom(_msgSender(), address(this), amount);
+        launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        if (_msgSender() == returnWalletAddress) {
+        if (msg.sender == returnWalletAddress) {
             _handleReturnWalletSale(amount);
         } else {
             _handleTokenSale(amount);
@@ -784,56 +751,10 @@ contract ProofOfCapital is
     }
 
     /**
-     * @dev Propose contract upgrade by royalty wallet
-     */
-    function proposeUpgrade(address newImplementation) external {
-        require(_msgSender() == royaltyWalletAddress, OnlyRoyaltyCanProposeUpgrade());
-        require(newImplementation != address(0), InvalidAddress());
-        require(proposedUpgradeImplementation == address(0), UpgradeAlreadyProposed());
-
-        proposedUpgradeImplementation = newImplementation;
-        upgradeProposalTime = block.timestamp;
-        upgradeConfirmed = false;
-        upgradeConfirmationTime = 0;
-
-        emit UpgradeProposed(newImplementation, block.timestamp);
-    }
-
-    /**
-     * @dev Confirm proposed upgrade by owner (within 30 days of proposal)
-     */
-    function confirmUpgrade() external onlyOwner {
-        require(proposedUpgradeImplementation != address(0), NoUpgradeProposed());
-        require(block.timestamp <= upgradeProposalTime + Constants.THIRTY_DAYS, UpgradeProposalExpired());
-        require(!upgradeConfirmed, UpgradeAlreadyProposed());
-
-        upgradeConfirmed = true;
-        upgradeConfirmationTime = block.timestamp;
-
-        emit UpgradeConfirmed(proposedUpgradeImplementation, block.timestamp);
-    }
-
-    /**
-     * @dev Cancel upgrade proposal (can be called by royalty wallet or owner)
-     */
-    function cancelUpgradeProposal() external {
-        require(_msgSender() == royaltyWalletAddress || _msgSender() == owner(), AccessDenied());
-        require(proposedUpgradeImplementation != address(0), NoUpgradeProposed());
-
-        address cancelledImplementation = proposedUpgradeImplementation;
-        proposedUpgradeImplementation = address(0);
-        upgradeProposalTime = 0;
-        upgradeConfirmed = false;
-        upgradeConfirmationTime = 0;
-
-        emit UpgradeCancelled(cancelledImplementation, block.timestamp);
-    }
-
-    /**
      * @dev Set DAO address (can only be called by current DAO)
      */
     function setDAO(address newDAOAddress) external {
-        require(_msgSender() == daoAddress, AccessDenied());
+        require(msg.sender == daoAddress, AccessDenied());
         require(newDAOAddress != address(0), InvalidDAOAddress());
         daoAddress = newDAOAddress;
         emit DAOAddressChanged(newDAOAddress);
@@ -843,19 +764,20 @@ contract ProofOfCapital is
      * @dev Calculate unaccounted collateral balance gradually
      * @param amount Amount of collateral to process
      */
-    function calculateUnaccountedCollateralBalance(uint256 amount) external onlyOwner nonReentrant {
+    function calculateUnaccountedCollateralBalance(uint256 amount) external nonReentrant {
         if (!_checkTradingAccess()) {
             if (_checkUnlockWindow()) {
                 controlDay += Constants.THIRTY_DAYS;
             }
+            _checkOwner();
         }
 
         require(unaccountedCollateralBalance >= amount, InsufficientUnaccountedCollateralBalance());
-        
+
         uint256 deltaCollateralBalance = _calculateChangeOffsetSupport(amount);
         unaccountedCollateralBalance -= amount;
         contractSupportBalance += deltaCollateralBalance;
-        
+
         uint256 change = amount - deltaCollateralBalance;
         if (change > 0) {
             _transferSupportTokens(daoAddress, change);
@@ -868,14 +790,13 @@ contract ProofOfCapital is
      * @dev Calculate unaccounted offset balance gradually
      * @param amount Amount of offset tokens to process
      */
-    function calculateUnaccountedOffsetBalance(uint256 amount) external onlyOwner nonReentrant {
+    function calculateUnaccountedOffsetBalance(uint256 amount) external nonReentrant {
         if (!_checkTradingAccess()) {
             if (_checkUnlockWindow()) {
                 controlDay += Constants.THIRTY_DAYS;
             }
+            _checkOwner();
         }
-
-        require(unaccountedOffsetBalance > 0, UnaccountedOffsetBalanceNotSet());
         require(!isInitialized, ContractAlreadyInitialized());
         require(unaccountedOffsetBalance >= amount, InsufficientUnaccountedOffsetBalance());
 
@@ -894,11 +815,12 @@ contract ProofOfCapital is
      * @dev Calculate unaccounted offset token balance gradually (for reducing offset when tokens are returned)
      * @param amount Amount of tokens to process
      */
-    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external onlyOwner nonReentrant {
+    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external nonReentrant {
         if (!_checkTradingAccess()) {
             if (_checkUnlockWindow()) {
                 controlDay += Constants.THIRTY_DAYS;
             }
+            _checkOwner();
         }
 
         require(unaccountedOffsetTokenBalance >= amount, InsufficientUnaccountedOffsetTokenBalance());
@@ -913,14 +835,14 @@ contract ProofOfCapital is
      * @dev Get profit on request
      */
     function getProfitOnRequest() external override nonReentrant {
-        if (_msgSender() == owner()) {
+        if (msg.sender == owner()) {
             require(ownerSupportBalance > 0, NoProfitAvailable());
             uint256 profitAmount = ownerSupportBalance;
             _transferSupportTokens(owner(), ownerSupportBalance);
             ownerSupportBalance = 0;
             emit ProfitWithdrawn(owner(), profitAmount, true);
         } else {
-            require(_msgSender() == royaltyWalletAddress, AccessDenied());
+            require(msg.sender == royaltyWalletAddress, AccessDenied());
             require(royaltySupportBalance > 0, NoProfitAvailable());
             uint256 profitAmount = royaltySupportBalance;
             _transferSupportTokens(royaltyWalletAddress, royaltySupportBalance);
@@ -994,7 +916,7 @@ contract ProofOfCapital is
             if (_checkUnlockWindow()) {
                 controlDay += Constants.THIRTY_DAYS;
             }
-            require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
+            require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
         require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
 
@@ -1018,9 +940,9 @@ contract ProofOfCapital is
         contractSupportBalance += netValue;
         totalTokensSold += totalTokens;
 
-        launchToken.safeTransfer(_msgSender(), totalTokens);
+        launchToken.safeTransfer(msg.sender, totalTokens);
 
-        emit TokensPurchased(_msgSender(), totalTokens, supportAmount);
+        emit TokensPurchased(msg.sender, totalTokens, supportAmount);
     }
 
     function _handleReturnWalletSale(uint256 amount) internal {
@@ -1034,8 +956,9 @@ contract ProofOfCapital is
 
         // Add unaccounted balance from previous calls
         uint256 totalAmount = amount + unaccountedReturnBuybackBalance;
-        uint256 effectiveAmount = totalAmount < tokensAvailableForReturnBuyback ? totalAmount : tokensAvailableForReturnBuyback;
-        
+        uint256 effectiveAmount =
+            totalAmount < tokensAvailableForReturnBuyback ? totalAmount : tokensAvailableForReturnBuyback;
+
         // Store the difference for future processing
         uint256 remainingAmount = totalAmount - effectiveAmount;
         unaccountedReturnBuybackBalance = remainingAmount;
@@ -1070,7 +993,7 @@ contract ProofOfCapital is
             if (_checkUnlockWindow()) {
                 controlDay += Constants.THIRTY_DAYS;
             }
-            require(marketMakerAddresses[_msgSender()], TradingNotAllowedOnlyMarketMakers());
+            require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
         uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
 
@@ -1086,9 +1009,9 @@ contract ProofOfCapital is
         contractSupportBalance -= supportAmountToPay;
         totalTokensSold -= amount;
 
-        _transferSupportTokens(_msgSender(), supportAmountToPay);
+        _transferSupportTokens(msg.sender, supportAmountToPay);
 
-        emit TokensSold(_msgSender(), amount, supportAmountToPay);
+        emit TokensSold(msg.sender, amount, supportAmountToPay);
     }
 
     function _checkTradingAccess() internal view returns (bool) {
@@ -1097,13 +1020,18 @@ contract ProofOfCapital is
     }
 
     function _checkControlDay() internal view returns (bool) {
+        // If block.timestamp is before controlDay, we're not in a control window
+        if (block.timestamp < controlDay) {
+            return false;
+        }
+
         uint256 timeSinceControlDay = block.timestamp - controlDay;
-        
+
         // Check if we are in the current window
         if (timeSinceControlDay < controlPeriod) {
             return true;
         }
-        
+
         // Check if we are in one of the following windows (every 30 days)
         uint256 periodsSinceControlDay = timeSinceControlDay / Constants.THIRTY_DAYS;
         uint256 timeInCurrentPeriod = timeSinceControlDay - (periodsSinceControlDay * Constants.THIRTY_DAYS);
@@ -1133,8 +1061,9 @@ contract ProofOfCapital is
             return (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend))
                 / Constants.PERCENTAGE_DIVISOR;
         } else {
-            return (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier))
-                / Constants.PERCENTAGE_DIVISOR;
+            return
+                (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier))
+                    / Constants.PERCENTAGE_DIVISOR;
         }
     }
 
@@ -1500,42 +1429,18 @@ contract ProofOfCapital is
     }
 
     /**
-     * @dev Authorize upgrade - only owner can upgrade
-     */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
-        require(proposedUpgradeImplementation != address(0), NoUpgradeProposed());
-        require(upgradeConfirmed, UpgradeNotConfirmed());
-        require(newImplementation == proposedUpgradeImplementation, InvalidAddress());
-        require(
-            block.timestamp >= upgradeConfirmationTime + Constants.THIRTY_DAYS, UpgradeConfirmationPeriodNotPassed()
-        );
-
-        // Reset upgrade state after successful upgrade
-        proposedUpgradeImplementation = address(0);
-        upgradeProposalTime = 0;
-        upgradeConfirmed = false;
-        upgradeConfirmationTime = 0;
-    }
-
-    /**
-     * @dev Calculate the number of past periods elapsed since controlDay
-     * @return Number of 30-day periods that have passed
-     */
-    function _calculatePastPeriods() internal view returns (uint256) {
-        if (block.timestamp <= controlDay) {
-            return 0;
-        }
-        return (block.timestamp - controlDay) / Constants.THIRTY_DAYS;
-    }
-
-    /**
      * @dev Check if current time is within unlock window period after lock expires
      * Accounts for the fact that we might be in one of the following windows, not the current one
      * @return True if in unlock window, false otherwise
      */
     function _checkUnlockWindow() internal view returns (bool) {
+        // Check for underflow
+        if (block.timestamp < controlDay) {
+            return false;
+        }
+
         uint256 timeSinceControlDay = block.timestamp - controlDay;
-        
+
         // If more than controlPeriod has passed since the last controlDay, we are not in the current window
         if (timeSinceControlDay > controlPeriod) {
             // Check if we are in one of the following windows (every 30 days)
@@ -1546,11 +1451,4 @@ contract ProofOfCapital is
         }
         return false;
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
 }

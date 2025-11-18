@@ -30,19 +30,24 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import "forge-std/Test.sol";
+import "../../src/ProofOfCapital.sol";
+import "../../src/interfaces/IProofOfCapital.sol";
+import "../../src/utils/Constant.sol";
+import "../mocks/MockERC20.sol";
 import "../mocks/MockWETH.sol";
-import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
-contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
-    using stdStorage for StdStorage;
+contract BaseTestWithoutOffset is Test {
+    ProofOfCapital public proofOfCapital;
+    MockERC20 public token;
+    MockERC20 public weth;
 
-    StdStorage private _stdStore;
-    address public user = address(0x5);
-    MockWETH public mockWETH;
-    ProofOfCapital public ethContract;
+    address public owner = address(0x1);
+    address public royalty = address(0x2);
+    address public returnWallet = address(0x3);
+    address public marketMaker = address(0x4);
 
-    function setUp() public override {
+    function setUp() public virtual {
         // Set realistic timestamp to avoid underflow issues
         vm.warp(1672531200); // January 1, 2023
 
@@ -50,16 +55,16 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
 
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
-        mockWETH = new MockWETH(); // Use MockWETH instead of MockERC20
+        weth = new MockERC20("WETH", "WETH");
 
-        // Create params for ETH-based contract (tokenSupport = false)
+        // Prepare initialization parameters WITHOUT offset
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(mockWETH),
+            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -68,44 +73,24 @@ contract ProofOfCapitalBuyTokensWithETHTest is BaseTest {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 0, // No offset to simplify testing
+            offsetTokens: 0, // No offset
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(0x999), // Different from wethAddress to make tokenSupport = false
-            royaltyProfitPercent: 500,
+            tokenSupportAddress: address(weth),
+            royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0) // Will default to owner
         });
 
-        ethContract = deployWithParams(params);
-
-        // Setup tokens for the return wallet to create contractTokenBalance
-        token.transfer(returnWallet, 100000e18);
-
-        // Give users ETH for testing
-        vm.deal(user, 100 ether);
-        vm.deal(marketMaker, 100 ether);
-        vm.deal(owner, 100 ether);
-
-        // Set market maker permissions
-        ethContract.setMarketMaker(user, true);
+        // Deploy contract directly (no proxy needed)
+        proofOfCapital = new ProofOfCapital(params);
 
         vm.stopPrank();
+    }
 
-        // Approve tokens for return wallet
-        vm.prank(returnWallet);
-        token.approve(address(ethContract), type(uint256).max);
-
-        // Return wallet sells tokens to create contractTokenBalance > totalTokensSold
-        // COMMENTED: This may not work correctly with current contract initialization
-        // vm.prank(returnWallet);
-        // ethContract.sellTokens(50000e18);
+    // Helper function to deploy contract with custom parameters
+    function deployWithParams(ProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
+        return new ProofOfCapital(params);
     }
 }
 
-// Helper contract that rejects all ETH transfers to test ETHTransferFailed
-contract RejectETHContract {
-    // This contract will reject all ETH transfers by not having a receive/fallback function
-    // This will cause the ETH transfer in _safeTransferETH to fail
-
-    }

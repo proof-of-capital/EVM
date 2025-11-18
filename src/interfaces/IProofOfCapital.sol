@@ -52,10 +52,6 @@ interface IProofOfCapital {
     event AllTokensWithdrawn(address indexed owner, uint256 amount);
     event AllSupportTokensWithdrawn(address indexed owner, uint256 amount);
     event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
-    // Upgrade events
-    event UpgradeProposed(address indexed implementation, uint256 proposalTime);
-    event UpgradeConfirmed(address indexed implementation, uint256 confirmationTime);
-    event UpgradeCancelled(address indexed implementation, uint256 cancellationTime);
 
     // Management functions
 
@@ -70,11 +66,6 @@ interface IProofOfCapital {
 
     // Market maker management
     function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external;
-
-    // Upgrade management
-    function proposeUpgrade(address newImplementation) external;
-    function confirmUpgrade() external;
-    function cancelUpgradeProposal() external;
 
     // Trading functions
     function buyTokens(uint256 amount) external;

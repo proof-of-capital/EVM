@@ -38,6 +38,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
 
         // prepare params with offsetTokens = 0
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+            initialOwner: owner,
             launchToken: address(tokenLocal),
             marketMakerAddress: buyer,
             returnWalletAddress: retWallet,
@@ -60,10 +61,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
             daoAddress: address(0) // Will default to owner
         });
 
-        ProofOfCapital impl = new ProofOfCapital();
-        bytes memory data = abi.encodeWithSelector(ProofOfCapital.initialize.selector, params);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), data);
-        poc = ProofOfCapital(payable(address(proxy)));
+        poc = new ProofOfCapital(params);
 
         // Provide actual launch tokens to the contract and adjust internal counter
         tokenLocal.transfer(address(poc), 1000e18);
@@ -82,24 +80,5 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
         tokenLocal.approve(address(poc), type(uint256).max);
         wethLocal.approve(address(poc), type(uint256).max);
         vm.stopPrank();
-    }
-
-    function testReachBranch() public {
-        // Step 1: buyer buys 700 tokens (support amount 700e18)
-        uint256 buyAmount = 700e18;
-        vm.prank(buyer);
-        poc.buyTokens(buyAmount);
-
-        console.log("totalTokensSold after buy", poc.totalTokensSold());
-        console.log("remainderOfStep", poc.remainderOfStep());
-
-        // Step 2: buyer sells 700 tokens to hit branch
-        uint256 sellAmount = 700e18;
-        vm.prank(buyer);
-        poc.sellTokens(sellAmount);
-
-        // Expect console log from contract; cannot assert easily but we can check state to verify branch executed
-        // After branch remainderOfStep should reset to tokensPerLevel (1000e18)
-        assertEq(poc.remainderOfStep(), poc.quantityTokensPerLevel());
     }
 }

@@ -3,7 +3,6 @@ pragma solidity 0.8.29;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../src/ProofOfCapital.sol";
 
 /**
@@ -12,8 +11,6 @@ import "../src/ProofOfCapital.sol";
  */
 contract DeployProofOfCapital is Script {
     // Contract instances
-    ProofOfCapital public implementation;
-    ERC1967Proxy public proxy;
     ProofOfCapital public proofOfCapital;
 
     // Deployment parameters as state variables to avoid "Stack too deep" error
@@ -131,28 +128,18 @@ contract DeployProofOfCapital is Script {
     }
 
     /**
-     * @dev Deploy implementation and proxy contracts
+     * @dev Deploy contract directly (no proxy needed)
      */
     function _deployContracts() internal {
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy implementation contract
-        console.log("\n1. Deploying implementation contract...");
-        implementation = new ProofOfCapital();
-        console.log("Implementation deployed at:", address(implementation));
-
         // Prepare initialization parameters
         ProofOfCapital.InitParams memory initParams = _prepareInitParams();
 
-        bytes memory initData = abi.encodeWithSelector(ProofOfCapital.initialize.selector, initParams);
-
-        // Deploy proxy contract
-        console.log("\n2. Deploying proxy contract...");
-        proxy = new ERC1967Proxy(address(implementation), initData);
-        console.log("Proxy deployed at:", address(proxy));
-
-        // Get proxy instance
-        proofOfCapital = ProofOfCapital(payable(address(proxy)));
+        // Deploy contract directly
+        console.log("\nDeploying ProofOfCapital contract...");
+        proofOfCapital = new ProofOfCapital(initParams);
+        console.log("Contract deployed at:", address(proofOfCapital));
 
         vm.stopBroadcast();
     }
@@ -161,7 +148,9 @@ contract DeployProofOfCapital is Script {
      * @dev Prepare initialization parameters struct
      */
     function _prepareInitParams() internal view returns (ProofOfCapital.InitParams memory) {
+        address deployer = vm.addr(deployerPrivateKey);
         return ProofOfCapital.InitParams({
+            initialOwner: deployer,
             launchToken: launchToken,
             marketMakerAddress: marketMakerAddress,
             returnWalletAddress: returnWalletAddress,
@@ -190,8 +179,6 @@ contract DeployProofOfCapital is Script {
      */
     function _verifyDeployment() internal view {
         console.log("\n=== Deployment Verification ===");
-        console.log("Implementation Address:", address(implementation));
-        console.log("Proxy Address:", address(proxy));
         console.log("ProofOfCapital Address:", address(proofOfCapital));
 
         console.log("\n=== Contract State Verification ===");
@@ -273,12 +260,6 @@ contract DeployProofOfCapital is Script {
                 "\n",
                 "Block Number: ",
                 vm.toString(block.number),
-                "\n",
-                "Implementation: ",
-                vm.toString(address(implementation)),
-                "\n",
-                "Proxy: ",
-                vm.toString(address(proxy)),
                 "\n",
                 "Contract Address: ",
                 vm.toString(address(proofOfCapital)),

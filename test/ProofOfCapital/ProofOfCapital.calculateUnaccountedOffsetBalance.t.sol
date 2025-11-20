@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -44,8 +44,8 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
-        // Ensure contract has unaccountedOffsetBalance set (from initialization with offsetTokens > 0)
-        assertGt(proofOfCapital.unaccountedOffsetBalance(), 0, "unaccountedOffsetBalance should be set");
+        // Ensure contract has unaccountedOffset set (from initialization with offsetTokens > 0)
+        assertGt(proofOfCapital.unaccountedOffset(), 0, "unaccountedOffset should be set");
         assertFalse(proofOfCapital.isInitialized(), "Contract should not be initialized initially");
     }
 
@@ -54,9 +54,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      * Tests the branch where _checkTradingAccess() returns true
      */
     function testCalculateUnaccountedOffsetBalance_Success_WithTradingAccess() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetBalance();
-        uint256 initialContractTokenBalance = proofOfCapital.contractTokenBalance();
-        uint256 initialTotalTokensSold = proofOfCapital.totalTokensSold();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffset();
+        uint256 initialContractTokenBalance = proofOfCapital.launchBalance();
+        uint256 initialTotalTokensSold = proofOfCapital.totalLaunchSold();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 amount = 1000e18;
 
@@ -74,19 +74,19 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetBalance(),
+            proofOfCapital.unaccountedOffset(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetBalance should decrease by amount"
+            "unaccountedOffset should decrease by amount"
         );
         assertEq(
-            proofOfCapital.contractTokenBalance(),
+            proofOfCapital.launchBalance(),
             initialContractTokenBalance + amount,
-            "contractTokenBalance should increase by amount"
+            "launchBalance should increase by amount"
         );
         assertEq(
-            proofOfCapital.totalTokensSold(),
+            proofOfCapital.totalLaunchSold(),
             initialTotalTokensSold + amount,
-            "totalTokensSold should increase by amount"
+            "totalLaunchSold should increase by amount"
         );
         assertGe(proofOfCapital.offsetStep(), initialOffsetStep, "offsetStep should increase or stay the same");
     }
@@ -96,7 +96,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      * Tests the branch where _checkTradingAccess() returns false and _checkUnlockWindow() returns true
      */
     function testCalculateUnaccountedOffsetBalance_Success_WithUnlockWindow() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffset();
         uint256 amount = 1000e18;
 
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient unaccounted balance");
@@ -121,9 +121,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetBalance(),
+            proofOfCapital.unaccountedOffset(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetBalance should decrease by amount"
+            "unaccountedOffset should decrease by amount"
         );
         // controlDay should be increased by THIRTY_DAYS
         assertEq(
@@ -138,7 +138,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      * Tests the branch where _checkTradingAccess() returns false and _checkUnlockWindow() returns false
      */
     function testCalculateUnaccountedOffsetBalance_Success_WithoutUnlockWindow() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffset();
         uint256 amount = 1000e18;
 
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient unaccounted balance");
@@ -162,9 +162,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetBalance(),
+            proofOfCapital.unaccountedOffset(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetBalance should decrease by amount"
+            "unaccountedOffset should decrease by amount"
         );
         // controlDay should NOT be increased (unlock window not active)
         assertEq(
@@ -175,11 +175,11 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
     }
 
     /**
-     * @dev Test that function sets isInitialized to true when unaccountedOffsetBalance becomes zero
+     * @dev Test that function sets isInitialized to true when unaccountedOffset becomes zero
      */
     function testCalculateUnaccountedOffsetBalance_SetsInitialized_WhenBalanceBecomesZero() public {
-        uint256 remainingBalance = proofOfCapital.unaccountedOffsetBalance();
-        require(remainingBalance > 0, "Test setup: unaccountedOffsetBalance must be greater than 0");
+        uint256 remainingBalance = proofOfCapital.unaccountedOffset();
+        require(remainingBalance > 0, "Test setup: unaccountedOffset must be greater than 0");
 
         assertFalse(proofOfCapital.isInitialized(), "Contract should not be initialized before");
 
@@ -193,17 +193,17 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         vm.prank(owner);
         proofOfCapital.calculateUnaccountedOffsetBalance(remainingBalance);
 
-        assertEq(proofOfCapital.unaccountedOffsetBalance(), 0, "unaccountedOffsetBalance should be zero");
+        assertEq(proofOfCapital.unaccountedOffset(), 0, "unaccountedOffset should be zero");
         assertTrue(
-            proofOfCapital.isInitialized(), "Contract should be initialized when unaccountedOffsetBalance becomes zero"
+            proofOfCapital.isInitialized(), "Contract should be initialized when unaccountedOffset becomes zero"
         );
     }
 
     /**
-     * @dev Test error: UnaccountedOffsetBalanceNotSet when unaccountedOffsetBalance is zero
+     * @dev Test error: UnaccountedOffsetBalanceNotSet when unaccountedOffset is zero
      */
     function testCalculateUnaccountedOffsetBalance_Reverts_ContractAlreadyInitialized() public {
-        // Create a new contract with zero offsetTokens to get zero unaccountedOffsetBalance
+        // Create a new contract with zero offsetTokens to get zero unaccountedOffset
         ProofOfCapital.InitParams memory params = getValidParams();
         params.offsetTokens = 0; // No offset tokens
 
@@ -211,9 +211,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         ProofOfCapital newContract = new ProofOfCapital(params);
         vm.stopPrank();
 
-        // New contract should have isInitialized = true and unaccountedOffsetBalance = 0
+        // New contract should have isInitialized = true and unaccountedOffset = 0
         assertTrue(newContract.isInitialized(), "Contract should be initialized when offsetTokens is 0");
-        assertEq(newContract.unaccountedOffsetBalance(), 0, "Balance should be zero");
+        assertEq(newContract.unaccountedOffset(), 0, "Balance should be zero");
 
         // Setup trading access
         uint256 slotControlDay = _stdStore.target(address(newContract)).sig("controlDay()").find();
@@ -229,7 +229,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      * @dev Test error: InsufficientUnaccountedOffsetBalance when amount exceeds balance
      */
     function testCalculateUnaccountedOffsetBalance_Reverts_WhenAmountExceedsBalance() public {
-        uint256 currentBalance = proofOfCapital.unaccountedOffsetBalance();
+        uint256 currentBalance = proofOfCapital.unaccountedOffset();
         uint256 excessiveAmount = currentBalance + 1;
 
         // Setup trading access
@@ -266,7 +266,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      * @dev Test that _calculateOffset is called correctly and updates state
      */
     function testCalculateUnaccountedOffsetBalance_UpdatesOffsetState() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffset();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 initialOffsetPrice = proofOfCapital.offsetPrice();
         uint256 initialRemainderOffsetTokens = proofOfCapital.remainderOffsetTokens();
@@ -313,7 +313,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      */
     function testCalculateUnaccountedOffsetBalance_EmitsEvent() public {
         uint256 amount = 1000e18;
-        uint256 initialBalance = proofOfCapital.unaccountedOffsetBalance();
+        uint256 initialBalance = proofOfCapital.unaccountedOffset();
         require(initialBalance >= amount, "Test setup: insufficient balance");
 
         // Setup trading access

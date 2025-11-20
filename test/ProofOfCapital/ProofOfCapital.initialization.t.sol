@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -264,7 +264,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             profitPercentage: 100,
             offsetTokens: 1000e18,
             controlPeriod: 1, // Way below minimum
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -298,7 +298,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             profitPercentage: 100,
             offsetTokens: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -335,7 +335,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             profitPercentage: 100,
             offsetTokens: 1000e18,
             controlPeriod: validPeriod, // Within valid range
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -371,7 +371,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 profitPercentage: 100,
                 offsetTokens: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
-                tokenSupportAddress: address(weth),
+                collateralAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -401,7 +401,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 profitPercentage: 100,
                 offsetTokens: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
-                tokenSupportAddress: address(weth),
+                collateralAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

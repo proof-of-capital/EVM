@@ -6,7 +6,7 @@ pragma solidity 0.8.29;
 // it only needs to exist so that external calls in the main contract do not
 // revert during tests.
 contract MockRecipient {
-    // Accepts an amount of support tokens from the caller. The body is empty
+    // Accepts an amount of collateral tokens from the caller. The body is empty
     // because tests do not rely on any specific behaviour, only on the fact
     // that the call does not revert.
     function deposit(

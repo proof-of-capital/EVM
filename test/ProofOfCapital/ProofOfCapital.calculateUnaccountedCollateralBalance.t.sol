@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -63,7 +63,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
 
         // Setup unaccountedCollateralBalance by making deposits
         // This requires offsetTokens > tokensEarned (which is true by default)
-        // Use deposit() function to deposit support tokens, which calls _handleOwnerDeposit
+        // Use deposit() function to deposit collateral tokens, which calls _handleOwnerDeposit
         uint256 depositAmount = 10000e18;
         vm.prank(owner);
         proofOfCapital.deposit(depositAmount);
@@ -78,7 +78,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
      */
     function testCalculateUnaccountedCollateralBalance_Success_WithTradingAccess() public {
         uint256 initialUnaccountedBalance = proofOfCapital.unaccountedCollateralBalance();
-        uint256 initialContractSupportBalance = proofOfCapital.contractSupportBalance();
+        uint256 initialContractCollateralBalance = proofOfCapital.contractCollateralBalance();
         uint256 initialDaoBalance = weth.balanceOf(daoAddress);
         uint256 amount = 5000e18;
 
@@ -93,7 +93,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedCollateralBalance(amount);
 
         uint256 finalUnaccountedBalance = proofOfCapital.unaccountedCollateralBalance();
-        uint256 finalContractSupportBalance = proofOfCapital.contractSupportBalance();
+        uint256 finalContractCollateralBalance = proofOfCapital.contractCollateralBalance();
         uint256 finalDaoBalance = weth.balanceOf(daoAddress);
 
         // Verify unaccountedCollateralBalance decreased by amount
@@ -103,8 +103,8 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
             "unaccountedCollateralBalance should decrease by amount"
         );
 
-        // Calculate deltaCollateralBalance (what was added to contractSupportBalance)
-        uint256 deltaCollateralBalance = finalContractSupportBalance - initialContractSupportBalance;
+        // Calculate deltaCollateralBalance (what was added to contractCollateralBalance)
+        uint256 deltaCollateralBalance = finalContractCollateralBalance - initialContractCollateralBalance;
 
         // Calculate change (what was sent to daoAddress)
         uint256 change = finalDaoBalance - initialDaoBalance;
@@ -253,7 +253,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
 
     function testCalculateUnaccountedCollateralBalance_CalculatesDeltaAndSendsChange() public {
         uint256 initialUnaccountedBalance = proofOfCapital.unaccountedCollateralBalance();
-        uint256 initialContractSupportBalance = proofOfCapital.contractSupportBalance();
+        uint256 initialContractCollateralBalance = proofOfCapital.contractCollateralBalance();
         uint256 initialDaoBalance = weth.balanceOf(daoAddress);
         uint256 amount = 5000e18;
 
@@ -265,10 +265,10 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
         vm.prank(owner);
         proofOfCapital.calculateUnaccountedCollateralBalance(amount);
 
-        uint256 finalContractSupportBalance = proofOfCapital.contractSupportBalance();
+        uint256 finalContractCollateralBalance = proofOfCapital.contractCollateralBalance();
         uint256 finalDaoBalance = weth.balanceOf(daoAddress);
 
-        uint256 deltaCollateralBalance = finalContractSupportBalance - initialContractSupportBalance;
+        uint256 deltaCollateralBalance = finalContractCollateralBalance - initialContractCollateralBalance;
 
         uint256 change = finalDaoBalance - initialDaoBalance;
 

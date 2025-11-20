@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -140,9 +140,9 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 tokensToDeposit = 100000e18; // Use smaller amount
         testToken.transfer(address(testContract), tokensToDeposit);
         testToken.approve(address(testContract), tokensToDeposit);
-        testContract.depositTokens(tokensToDeposit); // This increases contractTokenBalance
+        testContract.depositTokens(tokensToDeposit); // This increases launchBalance
 
-        // Create contractSupportBalance by depositing WETH
+        // Create contractCollateralBalance by depositing WETH
         uint256 depositAmount = 20000e18; // Use smaller amount
         testWeth.approve(address(testContract), depositAmount);
         testContract.deposit(depositAmount);
@@ -162,32 +162,32 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Record initial balances
         uint256 initialOwnerWethBalance = testWeth.balanceOf(testOwner);
-        uint256 initialOwnerSupportBalance = testContract.ownerSupportBalance();
-        assertEq(initialOwnerSupportBalance, 0, "Initial owner support balance should be 0");
+        uint256 initialOwnerCollateralBalance = testContract.ownerCollateralBalance();
+        assertEq(initialOwnerCollateralBalance, 0, "Initial owner collateral balance should be 0");
 
         // Market maker buys tokens to generate profit (this calls _handleTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
-        // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForSupportAmount
+        // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForCollateralAmount
         uint256 purchaseAmount = 3e18;
         vm.prank(testMarketMaker);
         testContract.buyTokens(purchaseAmount);
 
         // Verify profit was accumulated
-        uint256 ownerSupportBalanceAfterPurchase = testContract.ownerSupportBalance();
-        assertGt(ownerSupportBalanceAfterPurchase, 0, "Owner support balance should be greater than 0 after purchase");
+        uint256 ownerCollateralBalanceAfterPurchase = testContract.ownerCollateralBalance();
+        assertGt(ownerCollateralBalanceAfterPurchase, 0, "Owner collateral balance should be greater than 0 after purchase");
 
         // Owner requests profit withdrawal
         vm.expectEmit(false, false, false, true);
-        emit IProofOfCapital.ProfitWithdrawn(testOwner, ownerSupportBalanceAfterPurchase, true);
+        emit IProofOfCapital.ProfitWithdrawn(testOwner, ownerCollateralBalanceAfterPurchase, true);
 
         vm.prank(testOwner);
         testContract.getProfitOnRequest();
 
         // Verify profit was withdrawn
-        assertEq(testContract.ownerSupportBalance(), 0, "Owner support balance should be 0 after withdrawal");
+        assertEq(testContract.ownerCollateralBalance(), 0, "Owner collateral balance should be 0 after withdrawal");
         assertEq(
             testWeth.balanceOf(testOwner),
-            initialOwnerWethBalance + ownerSupportBalanceAfterPurchase,
+            initialOwnerWethBalance + ownerCollateralBalanceAfterPurchase,
             "Owner should receive the profit amount"
         );
     }
@@ -210,9 +210,9 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 tokensToDeposit = 100000e18; // Use smaller amount
         testToken.transfer(address(testContract), tokensToDeposit);
         testToken.approve(address(testContract), tokensToDeposit);
-        testContract.depositTokens(tokensToDeposit); // This increases contractTokenBalance
+        testContract.depositTokens(tokensToDeposit); // This increases launchBalance
 
-        // Create contractSupportBalance by depositing WETH
+        // Create contractCollateralBalance by depositing WETH
         uint256 depositAmount = 20000e18; // Use smaller amount
         testWeth.approve(address(testContract), depositAmount);
         testContract.deposit(depositAmount);
@@ -232,34 +232,34 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Record initial balances
         uint256 initialRoyaltyWethBalance = testWeth.balanceOf(testRoyalty);
-        uint256 initialRoyaltySupportBalance = testContract.royaltySupportBalance();
-        assertEq(initialRoyaltySupportBalance, 0, "Initial royalty support balance should be 0");
+        uint256 initialRoyaltyCollateralBalance = testContract.royaltyCollateralBalance();
+        assertEq(initialRoyaltyCollateralBalance, 0, "Initial royalty collateral balance should be 0");
 
         // Market maker buys tokens to generate profit (this calls _handleTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
-        // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForSupportAmount
+        // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForCollateralAmount
         uint256 purchaseAmount = 1e18;
         vm.prank(testMarketMaker);
         testContract.buyTokens(purchaseAmount);
 
         // Verify profit was accumulated
-        uint256 royaltySupportBalanceAfterPurchase = testContract.royaltySupportBalance();
+        uint256 royaltyCollateralBalanceAfterPurchase = testContract.royaltyCollateralBalance();
         assertGt(
-            royaltySupportBalanceAfterPurchase, 0, "Royalty support balance should be greater than 0 after purchase"
+            royaltyCollateralBalanceAfterPurchase, 0, "Royalty collateral balance should be greater than 0 after purchase"
         );
 
         // Royalty wallet requests profit withdrawal
         vm.expectEmit(false, false, false, true);
-        emit IProofOfCapital.ProfitWithdrawn(testRoyalty, royaltySupportBalanceAfterPurchase, false);
+        emit IProofOfCapital.ProfitWithdrawn(testRoyalty, royaltyCollateralBalanceAfterPurchase, false);
 
         vm.prank(testRoyalty);
         testContract.getProfitOnRequest();
 
         // Verify profit was withdrawn
-        assertEq(testContract.royaltySupportBalance(), 0, "Royalty support balance should be 0 after withdrawal");
+        assertEq(testContract.royaltyCollateralBalance(), 0, "Royalty collateral balance should be 0 after withdrawal");
         assertEq(
             testWeth.balanceOf(testRoyalty),
-            initialRoyaltyWethBalance + royaltySupportBalanceAfterPurchase,
+            initialRoyaltyWethBalance + royaltyCollateralBalanceAfterPurchase,
             "Royalty wallet should receive the profit amount"
         );
     }
@@ -498,7 +498,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Verify user is not a market maker
         assertFalse(proofOfCapital.marketMakerAddresses(regularUser), "Regular user should not be market maker");
 
-        // Create support balance first to enable token purchases
+        // Create collateral balance first to enable token purchases
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(15000e18);
 
@@ -531,7 +531,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Verify user is not a market maker
         assertFalse(proofOfCapital.marketMakerAddresses(regularUser), "Regular user should not be market maker");
 
-        // Create support balance first to enable token purchases
+        // Create collateral balance first to enable token purchases
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(15000e18);
 
@@ -561,8 +561,8 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
                     < Constants.THIRTY_DAYS + proofOfCapital.controlDay() + proofOfCapital.controlPeriod());
 
         // Check deferred withdrawals
-        bool deferredWithdrawalAccess = (proofOfCapital.mainTokenDeferredWithdrawalDate() > 0)
-            || (proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
+        bool deferredWithdrawalAccess = (proofOfCapital.launchDeferredWithdrawalDate() > 0)
+            || (proofOfCapital.collateralTokenDeferredWithdrawalDate() > 0);
 
         // Check if less than 60 days remaining until lock end (more freedom for trading)
         bool timeAccess = (proofOfCapital.lockEndTime() < block.timestamp + Constants.SIXTY_DAYS);

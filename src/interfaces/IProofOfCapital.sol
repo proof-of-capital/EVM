@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetcollateral as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -47,9 +47,9 @@ interface IProofOfCapital {
     event RoyaltyWalletChanged(address indexed newRoyaltyWalletAddress);
     event ReturnWalletChanged(address indexed newReturnWalletAddress);
     event ProfitPercentageChanged(uint256 newRoyaltyProfitPercentage);
-    event SupportDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
+    event CollateralDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
     event AllTokensWithdrawn(address indexed owner, uint256 amount);
-    event AllSupportTokensWithdrawn(address indexed owner, uint256 amount);
+    event AllCollateralTokensWithdrawn(address indexed owner, uint256 amount);
     event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
 
     // Management functions
@@ -75,13 +75,13 @@ interface IProofOfCapital {
     function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external;
     function stopTokenDeferredWithdrawal() external;
     function confirmTokenDeferredWithdrawal() external;
-    function supportDeferredWithdrawal(address recipientAddress) external;
-    function stopSupportDeferredWithdrawal() external;
-    function confirmSupportDeferredWithdrawal() external;
+    function collateralDeferredWithdrawal(address recipientAddress) external;
+    function stopCollateralDeferredWithdrawal() external;
+    function confirmCollateralDeferredWithdrawal() external;
 
     // Withdrawal functions
     function withdrawAllTokens() external;
-    function withdrawAllSupportTokens() external;
+    function withdrawAllCollateralTokens() external;
     function getProfitOnRequest() external;
 
     // View functions
@@ -93,8 +93,8 @@ interface IProofOfCapital {
     function isActive() external view returns (bool);
     function lockEndTime() external view returns (uint256);
     function currentPrice() external view returns (uint256);
-    function totalTokensSold() external view returns (uint256);
-    function contractSupportBalance() external view returns (uint256);
+    function totalLaunchSold() external view returns (uint256);
+    function contractCollateralBalance() external view returns (uint256);
     function profitInTime() external view returns (bool);
     function canWithdrawal() external view returns (bool);
 }

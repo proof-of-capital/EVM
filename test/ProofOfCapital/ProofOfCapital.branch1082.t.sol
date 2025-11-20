@@ -53,7 +53,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
             profitPercentage: 100,
             offsetTokens: 0,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(wethLocal),
+            collateralAddress: address(wethLocal),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -65,8 +65,8 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
         // Provide actual launch tokens to the contract and adjust internal counter
         tokenLocal.transfer(address(poc), 1000e18);
 
-        // Override storage variable `contractTokenBalance` to reflect the same amount using stdstore helper
-        uint256 slot = _stdStore.target(address(poc)).sig("contractTokenBalance()").find();
+        // Override storage variable `launchBalance` to reflect the same amount using stdstore helper
+        uint256 slot = _stdStore.target(address(poc)).sig("launchBalance()").find();
         vm.store(address(poc), bytes32(slot), bytes32(uint256(1000e18)));
 
         // Approve PoC for owner's tokens (may be used later)

@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -34,31 +34,31 @@ import "../utils/BaseTest.sol";
 import "../../src/interfaces/IProofOfCapital.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
-contract ProofOfCapitalWithdrawAllSupportTokensTest is BaseTest {
+contract ProofOfCapitalWithdrawAllCollateralTokensTest is BaseTest {
     using stdStorage for StdStorage;
 
     StdStorage private _stdStore;
 
     /**
-     * @dev Test successful withdrawal of all support tokens
+     * @dev Test successful withdrawal of all collateral tokens
      * Tests lines 754-759: successful case where:
-     * - withdrawnAmount = contractSupportBalance
-     * - contractSupportBalance is set to 0
+     * - withdrawnAmount = contractCollateralBalance
+     * - contractCollateralBalance is set to 0
      * - isActive is set to false
-     * - Support tokens are transferred to daoAddress
-     * - AllSupportTokensWithdrawn event is emitted
+     * - Collateral tokens are transferred to daoAddress
+     * - AllCollateralTokensWithdrawn event is emitted
      */
-    function testWithdrawAllSupportTokensSuccess() public {
-        // Step 1: Create contractSupportBalance by directly setting it via storage manipulation
+    function testWithdrawAllCollateralTokensSuccess() public {
+        // Step 1: Create contractCollateralBalance by directly setting it via storage manipulation
         // This is simpler and avoids complex setup requirements
-        uint256 supportBalanceAmount = 5000e18;
-        uint256 slotContractSupportBalance =
-            _stdStore.target(address(proofOfCapital)).sig("contractSupportBalance()").find();
-        vm.store(address(proofOfCapital), bytes32(slotContractSupportBalance), bytes32(supportBalanceAmount));
+        uint256 collateralBalanceAmount = 5000e18;
+        uint256 slotContractCollateralBalance =
+            _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
+        vm.store(address(proofOfCapital), bytes32(slotContractCollateralBalance), bytes32(collateralBalanceAmount));
 
         // Also transfer WETH to contract so it has tokens to transfer
         vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), supportBalanceAmount);
+        weth.transfer(address(proofOfCapital), collateralBalanceAmount);
         vm.stopPrank();
 
         // Step 2: Move time past lock end time
@@ -66,35 +66,35 @@ contract ProofOfCapitalWithdrawAllSupportTokensTest is BaseTest {
         vm.warp(lockEndTime + 1);
 
         // Step 3: Record initial state
-        uint256 initialSupportBalance = proofOfCapital.contractSupportBalance();
+        uint256 initialCollateralBalance = proofOfCapital.contractCollateralBalance();
         bool initialIsActive = proofOfCapital.isActive();
         address dao = proofOfCapital.daoAddress();
         uint256 daoBalanceBefore = weth.balanceOf(dao);
 
         // Verify preconditions
-        assertTrue(initialSupportBalance > 0, "Should have support balance");
+        assertTrue(initialCollateralBalance > 0, "Should have collateral balance");
         assertTrue(initialIsActive, "Contract should be active initially");
         assertEq(dao, owner, "DAO should be owner by default");
 
-        // Step 4: Withdraw all support tokens (only DAO can call this)
+        // Step 4: Withdraw all collateral tokens (only DAO can call this)
         vm.expectEmit(true, false, false, true);
-        emit IProofOfCapital.AllSupportTokensWithdrawn(dao, initialSupportBalance);
+        emit IProofOfCapital.AllCollateralTokensWithdrawn(dao, initialCollateralBalance);
 
         vm.prank(dao);
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
 
         // Step 5: Verify state changes
-        // Verify contractSupportBalance is set to 0 (line 755)
-        assertEq(proofOfCapital.contractSupportBalance(), 0, "contractSupportBalance should be zero after withdrawal");
+        // Verify contractCollateralBalance is set to 0 (line 755)
+        assertEq(proofOfCapital.contractCollateralBalance(), 0, "contractCollateralBalance should be zero after withdrawal");
 
         // Verify isActive is set to false (line 756)
         assertFalse(proofOfCapital.isActive(), "isActive should be false after withdrawal");
 
         // Verify tokens were transferred to daoAddress (line 757)
         uint256 daoBalanceAfter = weth.balanceOf(dao);
-        assertEq(daoBalanceAfter, daoBalanceBefore + initialSupportBalance, "DAO should receive all support tokens");
+        assertEq(daoBalanceAfter, daoBalanceBefore + initialCollateralBalance, "DAO should receive all collateral tokens");
 
-        // Verify withdrawnAmount equals initial support balance (line 754)
+        // Verify withdrawnAmount equals initial collateral balance (line 754)
         // This is implicit in the transfer check above
     }
 }

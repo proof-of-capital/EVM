@@ -27,7 +27,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetcollateral as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 
 pragma solidity 0.8.29;
@@ -63,14 +63,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     error CannotActivateWithdrawalTooCloseToLockEnd();
     error InvalidRecipientOrAmount();
     error DeferredWithdrawalBlocked();
-    error MainTokenDeferredWithdrawalAlreadyScheduled();
+    error LaunchDeferredWithdrawalAlreadyScheduled();
     error NoDeferredWithdrawalScheduled();
     error WithdrawalDateNotReached();
-    error SupportTokenWithdrawalWindowExpired();
+    error CollateralTokenWithdrawalWindowExpired();
     error InsufficientTokenBalance();
     error InsufficientAmount();
     error InvalidRecipient();
-    error SupportDeferredWithdrawalAlreadyScheduled();
+    error CollateralDeferredWithdrawalAlreadyScheduled();
     error InvalidNewOwner();
     error InvalidReserveOwner();
     error SameModeAlreadyActive();
@@ -84,18 +84,17 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     error UseDepositFunctionForOwners();
     error LockPeriodNotEnded();
     error NoTokensToWithdraw();
-    error NoSupportTokensToWithdraw();
+    error NoCollateralTokensToWithdraw();
     error ProfitModeNotActive();
     error NoProfitAvailable();
     error TradingNotAllowedOnlyMarketMakers();
-    error InsufficientSupportBalance();
+    error InsufficientCollateralBalance();
     error NoTokensAvailableForBuyback();
     error InsufficientTokensForBuyback();
     error InsufficientSoldTokens();
     error LockIsActive();
     error OldContractAddressZero();
     error OldContractAddressConflict();
-    error OldContractUpdateTooFrequent();
     error NoReturnWalletChangeProposed();
     error ReturnWalletChangeDelayNotPassed();
     error InvalidDAOAddress();
@@ -132,7 +131,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 profitPercentage;
         uint256 offsetTokens;
         uint256 controlPeriod;
-        address tokenSupportAddress;
+        address collateralAddress;
         uint256 royaltyProfitPercent;
         address[] oldContractAddresses; // Array of old contract addresses
         uint256 profitBeforeTrendChange; // Profit percentage before trend change
@@ -140,7 +139,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     // Contract state
-    bool public override isActive;
+    bool public isActive;
     mapping(address => bool) public oldContractAddress;
 
     // Core addresses
@@ -151,14 +150,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     address public daoAddress; // DAO address for governance
 
     // Time and control variables
-    uint256 public override lockEndTime;
+    uint256 public lockEndTime;
     uint256 public controlDay;
     uint256 public controlPeriod;
 
     // Pricing and level variables
     uint256 public initialPricePerToken;
     uint256 public firstLevelTokenQuantity;
-    uint256 public override currentPrice;
+    uint256 public currentPrice;
     uint256 public quantityTokensPerLevel;
     uint256 public remainderOfStep;
     uint256 public currentStep;
@@ -174,9 +173,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public profitBeforeTrendChange; // Profit percentage before trend change
 
     // Balances and counters
-    uint256 public override totalTokensSold;
-    uint256 public override contractSupportBalance; // WETH balance for backing
-    uint256 public contractTokenBalance; // Main token balance
+    uint256 public override totalLaunchSold;
+    uint256 public override contractCollateralBalance; // WETH balance for backing
+    uint256 public launchBalance; // Main token balance
     uint256 public tokensEarned;
     uint256 public actualProfit;
 
@@ -193,37 +192,35 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public remainderOffsetTokens;
     uint256 public sizeOffsetStep;
 
-    // Support token variables
-    address public tokenSupportAddress;
-    address public additionalTokenAddress;
+    // Collateral token variables
+    address public collateralAddress;
 
     // Market makers
     mapping(address => bool) public marketMakerAddresses;
 
     // Profit tracking
-    uint256 public ownerSupportBalance; // Owner's profit balance (universal for both ETH and support tokens)
-    uint256 public royaltySupportBalance; // Royalty profit balance (universal for both ETH and support tokens)
+    uint256 public ownerCollateralBalance; // Owner's profit balance (universal for both ETH and collateral tokens)
+    uint256 public royaltyCollateralBalance; // Royalty profit balance (universal for both ETH and collateral tokens)
     bool public override profitInTime; // true = immediate, false = on request
 
     // Deferred withdrawal
     bool public override canWithdrawal;
-    uint256 public mainTokenDeferredWithdrawalDate;
-    uint256 public mainTokenDeferredWithdrawalAmount;
-    address public recipientDeferredWithdrawalMainToken;
-    uint256 public supportTokenDeferredWithdrawalDate;
-    address public recipientDeferredWithdrawalSupportToken;
+    uint256 public launchDeferredWithdrawalDate;
+    uint256 public launchDeferredWithdrawalAmount;
+    address public recipientDeferredWithdrawalLaunch;
+    uint256 public collateralTokenDeferredWithdrawalDate;
+    address public recipientDeferredWithdrawalCollateralToken;
 
     // Return wallet change proposal
     address public proposedReturnWalletAddress; // Proposed return wallet address
     uint256 public proposedReturnWalletChangeTime; // Time when return wallet change was proposed
 
     // Old contract address change control
-    uint256 public lastOldContractAddressChangeTime; // Time of the last old contract address change
 
     // Unaccounted balances for gradual processing
     uint256 public unaccountedCollateralBalance; // Unaccounted collateral balance
-    uint256 public unaccountedOffsetBalance; // Unaccounted offset balance
-    uint256 public unaccountedOffsetTokenBalance; // Unaccounted offset token balance for gradual processing
+    uint256 public unaccountedOffset; // Unaccounted offset balance
+    uint256 public unaccountedOffsetLaunchBalance; // Unaccounted offset token balance for gradual processing
     uint256 public unaccountedReturnBuybackBalance; // Unaccounted return buyback balance for gradual processing
 
     // Initialization flag
@@ -275,7 +272,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         profitPercentage = params.profitPercentage;
         offsetTokens = params.offsetTokens;
         controlPeriod = _getPeriod(params.controlPeriod);
-        tokenSupportAddress = params.tokenSupportAddress;
+        collateralAddress = params.collateralAddress;
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
         profitBeforeTrendChange = params.profitBeforeTrendChange;
@@ -304,14 +301,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         quantityTokensPerLevelEarned = params.firstLevelTokenQuantity;
         currentPriceEarned = params.initialPricePerToken;
 
-        recipientDeferredWithdrawalMainToken = params.initialOwner;
-        recipientDeferredWithdrawalSupportToken = params.initialOwner;
+        recipientDeferredWithdrawalLaunch = params.initialOwner;
+        recipientDeferredWithdrawalCollateralToken = params.initialOwner;
 
         profitInTime = true;
         canWithdrawal = true;
 
         if (params.offsetTokens > 0) {
-            unaccountedOffsetBalance = params.offsetTokens;
+            unaccountedOffset = params.offsetTokens;
             isInitialized = false; // Will be set to true after processing offset
         } else {
             isInitialized = true; // No offset to process
@@ -367,23 +364,17 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function registerOldContract(address oldContractAddr) external onlyOwner {
         require(!_checkTradingAccess(), LockIsActive());
-        require(
-            lastOldContractAddressChangeTime == 0
-                || block.timestamp >= lastOldContractAddressChangeTime + Constants.FORTY_DAYS,
-            OldContractUpdateTooFrequent()
-        );
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
             oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)
-                && oldContractAddr != tokenSupportAddress
-                && oldContractAddr != additionalTokenAddress && oldContractAddr != returnWalletAddress
-                && oldContractAddr != royaltyWalletAddress && oldContractAddr != recipientDeferredWithdrawalMainToken
-                && oldContractAddr != recipientDeferredWithdrawalSupportToken && !marketMakerAddresses[oldContractAddr],
+                && oldContractAddr != collateralAddress
+                && oldContractAddr != returnWalletAddress
+                && oldContractAddr != royaltyWalletAddress && oldContractAddr != recipientDeferredWithdrawalLaunch
+                && oldContractAddr != recipientDeferredWithdrawalCollateralToken && !marketMakerAddresses[oldContractAddr],
             OldContractAddressConflict()
         );
 
         oldContractAddress[oldContractAddr] = true;
-        lastOldContractAddressChangeTime = block.timestamp;
         emit OldContractRegistered(oldContractAddr);
     }
 
@@ -393,13 +384,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
         require(recipientAddress != address(0) && amount > 0, InvalidRecipientOrAmount());
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(mainTokenDeferredWithdrawalAmount == 0, MainTokenDeferredWithdrawalAlreadyScheduled());
+        require(launchDeferredWithdrawalAmount == 0, LaunchDeferredWithdrawalAlreadyScheduled());
 
-        recipientDeferredWithdrawalMainToken = recipientAddress;
-        mainTokenDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
-        mainTokenDeferredWithdrawalAmount = amount;
+        recipientDeferredWithdrawalLaunch = recipientAddress;
+        launchDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
+        launchDeferredWithdrawalAmount = amount;
 
-        emit DeferredWithdrawalScheduled(recipientAddress, amount, mainTokenDeferredWithdrawalDate);
+        emit DeferredWithdrawalScheduled(recipientAddress, amount, launchDeferredWithdrawalDate);
     }
 
     /**
@@ -407,11 +398,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function stopTokenDeferredWithdrawal() external override {
         require(msg.sender == owner() || msg.sender == royaltyWalletAddress || msg.sender == daoAddress, AccessDenied());
-        require(mainTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(launchDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
-        mainTokenDeferredWithdrawalDate = 0;
-        mainTokenDeferredWithdrawalAmount = 0;
-        recipientDeferredWithdrawalMainToken = owner();
+        launchDeferredWithdrawalDate = 0;
+        launchDeferredWithdrawalAmount = 0;
+        recipientDeferredWithdrawalLaunch = owner();
     }
 
     /**
@@ -419,67 +410,67 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function confirmTokenDeferredWithdrawal() external override onlyOwner nonReentrant {
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(mainTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
-        require(block.timestamp >= mainTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
-        require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
-        require(contractTokenBalance - totalTokensSold >= mainTokenDeferredWithdrawalAmount, InsufficientAmount());
-        require(block.timestamp <= mainTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS, WithdrawalDateNotReached());
+        require(launchDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(block.timestamp >= launchDeferredWithdrawalDate, WithdrawalDateNotReached());
+        require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
+        require(launchBalance - totalLaunchSold >= launchDeferredWithdrawalAmount, InsufficientAmount());
+        require(block.timestamp <= launchDeferredWithdrawalDate + Constants.SEVEN_DAYS, WithdrawalDateNotReached());
 
-        launchToken.safeTransfer(recipientDeferredWithdrawalMainToken, mainTokenDeferredWithdrawalAmount);
+        launchToken.safeTransfer(recipientDeferredWithdrawalLaunch, launchDeferredWithdrawalAmount);
 
-        contractTokenBalance -= mainTokenDeferredWithdrawalAmount;
-        mainTokenDeferredWithdrawalDate = 0;
-        mainTokenDeferredWithdrawalAmount = 0;
-        recipientDeferredWithdrawalMainToken = owner();
+        launchBalance -= launchDeferredWithdrawalAmount;
+        launchDeferredWithdrawalDate = 0;
+        launchDeferredWithdrawalAmount = 0;
+        recipientDeferredWithdrawalLaunch = owner();
     }
 
     /**
-     * @dev Schedule deferred withdrawal of support tokens
+     * @dev Schedule deferred withdrawal of collateral tokens
      */
-    function supportDeferredWithdrawal(address recipientAddress) external override onlyOwner {
+    function collateralDeferredWithdrawal(address recipientAddress) external override onlyOwner {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(recipientAddress != address(0), InvalidRecipient());
-        require(supportTokenDeferredWithdrawalDate == 0, SupportDeferredWithdrawalAlreadyScheduled());
+        require(collateralTokenDeferredWithdrawalDate == 0, CollateralDeferredWithdrawalAlreadyScheduled());
 
-        recipientDeferredWithdrawalSupportToken = recipientAddress;
-        supportTokenDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
+        recipientDeferredWithdrawalCollateralToken = recipientAddress;
+        collateralTokenDeferredWithdrawalDate = block.timestamp + Constants.THIRTY_DAYS;
 
-        emit DeferredWithdrawalScheduled(recipientAddress, contractSupportBalance, supportTokenDeferredWithdrawalDate);
+        emit DeferredWithdrawalScheduled(recipientAddress, contractCollateralBalance, collateralTokenDeferredWithdrawalDate);
     }
 
     /**
-     * @dev Cancel deferred withdrawal of support tokens
+     * @dev Cancel deferred withdrawal of collateral tokens
      */
-    function stopSupportDeferredWithdrawal() external override {
+    function stopCollateralDeferredWithdrawal() external override {
         require(msg.sender == owner() || msg.sender == royaltyWalletAddress || msg.sender == daoAddress, AccessDenied());
-        require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(collateralTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
-        supportTokenDeferredWithdrawalDate = 0;
-        recipientDeferredWithdrawalSupportToken = owner();
+        collateralTokenDeferredWithdrawalDate = 0;
+        recipientDeferredWithdrawalCollateralToken = owner();
     }
 
     /**
-     * @dev Confirm and execute deferred withdrawal of support tokens
+     * @dev Confirm and execute deferred withdrawal of collateral tokens
      */
-    function confirmSupportDeferredWithdrawal() external override onlyOwner nonReentrant {
+    function confirmCollateralDeferredWithdrawal() external override onlyOwner nonReentrant {
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(supportTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
-        require(block.timestamp >= supportTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
+        require(collateralTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
+        require(block.timestamp >= collateralTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
         require(
-            block.timestamp <= supportTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS,
-            SupportTokenWithdrawalWindowExpired()
+            block.timestamp <= collateralTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS,
+            CollateralTokenWithdrawalWindowExpired()
         );
 
-        uint256 supportBalance = contractSupportBalance;
-        contractSupportBalance = 0;
-        supportTokenDeferredWithdrawalDate = 0;
-        recipientDeferredWithdrawalSupportToken = owner();
+        uint256 collateralBalance = contractCollateralBalance;
+        contractCollateralBalance = 0;
+        collateralTokenDeferredWithdrawalDate = 0;
+        recipientDeferredWithdrawalCollateralToken = owner();
         isActive = false;
 
-        emit SupportDeferredWithdrawalConfirmed(recipientDeferredWithdrawalSupportToken, supportBalance);
+        emit CollateralDeferredWithdrawalConfirmed(recipientDeferredWithdrawalCollateralToken, collateralBalance);
 
-        IERC20(tokenSupportAddress).safeIncreaseAllowance(recipientDeferredWithdrawalSupportToken, supportBalance);
-        IProofOfCapital(recipientDeferredWithdrawalSupportToken).deposit(supportBalance);
+        IERC20(collateralAddress).safeIncreaseAllowance(recipientDeferredWithdrawalCollateralToken, collateralBalance);
+        IProofOfCapital(recipientDeferredWithdrawalCollateralToken).deposit(collateralBalance);
     }
 
     /**
@@ -526,11 +517,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(newReturnWalletAddress != address(0), InvalidAddress());
         require(
             newReturnWalletAddress != owner() && newReturnWalletAddress != reserveOwner
-                && newReturnWalletAddress != address(launchToken) && newReturnWalletAddress != tokenSupportAddress
-                && newReturnWalletAddress != additionalTokenAddress
+                && newReturnWalletAddress != address(launchToken) && newReturnWalletAddress != collateralAddress
                 && newReturnWalletAddress != returnWalletAddress && newReturnWalletAddress != royaltyWalletAddress
-                && newReturnWalletAddress != recipientDeferredWithdrawalMainToken
-                && newReturnWalletAddress != recipientDeferredWithdrawalSupportToken
+                && newReturnWalletAddress != recipientDeferredWithdrawalLaunch
+                && newReturnWalletAddress != recipientDeferredWithdrawalCollateralToken
                 && !marketMakerAddresses[newReturnWalletAddress] && !oldContractAddress[newReturnWalletAddress],
             OldContractAddressConflict()
         );
@@ -607,24 +597,24 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Buy tokens with support tokens
+     * @dev Buy tokens with collateral tokens
      */
     function buyTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
         require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
-        IERC20(tokenSupportAddress).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(collateralAddress).safeTransferFrom(msg.sender, address(this), amount);
         _handleTokenPurchaseCommon(amount);
     }
 
 
     /**
-     * @dev Deposit support tokens (for owners and old contracts)
+     * @dev Deposit collateral tokens (for owners and old contracts)
      */
     function deposit(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(amount > 0, InvalidAmount());
 
-        IERC20(tokenSupportAddress).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(collateralAddress).safeTransferFrom(msg.sender, address(this), amount);
         _handleOwnerDeposit(amount);
     }
 
@@ -638,11 +628,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        // Check if we should accumulate in unaccountedOffsetTokenBalance for gradual offset reduction
-        if (totalTokensSold == offsetTokens && (offsetTokens - tokensEarned) >= amount) {
-            unaccountedOffsetTokenBalance += amount;
+        // Check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
+        if (totalLaunchSold == offsetTokens && (offsetTokens - tokensEarned) >= amount) {
+            unaccountedOffsetLaunchBalance += amount;
         } else {
-            contractTokenBalance += amount;
+            launchBalance += amount;
         }
     }
 
@@ -668,15 +658,15 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     function withdrawAllTokens() external override onlyDAO nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
 
-        uint256 availableTokens = contractTokenBalance - totalTokensSold;
+        uint256 availableTokens = launchBalance - totalLaunchSold;
         require(availableTokens > 0, NoTokensToWithdraw());
 
         launchToken.safeTransfer(daoAddress, availableTokens);
 
         // Reset state
         currentStep = 0;
-        contractTokenBalance = 0;
-        totalTokensSold = 0;
+        launchBalance = 0;
+        totalLaunchSold = 0;
         tokensEarned = 0;
         quantityTokensPerLevel = firstLevelTokenQuantity;
         currentPrice = initialPricePerToken;
@@ -691,19 +681,19 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Withdraw all support tokens after lock period
-     * @notice Only DAO can withdraw all support tokens after lock period ends
+     * @dev Withdraw all collateral tokens after lock period
+     * @notice Only DAO can withdraw all collateral tokens after lock period ends
      */
-    function withdrawAllSupportTokens() external override onlyDAO nonReentrant {
+    function withdrawAllCollateralTokens() external override onlyDAO nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
-        require(contractSupportBalance > 0, NoSupportTokensToWithdraw());
+        require(contractCollateralBalance > 0, NoCollateralTokensToWithdraw());
 
-        uint256 withdrawnAmount = contractSupportBalance;
-        contractSupportBalance = 0;
+        uint256 withdrawnAmount = contractCollateralBalance;
+        contractCollateralBalance = 0;
         isActive = false;
-        _transferSupportTokens(daoAddress, withdrawnAmount);
+        _transferCollateralTokens(daoAddress, withdrawnAmount);
 
-        emit AllSupportTokensWithdrawn(daoAddress, withdrawnAmount);
+        emit AllCollateralTokensWithdrawn(daoAddress, withdrawnAmount);
     }
 
     /**
@@ -730,13 +720,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         require(unaccountedCollateralBalance >= amount, InsufficientUnaccountedCollateralBalance());
 
-        uint256 deltaCollateralBalance = _calculateChangeOffsetSupport(amount);
+        uint256 deltaCollateralBalance = _calculateChangeOffsetCollateral(amount);
         unaccountedCollateralBalance -= amount;
-        contractSupportBalance += deltaCollateralBalance;
+        contractCollateralBalance += deltaCollateralBalance;
 
         uint256 change = amount - deltaCollateralBalance;
         if (change > 0) {
-            _transferSupportTokens(daoAddress, change);
+            _transferCollateralTokens(daoAddress, change);
         }
 
         emit UnaccountedCollateralBalanceProcessed(amount, deltaCollateralBalance, change);
@@ -754,13 +744,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             _checkOwner();
         }
         require(!isInitialized, ContractAlreadyInitialized());
-        require(unaccountedOffsetBalance >= amount, InsufficientUnaccountedOffsetBalance());
+        require(unaccountedOffset >= amount, InsufficientUnaccountedOffsetBalance());
 
         _calculateOffset(amount);
-        unaccountedOffsetBalance -= amount;
+        unaccountedOffset -= amount;
 
         // Check if all offset has been processed
-        if (unaccountedOffsetBalance == 0) {
+        if (unaccountedOffset == 0) {
             isInitialized = true;
         }
 
@@ -779,10 +769,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             _checkOwner();
         }
 
-        require(unaccountedOffsetTokenBalance >= amount, InsufficientUnaccountedOffsetTokenBalance());
+        require(unaccountedOffsetLaunchBalance >= amount, InsufficientUnaccountedOffsetTokenBalance());
 
         _calculateChangeOffsetToken(amount);
-        unaccountedOffsetTokenBalance -= amount;
+        unaccountedOffsetLaunchBalance -= amount;
 
         emit UnaccountedOffsetTokenBalanceProcessed(amount);
     }
@@ -792,17 +782,17 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function getProfitOnRequest() external override nonReentrant {
         if (msg.sender == owner()) {
-            require(ownerSupportBalance > 0, NoProfitAvailable());
-            uint256 profitAmount = ownerSupportBalance;
-            _transferSupportTokens(owner(), ownerSupportBalance);
-            ownerSupportBalance = 0;
+            require(ownerCollateralBalance > 0, NoProfitAvailable());
+            uint256 profitAmount = ownerCollateralBalance;
+            _transferCollateralTokens(owner(), ownerCollateralBalance);
+            ownerCollateralBalance = 0;
             emit ProfitWithdrawn(owner(), profitAmount, true);
         } else {
             require(msg.sender == royaltyWalletAddress, AccessDenied());
-            require(royaltySupportBalance > 0, NoProfitAvailable());
-            uint256 profitAmount = royaltySupportBalance;
-            _transferSupportTokens(royaltyWalletAddress, royaltySupportBalance);
-            royaltySupportBalance = 0;
+            require(royaltyCollateralBalance > 0, NoProfitAvailable());
+            uint256 profitAmount = royaltyCollateralBalance;
+            _transferCollateralTokens(royaltyWalletAddress, royaltyCollateralBalance);
+            royaltyCollateralBalance = 0;
             emit ProfitWithdrawn(royaltyWalletAddress, profitAmount, false);
         }
     }
@@ -821,10 +811,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function tokenAvailable() external view override returns (uint256) {
-        if (totalTokensSold < tokensEarned) {
+        if (totalLaunchSold < tokensEarned) {
             return 0;
         }
-        return totalTokensSold - tokensEarned;
+        return totalLaunchSold - tokensEarned;
     }
 
     // Internal functions for handling different types of transactions
@@ -850,50 +840,50 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Common logic for handling token purchases with any support currency
-     * @param supportAmount Amount of support currency (ETH or support token)
+     * @dev Common logic for handling token purchases with any collateral currency
+     * @param collateralAmount Amount of collateral currency (ETH or collateral token)
      */
-    function _handleTokenPurchaseCommon(uint256 supportAmount) internal {
+    function _handleTokenPurchaseCommon(uint256 collateralAmount) internal {
         if (!_checkTradingAccess()) {
             if (_checkUnlockWindow()) {
                 controlDay += Constants.THIRTY_DAYS;
             }
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
-        require(contractTokenBalance > totalTokensSold, InsufficientTokenBalance());
+        require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
 
-        uint256 totalTokens = _calculateTokensToGiveForSupportAmount(supportAmount);
+        uint256 totalTokens = _calculateTokensToGiveForCollateralAmount(collateralAmount);
         uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
         if (profitInTime) {
-            _transferSupportTokens(owner(), creatorProfit);
-            _transferSupportTokens(royaltyWalletAddress, royaltyProfit);
+            _transferCollateralTokens(owner(), creatorProfit);
+            _transferCollateralTokens(royaltyWalletAddress, royaltyProfit);
         } else {
-            ownerSupportBalance += creatorProfit;
-            royaltySupportBalance += royaltyProfit;
+            ownerCollateralBalance += creatorProfit;
+            royaltyCollateralBalance += royaltyProfit;
         }
 
         // Check to prevent arithmetic underflow
         uint256 netValue = 0;
-        if (supportAmount > actualProfit) {
-            netValue = supportAmount - actualProfit;
+        if (collateralAmount > actualProfit) {
+            netValue = collateralAmount - actualProfit;
         }
-        contractSupportBalance += netValue;
-        totalTokensSold += totalTokens;
+        contractCollateralBalance += netValue;
+        totalLaunchSold += totalTokens;
 
         launchToken.safeTransfer(msg.sender, totalTokens);
 
-        emit TokensPurchased(msg.sender, totalTokens, supportAmount);
+        emit TokensPurchased(msg.sender, totalTokens, collateralAmount);
     }
 
     function _handleReturnWalletSale(uint256 amount) internal {
-        uint256 supportAmountToPay = 0;
+        uint256 collateralAmountToPay = 0;
 
         // Check to prevent arithmetic underflow
         uint256 tokensAvailableForReturnBuyback = 0;
-        if (totalTokensSold > tokensEarned) {
-            tokensAvailableForReturnBuyback = totalTokensSold - tokensEarned;
+        if (totalLaunchSold > tokensEarned) {
+            tokensAvailableForReturnBuyback = totalLaunchSold - tokensEarned;
         }
 
         // Add unaccounted balance from previous calls
@@ -909,24 +899,24 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             uint256 offsetAmount = offsetTokens - tokensEarned;
 
             if (effectiveAmount > offsetAmount) {
-                _calculateSupportForTokenAmountEarned(offsetAmount);
+                _calculateCollateralForTokenAmountEarned(offsetAmount);
                 uint256 buybackAmount = effectiveAmount - offsetAmount;
-                supportAmountToPay = _calculateSupportForTokenAmountEarned(buybackAmount);
+                collateralAmountToPay = _calculateCollateralForTokenAmountEarned(buybackAmount);
             } else {
-                _calculateSupportForTokenAmountEarned(effectiveAmount);
-                supportAmountToPay = 0;
+                _calculateCollateralForTokenAmountEarned(effectiveAmount);
+                collateralAmountToPay = 0;
             }
         } else {
-            supportAmountToPay = _calculateSupportForTokenAmountEarned(effectiveAmount);
+            collateralAmountToPay = _calculateCollateralForTokenAmountEarned(effectiveAmount);
         }
 
         tokensEarned += effectiveAmount;
-        require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
-        contractSupportBalance -= supportAmountToPay;
-        contractTokenBalance += amount;
+        require(contractCollateralBalance >= collateralAmountToPay, InsufficientCollateralBalance());
+        contractCollateralBalance -= collateralAmountToPay;
+        launchBalance += amount;
 
-        if (supportAmountToPay > 0) {
-            _transferSupportTokens(daoAddress, supportAmountToPay);
+        if (collateralAmountToPay > 0) {
+            _transferCollateralTokens(daoAddress, collateralAmountToPay);
         }
     }
 
@@ -940,24 +930,24 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
 
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
-        require(totalTokensSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
+        require(totalLaunchSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
 
-        uint256 tokensAvailableForBuyback = totalTokensSold - maxEarnedOrOffset;
+        uint256 tokensAvailableForBuyback = totalLaunchSold - maxEarnedOrOffset;
         require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
 
-        uint256 supportAmountToPay = _calculateSupportToPayForTokenAmount(amount);
-        require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance());
+        uint256 collateralAmountToPay = _calculateCollateralToPayForTokenAmount(amount);
+        require(contractCollateralBalance >= collateralAmountToPay, InsufficientCollateralBalance());
 
-        contractSupportBalance -= supportAmountToPay;
-        totalTokensSold -= amount;
+        contractCollateralBalance -= collateralAmountToPay;
+        totalLaunchSold -= amount;
 
-        _transferSupportTokens(msg.sender, supportAmountToPay);
+        _transferCollateralTokens(msg.sender, collateralAmountToPay);
 
-        emit TokensSold(msg.sender, amount, supportAmountToPay);
+        emit TokensSold(msg.sender, amount, collateralAmountToPay);
     }
 
     function _checkTradingAccess() internal view returns (bool) {
-        return _checkControlDay() || (mainTokenDeferredWithdrawalDate > 0) || (supportTokenDeferredWithdrawalDate > 0)
+        return _checkControlDay() || (launchDeferredWithdrawalDate > 0) || (collateralTokenDeferredWithdrawalDate > 0)
             || (lockEndTime < block.timestamp + Constants.SIXTY_DAYS);
     }
 
@@ -1044,8 +1034,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        contractTokenBalance += amountTokens;
-        totalTokensSold += amountTokens;
+        launchBalance += amountTokens;
+        totalLaunchSold += amountTokens;
     }
 
     /**
@@ -1100,13 +1090,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        totalTokensSold -= amountToken;
+        totalLaunchSold -= amountToken;
 
         return localCurrentStep;
     }
 
-    function _calculateChangeOffsetSupport(uint256 amountSupport) internal returns (uint256) {
-        int256 remainingAddSupport = int256(amountSupport);
+    function _calculateChangeOffsetCollateral(uint256 amountCollateral) internal returns (uint256) {
+        int256 remainingAddCollateral = int256(amountCollateral);
         uint256 remainingOffsetTokensLocal = offsetTokens;
         int256 remainingAddTokens = int256(offsetTokens) - int256(tokensEarned);
         uint256 localCurrentStep = offsetStep;
@@ -1114,15 +1104,15 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 tokensPerLevel = sizeOffsetStep;
         uint256 currentPriceLocal = offsetPrice;
 
-        while (remainingAddSupport > 0 && remainingAddTokens > 0) {
+        while (remainingAddCollateral > 0 && remainingAddTokens > 0) {
             uint256 tokensAvailableInStep = tokensPerLevel - remainderOfStepLocal;
             uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-            uint256 tonInStep = (uint256(tokensAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
-            uint256 tonRealInStep =
-                (tonInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal)) / Constants.PERCENTAGE_DIVISOR;
+            uint256 collateralInStep = (uint256(tokensAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
+            uint256 collateralRealInStep =
+                (collateralInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal)) / Constants.PERCENTAGE_DIVISOR;
 
-            if (remainingAddSupport >= int256(tonRealInStep) && remainingAddTokens >= int256(tokensAvailableInStep)) {
-                remainingAddSupport -= int256(tonRealInStep);
+            if (remainingAddCollateral >= int256(collateralRealInStep) && remainingAddTokens >= int256(tokensAvailableInStep)) {
+                remainingAddCollateral -= int256(collateralRealInStep);
                 remainingOffsetTokensLocal -= tokensAvailableInStep;
                 remainingAddTokens -= int256(tokensAvailableInStep);
 
@@ -1150,19 +1140,19 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
 
-                uint256 supportToPayForStep = 0;
+                uint256 collateralToPayForStep = 0;
                 uint256 tokensToBuyInThisStep = 0;
 
-                if (remainingAddSupport >= int256(tonRealInStep)) {
-                    supportToPayForStep = (uint256(remainingAddTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
+                if (remainingAddCollateral >= int256(collateralRealInStep)) {
+                    collateralToPayForStep = (uint256(remainingAddTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
                     tokensToBuyInThisStep = uint256(remainingAddTokens);
                 } else {
-                    supportToPayForStep = uint256(remainingAddSupport);
-                    tokensToBuyInThisStep = (uint256(remainingAddSupport) * Constants.PRICE_PRECISION) / adjustedPrice;
+                    collateralToPayForStep = uint256(remainingAddCollateral);
+                    tokensToBuyInThisStep = (uint256(remainingAddCollateral) * Constants.PRICE_PRECISION) / adjustedPrice;
                 }
 
                 remainderOfStepLocal += tokensToBuyInThisStep;
-                remainingAddSupport -= int256(supportToPayForStep);
+                remainingAddCollateral -= int256(collateralToPayForStep);
                 remainingOffsetTokensLocal -= tokensToBuyInThisStep;
                 remainingAddTokens = 0;
             }
@@ -1174,33 +1164,33 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         sizeOffsetStep = tokensPerLevel;
         offsetTokens = remainingOffsetTokensLocal;
 
-        return (amountSupport - uint256(remainingAddSupport));
+        return (amountCollateral - uint256(remainingAddCollateral));
     }
 
-    function _calculateTokensToGiveForSupportAmount(uint256 supportAmount) internal returns (uint256) {
+    function _calculateTokensToGiveForCollateralAmount(uint256 collateralAmount) internal returns (uint256) {
         uint256 tokensToGive = 0;
-        int256 remainingSupportAmount = int256(supportAmount);
+        int256 remainingCollateralAmount = int256(collateralAmount);
         uint256 localCurrentStep = currentStep;
         int256 remainderOfStepLocal = int256(remainderOfStep);
         uint256 tokensPerLevel = quantityTokensPerLevel;
         uint256 currentPriceLocal = currentPrice;
         uint256 totalProfit = 0;
-        uint256 remainderOfTokens = contractTokenBalance - totalTokensSold;
+        uint256 remainderOfTokens = launchBalance - totalLaunchSold;
 
-        while (remainingSupportAmount > 0 && remainderOfTokens >= tokensToGive) {
+        while (remainingCollateralAmount > 0 && remainderOfTokens >= tokensToGive) {
             int256 tokensAvailableInStep = remainderOfStepLocal;
-            int256 tonRequiredForStep =
+            int256 collateralRequiredForStep =
                 (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
-            if (remainingSupportAmount >= tonRequiredForStep) {
+            if (remainingCollateralAmount >= collateralRequiredForStep) {
                 tokensToGive += uint256(tokensAvailableInStep);
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
 
                 uint256 profitInStep =
-                    (uint256(tonRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
+                    (uint256(collateralRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
                 totalProfit += profitInStep;
 
-                remainingSupportAmount -= tonRequiredForStep;
+                remainingCollateralAmount -= collateralRequiredForStep;
                 localCurrentStep += 1;
 
                 tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
@@ -1209,15 +1199,15 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
                 uint256 tokensToBuyInThisStep =
-                    (uint256(remainingSupportAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
+                    (uint256(remainingCollateralAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
                 tokensToGive += tokensToBuyInThisStep;
-                uint256 tonSpentInThisStep = uint256(remainingSupportAmount);
+                uint256 collateralSpentInThisStep = uint256(remainingCollateralAmount);
 
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-                uint256 profitInStep = (tonSpentInThisStep * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
+                uint256 profitInStep = (collateralSpentInThisStep * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
                 totalProfit += profitInStep;
 
-                remainingSupportAmount = 0;
+                remainingCollateralAmount = 0;
                 remainderOfStepLocal -= int256(tokensToBuyInThisStep);
             }
         }
@@ -1236,8 +1226,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         return tokensToGive;
     }
 
-    function _calculateSupportToPayForTokenAmount(uint256 tokenAmount) internal returns (uint256) {
-        uint256 supportAmountToPay = 0;
+    function _calculateCollateralToPayForTokenAmount(uint256 tokenAmount) internal returns (uint256) {
+        uint256 collateralAmountToPay = 0;
         int256 remainingTokenAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStep;
         int256 remainderOfStepLocal = int256(remainderOfStep);
@@ -1251,9 +1241,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep =
+                uint256 collateralToPayForStep =
                     (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
-                supportAmountToPay += supportToPayForStep;
+                collateralAmountToPay += collateralToPayForStep;
 
                 remainingTokenAmount -= int256(tokensAvailableInStep);
 
@@ -1281,9 +1271,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep =
+                uint256 collateralToPayForStep =
                     (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
-                supportAmountToPay += supportToPayForStep;
+                collateralAmountToPay += collateralToPayForStep;
 
                 remainderOfStepLocal += int256(remainingTokenAmount);
                 remainingTokenAmount = 0;
@@ -1296,11 +1286,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         remainderOfStep = uint256(remainderOfStepLocal);
 
-        return supportAmountToPay;
+        return collateralAmountToPay;
     }
 
-    function _calculateSupportForTokenAmountEarned(uint256 tokenAmount) internal returns (uint256) {
-        uint256 supportAmountToPay = 0;
+    function _calculateCollateralForTokenAmountEarned(uint256 tokenAmount) internal returns (uint256) {
+        uint256 collateralAmountToPay = 0;
         int256 remainingTokenAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStepEarned;
         int256 remainderOfStepLocal = int256(remainderOfStepEarned);
@@ -1314,9 +1304,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep =
+                uint256 collateralToPayForStep =
                     (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
-                supportAmountToPay += supportToPayForStep;
+                collateralAmountToPay += collateralToPayForStep;
 
                 localCurrentStep += 1;
                 tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
@@ -1328,9 +1318,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
-                uint256 supportToPayForStep =
+                uint256 collateralToPayForStep =
                     (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
-                supportAmountToPay += supportToPayForStep;
+                collateralAmountToPay += collateralToPayForStep;
 
                 remainderOfStepLocal -= remainingTokenAmount;
                 remainingTokenAmount = 0;
@@ -1343,20 +1333,20 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         remainderOfStepEarned = uint256(remainderOfStepLocal);
 
-        return supportAmountToPay;
+        return collateralAmountToPay;
     }
 
 
     /**
-     * @dev General transfer function for support tokens (ERC20 only)
+     * @dev General transfer function for collateral tokens (ERC20 only)
      * @param to Recipient address
      * @param amount Amount to transfer
      */
-    function _transferSupportTokens(address to, uint256 amount) internal {
+    function _transferCollateralTokens(address to, uint256 amount) internal {
         if (amount == 0) return;
 
-        // Transfer support tokens
-        IERC20(tokenSupportAddress).safeTransfer(to, amount);
+        // Transfer collateral tokens
+        IERC20(collateralAddress).safeTransfer(to, amount);
     }
 
     /**

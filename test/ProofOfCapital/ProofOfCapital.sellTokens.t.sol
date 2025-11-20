@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 
 pragma solidity 0.8.29;
@@ -146,7 +146,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
 
     function testSellTokensHitsConsoleLogBranch() public {
-        // Test to hit the console.log branch in _calculateSupportToPayForTokenAmount
+        // Test to hit the console.log branch in _calculateCollateralToPayForTokenAmount
         // This branch executes when localCurrentStep > currentStepEarned && localCurrentStep <= trendChangeStep
 
     // Create a custom contract with high trendChangeStep and some offset to trigger offset logic
@@ -165,11 +165,11 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(returnWallet);
         token.approve(address(customContract), type(uint256).max);
 
-        // First, returnWallet sells tokens to increase contractTokenBalance
+        // First, returnWallet sells tokens to increase launchBalance
         vm.prank(returnWallet);
         customContract.sellTokens(20000e18);
 
-        // Approve WETH for market maker (since buyTokens uses WETH as support)
+        // Approve WETH for market maker (since buyTokens uses WETH as collateral)
         vm.prank(marketMaker);
         weth.approve(address(customContract), type(uint256).max);
 
@@ -179,26 +179,26 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
     // Buy enough tokens to exceed offsetTokens for buyback availability
     vm.prank(marketMaker);
-    customContract.buyTokens(15000e18); // This should advance currentStep and make totalTokensSold > offsetTokens
+    customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetTokens
 
-        // Create unaccountedOffsetBalance to trigger offset processing
+        // Create unaccountedOffset to trigger offset processing
         // First, approve tokens for owner and deposit to create offset balance
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
-        customContract.depositTokens(2000e18); // This should create unaccountedOffsetBalance
+        customContract.depositTokens(2000e18); // This should create unaccountedOffset
 
         // Call calculateUnaccountedOffsetBalance to trigger offset processing and set offsetStep > 0
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetBalance(1000e18); // This should process offset and set offsetStep
 
-        // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetSupport
+        // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetCollateral
         vm.prank(owner);
         weth.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
         customContract.deposit(1000e18); // This creates unaccountedCollateralBalance
 
-        // Call calculateUnaccountedCollateralBalance to trigger _calculateChangeOffsetSupport
+        // Call calculateUnaccountedCollateralBalance to trigger _calculateChangeOffsetCollateral
         vm.prank(owner);
         customContract.calculateUnaccountedCollateralBalance(500e18); // This should trigger console.log("trend change branch2")
 
@@ -206,22 +206,22 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 currentStep = customContract.currentStep();
         uint256 currentStepEarned = customContract.currentStepEarned();
         uint256 trendChangeStep = customContract.trendChangeStep();
-        uint256 totalTokensSold = customContract.totalTokensSold();
+        uint256 totalLaunchSold = customContract.totalLaunchSold();
         uint256 offsetTokens = customContract.offsetTokens();
 
         // Debug: print values
         console.log("currentStep:", currentStep);
         console.log("currentStepEarned:", currentStepEarned);
         console.log("trendChangeStep:", trendChangeStep);
-        console.log("totalTokensSold:", totalTokensSold);
+        console.log("totalLaunchSold:", totalLaunchSold);
         console.log("offsetTokens:", offsetTokens);
 
     // Ensure we have currentStep > currentStepEarned and currentStep <= trendChangeStep for sell logic
     assertGt(currentStep, currentStepEarned, "currentStep should be greater than currentStepEarned");
     assertLe(currentStep, trendChangeStep, "currentStep should be <= trendChangeStep to hit the branch");
-    assertGt(totalTokensSold, offsetTokens, "totalTokensSold should be > offsetTokens for buyback");
+    assertGt(totalLaunchSold, offsetTokens, "totalLaunchSold should be > offsetTokens for buyback");
 
-        // Now sell tokens - this should hit the console.log branch in _calculateSupportToPayForTokenAmount
+        // Now sell tokens - this should hit the console.log branch in _calculateCollateralToPayForTokenAmount
         uint256 sellAmount = 1000e18;
         uint256 balanceBefore = token.balanceOf(marketMaker);
 
@@ -233,7 +233,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     }
 
     function testOffsetChangeHitsTrendChangeBranch() public {
-        // Test to hit the "trend change branch" in _calculateChangeOffsetSupport
+        // Test to hit the "trend change branch" in _calculateChangeOffsetCollateral
         // This branch executes when localCurrentStep > trendChangeStep
 
         // Create a custom contract with low trendChangeStep to trigger "trend change branch"
@@ -262,19 +262,19 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Buy enough tokens to exceed offsetTokens for buyback availability
         vm.prank(marketMaker);
-        customContract.buyTokens(15000e18); // This should advance currentStep and make totalTokensSold > offsetTokens
+        customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetTokens
 
-        // Create unaccountedOffsetBalance to trigger offset processing
+        // Create unaccountedOffset to trigger offset processing
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
-        customContract.depositTokens(2000e18); // This should create unaccountedOffsetBalance
+        customContract.depositTokens(2000e18); // This should create unaccountedOffset
 
         // Call calculateUnaccountedOffsetBalance to trigger offset processing and set offsetStep > 0
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetBalance(1000e18); // This should process offset and set offsetStep
 
-        // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetSupport
+        // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetCollateral
         vm.prank(owner);
         weth.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
@@ -301,7 +301,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(returnWallet);
         token.transfer(address(customContract), 40000e18);
 
-        // Create unaccountedOffsetBalance
+        // Create unaccountedOffset
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
@@ -311,7 +311,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetBalance(1000e18);
 
-        // Now create more unaccountedOffsetBalance to trigger the condition check
+        // Now create more unaccountedOffset to trigger the condition check
         vm.prank(owner);
         customContract.depositTokens(1000e18);
 
@@ -336,7 +336,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(returnWallet);
         token.transfer(address(customContract), 40000e18);
 
-        // Create unaccountedOffsetBalance
+        // Create unaccountedOffset
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
@@ -346,7 +346,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetBalance(1000e18);
 
-        // Now create more unaccountedOffsetBalance to trigger the condition check
+        // Now create more unaccountedOffset to trigger the condition check
         vm.prank(owner);
         customContract.depositTokens(1000e18);
 
@@ -394,7 +394,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     }
 
     function testCollateralCalculationHitsNormalBranch() public {
-        // Test to hit the "collateral_normal_branch" in _calculateChangeOffsetSupport
+        // Test to hit the "collateral_normal_branch" in _calculateChangeOffsetCollateral
         // This branch executes when localCurrentStep <= trendChangeStep
 
         // Create contract with high trendChangeStep
@@ -423,13 +423,13 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.deposit(2000e18); // This creates unaccountedCollateralBalance
 
-        // Call calculateUnaccountedCollateralBalance - this should trigger _calculateChangeOffsetSupport with collateral_normal_branch
+        // Call calculateUnaccountedCollateralBalance - this should trigger _calculateChangeOffsetCollateral with collateral_normal_branch
         vm.prank(owner);
         customContract.calculateUnaccountedCollateralBalance(1000e18);
     }
 
     function testCollateralCalculationHitsTrendChangeBranch() public {
-        // Test to hit the "collateral_trend_change_branch" in _calculateChangeOffsetSupport
+        // Test to hit the "collateral_trend_change_branch" in _calculateChangeOffsetCollateral
         // This branch executes when localCurrentStep > trendChangeStep
 
         // Create contract with low trendChangeStep
@@ -458,14 +458,14 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.deposit(2000e18); // This creates unaccountedCollateralBalance
 
-        // Call calculateUnaccountedCollateralBalance - this should trigger _calculateChangeOffsetSupport with collateral_trend_change_branch
+        // Call calculateUnaccountedCollateralBalance - this should trigger _calculateChangeOffsetCollateral with collateral_trend_change_branch
         vm.prank(owner);
         customContract.calculateUnaccountedCollateralBalance(1000e18);
     }
 
 
     function testBuyTokensHitsConsoleLogBranches() public {
-        // Test to hit both console.log branches in _calculateTokensToGiveForSupportAmount
+        // Test to hit both console.log branches in _calculateTokensToGiveForCollateralAmount
         // First branch: localCurrentStep > trendChangeStep (buy_branch_trend_change)
         // Second branch: localCurrentStep <= trendChangeStep (buy_branch_normal)
 

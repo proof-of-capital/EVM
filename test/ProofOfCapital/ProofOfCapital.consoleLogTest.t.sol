@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -42,24 +42,24 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
     function testHandleReturnWalletSaleConsoleLog() public {
         // when offsetTokens > tokensEarned and effectiveAmount > offsetAmount
 
-        // Step 1: Owner deposits tokens to create contractTokenBalance
+        // Step 1: Owner deposits tokens to create launchBalance
         vm.startPrank(owner);
         token.approve(address(proofOfCapital), 100000e18);
-        proofOfCapital.depositTokens(50000e18); // This increases contractTokenBalance
+        proofOfCapital.depositTokens(50000e18); // This increases launchBalance
         vm.stopPrank();
 
-        // Now market maker can buy many tokens to create large totalTokensSold
+        // Now market maker can buy many tokens to create large totalLaunchSold
         vm.startPrank(owner);
         weth.transfer(marketMaker, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyTokens(5000e18); // Buy many tokens to create large totalTokensSold
+        proofOfCapital.buyTokens(5000e18); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
-        // Verify totalTokensSold increased
-        uint256 totalTokensSoldAfterBuy = proofOfCapital.totalTokensSold();
+        // Verify totalLaunchSold increased
+        uint256 totalTokensSoldAfterBuy = proofOfCapital.totalLaunchSold();
         assertTrue(totalTokensSoldAfterBuy > 0, "Should have tokens sold after market maker purchase");
 
         // Step 2: Now returnWallet can sell tokens back, which will increase tokensEarned
@@ -78,12 +78,12 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         // Step 4: Set offsetTokens to be larger than tokensEarned and ensure tokensAvailableForReturnBuyback > 0
         uint256 currentTokensEarned = proofOfCapital.tokensEarned();
-        uint256 currentTotalTokensSold = proofOfCapital.totalTokensSold();
+        uint256 currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
-        // Make sure totalTokensSold > tokensEarned so that tokensAvailableForReturnBuyback > 0
+        // Make sure totalLaunchSold > tokensEarned so that tokensAvailableForReturnBuyback > 0
         if (currentTotalTokensSold <= currentTokensEarned) {
-            // Increase totalTokensSold to make tokensAvailableForReturnBuyback > 0
-            uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+            // Increase totalLaunchSold to make tokensAvailableForReturnBuyback > 0
+            uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
             vm.store(address(proofOfCapital), bytes32(totalTokensSoldSlot), bytes32(currentTokensEarned + 2000e18));
             currentTotalTokensSold = currentTokensEarned + 2000e18;
         }
@@ -94,14 +94,14 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         // Re-read values after modification
         currentTokensEarned = proofOfCapital.tokensEarned();
         uint256 currentOffsetTokens = proofOfCapital.offsetTokens();
-        currentTotalTokensSold = proofOfCapital.totalTokensSold();
+        currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
         // Verify we have the right conditions for the test
         assertTrue(currentOffsetTokens > currentTokensEarned, "offsetTokens should be > tokensEarned");
-        assertTrue(currentTotalTokensSold > currentTokensEarned, "totalTokensSold should be > tokensEarned");
+        assertTrue(currentTotalTokensSold > currentTokensEarned, "totalLaunchSold should be > tokensEarned");
 
-        // Step 5: Create support balance to ensure contractSupportBalance > 0
-        createSupportBalance(10000e18);
+        // Step 5: Create collateral balance to ensure contractCollateralBalance > 0
+        createCollateralBalance(10000e18);
 
         // Step 6: Give returnWallet more tokens and try to sell again
         vm.startPrank(owner);
@@ -110,11 +110,11 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         // Step 7: Ensure we have enough tokensAvailableForReturnBuyback before calling sellTokens
         uint256 finalTokensEarned = proofOfCapital.tokensEarned();
-        uint256 finalTotalTokensSold = proofOfCapital.totalTokensSold();
+        uint256 finalTotalTokensSold = proofOfCapital.totalLaunchSold();
 
-        // If tokensAvailableForReturnBuyback is 0, we need to increase totalTokensSold
+        // If tokensAvailableForReturnBuyback is 0, we need to increase totalLaunchSold
         if (finalTotalTokensSold <= finalTokensEarned) {
-            uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+            uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
             vm.store(address(proofOfCapital), bytes32(totalTokensSoldSlot), bytes32(finalTokensEarned + 3000e18));
         }
 

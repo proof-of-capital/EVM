@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -44,11 +44,11 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
-        // Setup: Create unaccountedOffsetTokenBalance by depositing tokens when totalTokensSold == offsetTokens
+        // Setup: Create unaccountedOffsetLaunchBalance by depositing tokens when totalLaunchSold == offsetTokens
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
-        // Set totalTokensSold to equal offsetTokens
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        // Set totalLaunchSold to equal offsetTokens
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to a value less than offsetTokens to allow deposit
@@ -56,7 +56,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
-        // Deposit tokens to create unaccountedOffsetTokenBalance
+        // Deposit tokens to create unaccountedOffsetLaunchBalance
         uint256 depositAmount = 5000e18;
         require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
@@ -66,8 +66,8 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         proofOfCapital.depositTokens(depositAmount);
         vm.stopPrank();
 
-        // Verify unaccountedOffsetTokenBalance was created
-        assertGt(proofOfCapital.unaccountedOffsetTokenBalance(), 0, "unaccountedOffsetTokenBalance should be set");
+        // Verify unaccountedOffsetLaunchBalance was created
+        assertGt(proofOfCapital.unaccountedOffsetLaunchBalance(), 0, "unaccountedOffsetLaunchBalance should be set");
     }
 
     /**
@@ -75,9 +75,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      * Tests the branch where _checkTradingAccess() returns true
      */
     function testCalculateUnaccountedOffsetTokenBalance_Success_WithTradingAccess() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
-        uint256 initialTotalTokensSold = proofOfCapital.totalTokensSold();
+        uint256 initialTotalTokensSold = proofOfCapital.totalLaunchSold();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 amount = 1000e18;
 
@@ -95,15 +95,15 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetTokenBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetTokenBalance(),
+            proofOfCapital.unaccountedOffsetLaunchBalance(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetTokenBalance should decrease by amount"
+            "unaccountedOffsetLaunchBalance should decrease by amount"
         );
         assertEq(proofOfCapital.offsetTokens(), initialOffsetTokens - amount, "offsetTokens should decrease by amount");
         assertEq(
-            proofOfCapital.totalTokensSold(),
+            proofOfCapital.totalLaunchSold(),
             initialTotalTokensSold - amount,
-            "totalTokensSold should decrease by amount"
+            "totalLaunchSold should decrease by amount"
         );
         // offsetStep should decrease or stay the same (going backwards)
         assertLe(proofOfCapital.offsetStep(), initialOffsetStep, "offsetStep should decrease or stay the same");
@@ -114,7 +114,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      * Tests the branch where _checkTradingAccess() returns false and _checkUnlockWindow() returns true
      */
     function testCalculateUnaccountedOffsetTokenBalance_Success_WithUnlockWindow() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 amount = 1000e18;
 
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient unaccounted balance");
@@ -132,11 +132,11 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
 
         // Clear deferred withdrawal dates to ensure no trading access
         uint256 slotMainDeferred =
-            _stdStore.target(address(proofOfCapital)).sig("mainTokenDeferredWithdrawalDate()").find();
+            _stdStore.target(address(proofOfCapital)).sig("launchDeferredWithdrawalDate()").find();
         vm.store(address(proofOfCapital), bytes32(slotMainDeferred), bytes32(0));
-        uint256 slotSupportDeferred =
-            _stdStore.target(address(proofOfCapital)).sig("supportTokenDeferredWithdrawalDate()").find();
-        vm.store(address(proofOfCapital), bytes32(slotSupportDeferred), bytes32(0));
+        uint256 slotCollateralDeferred =
+            _stdStore.target(address(proofOfCapital)).sig("collateralTokenDeferredWithdrawalDate()").find();
+        vm.store(address(proofOfCapital), bytes32(slotCollateralDeferred), bytes32(0));
 
         uint256 controlDayBefore = proofOfCapital.controlDay();
 
@@ -147,9 +147,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetTokenBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetTokenBalance(),
+            proofOfCapital.unaccountedOffsetLaunchBalance(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetTokenBalance should decrease by amount"
+            "unaccountedOffsetLaunchBalance should decrease by amount"
         );
         // controlDay should be increased by THIRTY_DAYS
         assertEq(
@@ -164,7 +164,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      * Tests the branch where _checkTradingAccess() returns false and _checkUnlockWindow() returns false
      */
     function testCalculateUnaccountedOffsetTokenBalance_Success_WithoutUnlockWindow() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 amount = 1000e18;
 
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient unaccounted balance");
@@ -181,11 +181,11 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
 
         // Clear deferred withdrawal dates
         uint256 slotMainDeferred =
-            _stdStore.target(address(proofOfCapital)).sig("mainTokenDeferredWithdrawalDate()").find();
+            _stdStore.target(address(proofOfCapital)).sig("launchDeferredWithdrawalDate()").find();
         vm.store(address(proofOfCapital), bytes32(slotMainDeferred), bytes32(0));
-        uint256 slotSupportDeferred =
-            _stdStore.target(address(proofOfCapital)).sig("supportTokenDeferredWithdrawalDate()").find();
-        vm.store(address(proofOfCapital), bytes32(slotSupportDeferred), bytes32(0));
+        uint256 slotCollateralDeferred =
+            _stdStore.target(address(proofOfCapital)).sig("collateralTokenDeferredWithdrawalDate()").find();
+        vm.store(address(proofOfCapital), bytes32(slotCollateralDeferred), bytes32(0));
 
         uint256 controlDayBefore = proofOfCapital.controlDay();
 
@@ -196,9 +196,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetTokenBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetTokenBalance(),
+            proofOfCapital.unaccountedOffsetLaunchBalance(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetTokenBalance should decrease by amount"
+            "unaccountedOffsetLaunchBalance should decrease by amount"
         );
         // controlDay should NOT be increased (unlock window not active)
         assertEq(
@@ -212,7 +212,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      * @dev Test error: InsufficientUnaccountedOffsetTokenBalance when amount exceeds balance
      */
     function testCalculateUnaccountedOffsetTokenBalance_Reverts_WhenAmountExceedsBalance() public {
-        uint256 currentBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 currentBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 excessiveAmount = currentBalance + 1;
 
         // Setup trading access
@@ -241,11 +241,11 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
 
         // Clear deferred withdrawal dates
         uint256 slotMainDeferred =
-            _stdStore.target(address(proofOfCapital)).sig("mainTokenDeferredWithdrawalDate()").find();
+            _stdStore.target(address(proofOfCapital)).sig("launchDeferredWithdrawalDate()").find();
         vm.store(address(proofOfCapital), bytes32(slotMainDeferred), bytes32(0));
-        uint256 slotSupportDeferred =
-            _stdStore.target(address(proofOfCapital)).sig("supportTokenDeferredWithdrawalDate()").find();
-        vm.store(address(proofOfCapital), bytes32(slotSupportDeferred), bytes32(0));
+        uint256 slotCollateralDeferred =
+            _stdStore.target(address(proofOfCapital)).sig("collateralTokenDeferredWithdrawalDate()").find();
+        vm.store(address(proofOfCapital), bytes32(slotCollateralDeferred), bytes32(0));
 
         // Non-owner should not be able to call
         vm.expectRevert();
@@ -257,7 +257,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      * @dev Test that anyone can call when trading access is available
      */
     function testCalculateUnaccountedOffsetTokenBalance_Success_WhenNonOwnerCallsWithTradingAccess() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 amount = 1000e18;
 
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient unaccounted balance");
@@ -277,9 +277,9 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetTokenBalance(amount);
 
         assertEq(
-            proofOfCapital.unaccountedOffsetTokenBalance(),
+            proofOfCapital.unaccountedOffsetLaunchBalance(),
             initialUnaccountedBalance - amount,
-            "unaccountedOffsetTokenBalance should decrease by amount"
+            "unaccountedOffsetLaunchBalance should decrease by amount"
         );
     }
 
@@ -287,10 +287,10 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      * @dev Test that _calculateChangeOffsetToken is called correctly and updates state
      */
     function testCalculateUnaccountedOffsetTokenBalance_UpdatesOffsetState() public {
-        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
-        uint256 initialTotalTokensSold = proofOfCapital.totalTokensSold();
+        uint256 initialTotalTokensSold = proofOfCapital.totalLaunchSold();
 
         uint256 amount = 1000e18;
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient balance");
@@ -309,11 +309,11 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         // offsetTokens should decrease
         assertEq(proofOfCapital.offsetTokens(), initialOffsetTokens - amount, "offsetTokens should decrease by amount");
 
-        // totalTokensSold should decrease
+        // totalLaunchSold should decrease
         assertEq(
-            proofOfCapital.totalTokensSold(),
+            proofOfCapital.totalLaunchSold(),
             initialTotalTokensSold - amount,
-            "totalTokensSold should decrease by amount"
+            "totalLaunchSold should decrease by amount"
         );
 
         // currentStep, currentPrice, quantityTokensPerLevel should be updated to match offset values
@@ -336,7 +336,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      */
     function testCalculateUnaccountedOffsetTokenBalance_EmitsEvent() public {
         uint256 amount = 1000e18;
-        uint256 initialBalance = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         require(initialBalance >= amount, "Test setup: insufficient balance");
 
         // Setup trading access
@@ -351,16 +351,16 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
     }
 
     /**
-     * @dev Test that function reverts when unaccountedOffsetTokenBalance is zero
+     * @dev Test that function reverts when unaccountedOffsetLaunchBalance is zero
      */
     function testCalculateUnaccountedOffsetTokenBalance_Reverts_WhenBalanceIsZero() public {
-        // Create a contract with zero unaccountedOffsetTokenBalance
+        // Create a contract with zero unaccountedOffsetLaunchBalance
         // We'll set it directly via storage manipulation
         uint256 slotUnaccounted =
-            _stdStore.target(address(proofOfCapital)).sig("unaccountedOffsetTokenBalance()").find();
+            _stdStore.target(address(proofOfCapital)).sig("unaccountedOffsetLaunchBalance()").find();
         vm.store(address(proofOfCapital), bytes32(slotUnaccounted), bytes32(0));
 
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), 0, "Balance should be zero");
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), 0, "Balance should be zero");
 
         // Setup trading access
         uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
@@ -379,7 +379,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
     function testCalculateUnaccountedOffsetTokenBalance_TriggersOffsetNormalBranch() public {
         // Create a small offset to make offsetStep <= trendChangeStep (which is 5)
         uint256 smallOffsetAmount = 2000e18; // Small amount to keep offsetStep low
-        require(proofOfCapital.unaccountedOffsetBalance() >= smallOffsetAmount, "Test setup: insufficient unaccounted offset balance");
+        require(proofOfCapital.unaccountedOffset() >= smallOffsetAmount, "Test setup: insufficient unaccounted offset balance");
 
         // Setup trading access for offset creation
         uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
@@ -395,10 +395,10 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         assertGt(currentOffsetStep, 0, "offsetStep should be > 0 after offset creation");
         assertLe(currentOffsetStep, trendChangeStep, "offsetStep should be <= trendChangeStep for normal branch");
 
-        // Now create unaccountedOffsetTokenBalance by depositing tokens
-        // First set totalTokensSold to equal offsetTokens
+        // Now create unaccountedOffsetLaunchBalance by depositing tokens
+        // First set totalLaunchSold to equal offsetTokens
         uint256 offsetTokens = proofOfCapital.offsetTokens();
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to a value less than offsetTokens to allow deposit
@@ -406,7 +406,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
-        // Deposit tokens to create unaccountedOffsetTokenBalance
+        // Deposit tokens to create unaccountedOffsetLaunchBalance
         uint256 depositAmount = 1000e18; // Amount for the token balance reduction
         require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
@@ -427,7 +427,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         // Now call calculateUnaccountedOffsetTokenBalance - this should trigger the offset_normal_branch
         // Use a larger amount to ensure we process enough tokens to hit the condition
         uint256 processAmount = 2000e18; // Larger amount to process that will trigger the branch
-        require(proofOfCapital.unaccountedOffsetTokenBalance() >= processAmount, "Test setup: insufficient token balance to process");
+        require(proofOfCapital.unaccountedOffsetLaunchBalance() >= processAmount, "Test setup: insufficient token balance to process");
 
         // Setup trading access for token balance processing
         vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
@@ -448,7 +448,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
     function testCalculateUnaccountedOffsetTokenBalance_TriggersOffsetTrendChangeBranch() public {
         // First, create a large offset to make offsetStep > trendChangeStep (which is 5)
         uint256 largeOffsetAmount = 10000e18; // Large amount to increase offsetStep significantly
-        require(proofOfCapital.unaccountedOffsetBalance() >= largeOffsetAmount, "Test setup: insufficient unaccounted offset balance");
+        require(proofOfCapital.unaccountedOffset() >= largeOffsetAmount, "Test setup: insufficient unaccounted offset balance");
 
         // Setup trading access for offset creation
         uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
@@ -463,10 +463,10 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 trendChangeStep = proofOfCapital.trendChangeStep();
         assertGt(currentOffsetStep, trendChangeStep, "offsetStep should be > trendChangeStep after large offset creation");
 
-        // Now create unaccountedOffsetTokenBalance by depositing tokens
-        // First set totalTokensSold to equal offsetTokens
+        // Now create unaccountedOffsetLaunchBalance by depositing tokens
+        // First set totalLaunchSold to equal offsetTokens
         uint256 offsetTokens = proofOfCapital.offsetTokens();
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to a value less than offsetTokens to allow deposit
@@ -474,7 +474,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
-        // Deposit tokens to create unaccountedOffsetTokenBalance
+        // Deposit tokens to create unaccountedOffsetLaunchBalance
         uint256 depositAmount = 2000e18; // Smaller amount for the token balance reduction
         require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
@@ -494,7 +494,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
 
         // Now call calculateUnaccountedOffsetTokenBalance - this should trigger the offset_trend_change_branch
         uint256 processAmount = 1000e18; // Amount to process that will trigger the branch
-        require(proofOfCapital.unaccountedOffsetTokenBalance() >= processAmount, "Test setup: insufficient token balance to process");
+        require(proofOfCapital.unaccountedOffsetLaunchBalance() >= processAmount, "Test setup: insufficient token balance to process");
 
         // Setup trading access for token balance processing
         vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));

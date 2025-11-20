@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -101,7 +101,7 @@ contract ProofOfCapitalTest is Test {
             profitPercentage: 100,
             offsetTokens: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -306,9 +306,9 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
         // Check that variables are set correctly
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), recipient);
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), amount);
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), recipient);
+        assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), amount);
+        assertEq(proofOfCapital.launchDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
     }
 
     function testTokenDeferredWithdrawalEmitsEvent() public {
@@ -375,7 +375,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to schedule second withdrawal (should fail)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.MainTokenDeferredWithdrawalAlreadyScheduled.selector);
+        vm.expectRevert(ProofOfCapital.LaunchDeferredWithdrawalAlreadyScheduled.selector);
         proofOfCapital.tokenDeferredWithdrawal(recipient2, amount2);
     }
 
@@ -409,7 +409,7 @@ contract ProofOfCapitalTest is Test {
 
         for (uint256 i = 0; i < amounts.length; i++) {
             // Reset state by stopping any existing withdrawal
-            if (proofOfCapital.mainTokenDeferredWithdrawalAmount() > 0) {
+            if (proofOfCapital.launchDeferredWithdrawalAmount() > 0) {
                 vm.prank(owner);
                 proofOfCapital.stopTokenDeferredWithdrawal();
             }
@@ -419,7 +419,7 @@ contract ProofOfCapitalTest is Test {
             proofOfCapital.tokenDeferredWithdrawal(recipient, amounts[i]);
 
             // Verify amount is set correctly
-            assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), amounts[i]);
+            assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), amounts[i]);
         }
     }
 
@@ -437,7 +437,7 @@ contract ProofOfCapitalTest is Test {
 
     //     // Verify date is set correctly (current time + 30 days)
     //     uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
-    //     assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), expectedDate);
+    //     assertEq(proofOfCapital.launchDeferredWithdrawalDate(), expectedDate);
 
     //     // Move time forward and schedule another (after stopping first)
     //     vm.warp(block.timestamp + 10 days);
@@ -449,7 +449,7 @@ contract ProofOfCapitalTest is Test {
     //     proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
     //     uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
-    //     assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), newExpectedDate);
+    //     assertEq(proofOfCapital.launchDeferredWithdrawalDate(), newExpectedDate);
     // }
 
     // Tests for stopTokenDeferredWithdrawal function (testing each require)
@@ -462,16 +462,16 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
         // Verify it was scheduled
-        assertTrue(proofOfCapital.mainTokenDeferredWithdrawalDate() > 0);
+        assertTrue(proofOfCapital.launchDeferredWithdrawalDate() > 0);
 
         // Stop the withdrawal
         vm.prank(owner);
         proofOfCapital.stopTokenDeferredWithdrawal();
 
         // Verify it was stopped
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), owner);
+        assertEq(proofOfCapital.launchDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), owner);
     }
 
     function testStopTokenDeferredWithdrawalByRoyalty() public {
@@ -487,7 +487,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.stopTokenDeferredWithdrawal();
 
         // Verify it was stopped
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.launchDeferredWithdrawalDate(), 0);
     }
 
     function testStopTokenDeferredWithdrawalAccessDenied() public {
@@ -567,28 +567,28 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testConfirmTokenDeferredWithdrawalExpiredAfterSevenDays() public {
-        // Test require: block.timestamp <= mainTokenDeferredWithdrawalDate + Constants.SEVEN_DAYS
+        // Test require: block.timestamp <= launchDeferredWithdrawalDate + Constants.SEVEN_DAYS
         // This test verifies that withdrawal cannot be confirmed after 7 days from the withdrawal date
 
         address recipient = address(0x123);
         uint256 withdrawalAmount = 1000e18;
 
-        // Step 1: Create state where contractTokenBalance > totalTokensSold
-        // Use returnWallet to sell tokens back to contract, increasing contractTokenBalance
+        // Step 1: Create state where launchBalance > totalLaunchSold
+        // Use returnWallet to sell tokens back to contract, increasing launchBalance
         vm.startPrank(owner);
         token.transfer(returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18); // This increases contractTokenBalance
+        proofOfCapital.sellTokens(10000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Step 2: Schedule withdrawal
         vm.prank(owner);
         proofOfCapital.tokenDeferredWithdrawal(recipient, withdrawalAmount);
 
-        uint256 withdrawalDate = proofOfCapital.mainTokenDeferredWithdrawalDate();
+        uint256 withdrawalDate = proofOfCapital.launchDeferredWithdrawalDate();
         assertTrue(withdrawalDate > 0, "Withdrawal should be scheduled");
 
         // Step 3: Move time forward to the withdrawal date (30 days)
@@ -607,20 +607,20 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testConfirmTokenDeferredWithdrawalInsufficientTokenBalance() public {
-        // Test specific require: contractTokenBalance > totalTokensSold
-        // Default state: contractTokenBalance = 0, totalTokensSold = 10000e18 (from offset)
+        // Test specific require: launchBalance > totalLaunchSold
+        // Default state: launchBalance = 0, totalLaunchSold = 10000e18 (from offset)
         // This creates the exact condition for InsufficientTokenBalance error
 
         address recipient = address(0x123);
         uint256 amount = 1000e18;
 
-        // Verify initial state - contractTokenBalance should be <= totalTokensSold
-        uint256 contractBalance = proofOfCapital.contractTokenBalance();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        // Verify initial state - launchBalance should be <= totalLaunchSold
+        uint256 contractBalance = proofOfCapital.launchBalance();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // In our setup: contractTokenBalance = 0, totalTokensSold = 10000e18 (offsetTokens)
+        // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetTokens)
         assertTrue(
-            contractBalance <= totalSold, "Setup verification: contractTokenBalance should be <= totalTokensSold"
+            contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold"
         );
 
         // Schedule withdrawal
@@ -631,27 +631,27 @@ contract ProofOfCapitalTest is Test {
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         // Try to confirm - should fail with InsufficientTokenBalance
-        // because contractTokenBalance (0) <= totalTokensSold (10000e18)
+        // because launchBalance (0) <= totalLaunchSold (10000e18)
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
     function testConfirmTokenDeferredWithdrawalInsufficientTokenBalanceSpecific() public {
-        // Test specific require: contractTokenBalance > totalTokensSold
-        // Default state: contractTokenBalance = 0, totalTokensSold = 10000e18 (from offset)
+        // Test specific require: launchBalance > totalLaunchSold
+        // Default state: launchBalance = 0, totalLaunchSold = 10000e18 (from offset)
         // This creates the exact condition for InsufficientTokenBalance error
 
         address recipient = address(0x123);
         uint256 amount = 1000e18;
 
-        // Verify initial state - contractTokenBalance should be <= totalTokensSold
-        uint256 contractBalance = proofOfCapital.contractTokenBalance();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        // Verify initial state - launchBalance should be <= totalLaunchSold
+        uint256 contractBalance = proofOfCapital.launchBalance();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // In our setup: contractTokenBalance = 0, totalTokensSold = 10000e18 (offsetTokens)
+        // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetTokens)
         assertTrue(
-            contractBalance <= totalSold, "Setup verification: contractTokenBalance should be <= totalTokensSold"
+            contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold"
         );
 
         // Schedule withdrawal
@@ -662,7 +662,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         // Try to confirm - should fail with InsufficientTokenBalance
-        // because contractTokenBalance (0) <= totalTokensSold (10000e18)
+        // because launchBalance (0) <= totalLaunchSold (10000e18)
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
@@ -670,13 +670,13 @@ contract ProofOfCapitalTest is Test {
 
     function testConfirmTokenDeferredWithdrawalRequire5_InsufficientAmount() public {
         // Create scenario where:
-        // 1. contractTokenBalance > totalTokensSold (to pass require 4)
-        // 2. contractTokenBalance - totalTokensSold < mainTokenDeferredWithdrawalAmount (to fail require 5)
+        // 1. launchBalance > totalLaunchSold (to pass require 4)
+        // 2. launchBalance - totalLaunchSold < launchDeferredWithdrawalAmount (to fail require 5)
 
         address recipient = address(0x123);
 
-        // Use returnWallet to sell tokens back to contract, which increases contractTokenBalance
-        // From _handleReturnWalletSale: contractTokenBalance += amount;
+        // Use returnWallet to sell tokens back to contract, which increases launchBalance
+        // From _handleReturnWalletSale: launchBalance += amount;
 
         vm.startPrank(owner);
 
@@ -685,18 +685,18 @@ contract ProofOfCapitalTest is Test {
 
         vm.stopPrank();
 
-        // ReturnWallet sells tokens back, which increases contractTokenBalance
+        // ReturnWallet sells tokens back, which increases launchBalance
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18); // This should increase contractTokenBalance
+        proofOfCapital.sellTokens(50000e18); // This should increase launchBalance
         vm.stopPrank();
 
-        // Check the state - this should now have contractTokenBalance > totalTokensSold
-        uint256 contractBalance = proofOfCapital.contractTokenBalance();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        // Check the state - this should now have launchBalance > totalLaunchSold
+        uint256 contractBalance = proofOfCapital.launchBalance();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // Ensure we have the first condition: contractTokenBalance > totalTokensSold
-        require(contractBalance > totalSold, "Setup failed: need contractTokenBalance > totalTokensSold");
+        // Ensure we have the first condition: launchBalance > totalLaunchSold
+        require(contractBalance > totalSold, "Setup failed: need launchBalance > totalLaunchSold");
 
         // Calculate available tokens
         uint256 availableTokens = contractBalance - totalSold;
@@ -781,23 +781,23 @@ contract ProofOfCapitalTest is Test {
         // Test successful execution of confirmTokenDeferredWithdrawal
         // Need to create state where all require conditions pass:
         // 1. canWithdrawal = true (default)
-        // 2. mainTokenDeferredWithdrawalDate != 0 (withdrawal scheduled)
-        // 3. block.timestamp >= mainTokenDeferredWithdrawalDate (date reached)
-        // 4. contractTokenBalance > totalTokensSold (sufficient balance)
-        // 5. contractTokenBalance - totalTokensSold >= mainTokenDeferredWithdrawalAmount (sufficient available)
+        // 2. launchDeferredWithdrawalDate != 0 (withdrawal scheduled)
+        // 3. block.timestamp >= launchDeferredWithdrawalDate (date reached)
+        // 4. launchBalance > totalLaunchSold (sufficient balance)
+        // 5. launchBalance - totalLaunchSold >= launchDeferredWithdrawalAmount (sufficient available)
 
         address recipient = address(0x123);
         uint256 withdrawalAmount = 1000e18;
 
-        // Step 1: Create state where contractTokenBalance > totalTokensSold
-        // Use returnWallet to sell tokens back to contract, increasing contractTokenBalance
+        // Step 1: Create state where launchBalance > totalLaunchSold
+        // Use returnWallet to sell tokens back to contract, increasing launchBalance
         vm.startPrank(owner);
         token.transfer(returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18); // This increases contractTokenBalance
+        proofOfCapital.sellTokens(10000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Step 2: Schedule withdrawal with amount less than available
@@ -805,19 +805,19 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.tokenDeferredWithdrawal(recipient, withdrawalAmount);
 
         // Verify withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), recipient);
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), withdrawalAmount);
-        assertTrue(proofOfCapital.mainTokenDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), recipient);
+        assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), withdrawalAmount);
+        assertTrue(proofOfCapital.launchDeferredWithdrawalDate() > 0);
 
         // Step 3: Move time forward to reach withdrawal date
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         // Step 4: Get balances before confirmation
         uint256 recipientBalanceBefore = token.balanceOf(recipient);
-        uint256 contractBalanceBefore = proofOfCapital.contractTokenBalance();
+        uint256 contractBalanceBefore = proofOfCapital.launchBalance();
 
         // Verify we have sufficient balance for withdrawal
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 available = contractBalanceBefore - totalSold;
         assertTrue(available >= withdrawalAmount, "Insufficient available tokens for withdrawal");
 
@@ -830,12 +830,12 @@ contract ProofOfCapitalTest is Test {
         assertEq(token.balanceOf(recipient), recipientBalanceBefore + withdrawalAmount);
 
         // Check contract balance decreased
-        assertEq(proofOfCapital.contractTokenBalance(), contractBalanceBefore - withdrawalAmount);
+        assertEq(proofOfCapital.launchBalance(), contractBalanceBefore - withdrawalAmount);
 
         // Check state variables reset
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), owner);
+        assertEq(proofOfCapital.launchDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), owner);
     }
 
     // Tests for assignNewOwner function
@@ -1107,34 +1107,34 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.reserveOwner(), finalOwner);
     }
 
-    // Tests for supportDeferredWithdrawal function
-    function testSupportDeferredWithdrawalSuccess() public {
+    // Tests for collateralDeferredWithdrawal function
+    function testCollateralDeferredWithdrawalSuccess() public {
         address recipient = address(0x123);
 
-        // Schedule support withdrawal
+        // Schedule collateral withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Verify withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipient);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
     }
 
-    function testSupportDeferredWithdrawalEmitsEvent() public {
+    function testCollateralDeferredWithdrawalEmitsEvent() public {
         address recipient = address(0x123);
         uint256 expectedExecuteTime = block.timestamp + Constants.THIRTY_DAYS;
 
-        // Note: contractSupportBalance is the amount that will be emitted in the event
-        uint256 currentBalance = proofOfCapital.contractSupportBalance();
+        // Note: contractCollateralBalance is the amount that will be emitted in the event
+        uint256 currentBalance = proofOfCapital.contractCollateralBalance();
 
         // Expect the event to be emitted
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
         emit IProofOfCapital.DeferredWithdrawalScheduled(recipient, currentBalance, expectedExecuteTime);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
     }
 
-    function testSupportDeferredWithdrawalDeferredWithdrawalBlocked() public {
+    function testCollateralDeferredWithdrawalDeferredWithdrawalBlocked() public {
         address recipient = address(0x123);
 
         // Block deferred withdrawals
@@ -1142,56 +1142,56 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.blockDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
-        // Try to schedule support withdrawal when blocked
+        // Try to schedule collateral withdrawal when blocked
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
     }
 
-    function testSupportDeferredWithdrawalInvalidRecipient() public {
+    function testCollateralDeferredWithdrawalInvalidRecipient() public {
         // Try to schedule with zero address
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InvalidRecipient.selector);
-        proofOfCapital.supportDeferredWithdrawal(address(0));
+        proofOfCapital.collateralDeferredWithdrawal(address(0));
     }
 
-    function testSupportDeferredWithdrawalAlreadyScheduled() public {
+    function testCollateralDeferredWithdrawalAlreadyScheduled() public {
         address recipient1 = address(0x123);
         address recipient2 = address(0x456);
 
-        // Schedule first support withdrawal
+        // Schedule first collateral withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient1);
+        proofOfCapital.collateralDeferredWithdrawal(recipient1);
 
-        // Try to schedule second support withdrawal (should fail)
+        // Try to schedule second collateral withdrawal (should fail)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.SupportDeferredWithdrawalAlreadyScheduled.selector);
-        proofOfCapital.supportDeferredWithdrawal(recipient2);
+        vm.expectRevert(ProofOfCapital.CollateralDeferredWithdrawalAlreadyScheduled.selector);
+        proofOfCapital.collateralDeferredWithdrawal(recipient2);
     }
 
-    function testSupportDeferredWithdrawalOnlyOwner() public {
+    function testCollateralDeferredWithdrawalOnlyOwner() public {
         address recipient = address(0x123);
 
-        // Non-owner tries to schedule support withdrawal
+        // Non-owner tries to schedule collateral withdrawal
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(recipient);
         vm.expectRevert();
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
     }
 
 
-    // function testSupportDeferredWithdrawalDateCalculation() public {
+    // function testCollateralDeferredWithdrawalDateCalculation() public {
     //     address recipient = address(0x123);
 
     //     // Record current time
@@ -1199,26 +1199,26 @@ contract ProofOfCapitalTest is Test {
 
     //     // Schedule withdrawal
     //     vm.prank(owner);
-    //     proofOfCapital.supportDeferredWithdrawal(recipient);
+    //     proofOfCapital.collateralDeferredWithdrawal(recipient);
 
     //     // Verify date is set correctly (current time + 30 days)
     //     uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
-    //     assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), expectedDate);
+    //     assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), expectedDate);
 
     //     // Move time forward and schedule another (after stopping first)
     //     vm.warp(block.timestamp + 10 days);
     //     vm.prank(owner);
-    //     proofOfCapital.stopSupportDeferredWithdrawal();
+    //     proofOfCapital.stopCollateralDeferredWithdrawal();
 
     //     uint256 newCurrentTime = block.timestamp;
     //     vm.prank(owner);
-    //     proofOfCapital.supportDeferredWithdrawal(recipient);
+    //     proofOfCapital.collateralDeferredWithdrawal(recipient);
 
     //     uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
-    //     assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), newExpectedDate);
+    //     assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), newExpectedDate);
     // }
 
-    function testSupportDeferredWithdrawalWithDifferentRecipients() public {
+    function testCollateralDeferredWithdrawalWithDifferentRecipients() public {
         address[] memory recipients = new address[](3);
         recipients[0] = address(0x123);
         recipients[1] = address(0x456);
@@ -1226,125 +1226,125 @@ contract ProofOfCapitalTest is Test {
 
         for (uint256 i = 0; i < recipients.length; i++) {
             // Reset state by stopping any existing withdrawal
-            if (proofOfCapital.supportTokenDeferredWithdrawalDate() > 0) {
+            if (proofOfCapital.collateralTokenDeferredWithdrawalDate() > 0) {
                 vm.prank(owner);
-                proofOfCapital.stopSupportDeferredWithdrawal();
+                proofOfCapital.stopCollateralDeferredWithdrawal();
             }
 
             // Schedule withdrawal with this recipient
             vm.prank(owner);
-            proofOfCapital.supportDeferredWithdrawal(recipients[i]);
+            proofOfCapital.collateralDeferredWithdrawal(recipients[i]);
 
             // Verify recipient is set correctly
-            assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipients[i]);
+            assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipients[i]);
         }
     }
 
-    function testSupportDeferredWithdrawalStateConsistency() public {
+    function testCollateralDeferredWithdrawalStateConsistency() public {
         address recipient = address(0x123);
 
         // Initially no withdrawal should be scheduled
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner); // Default to owner
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), owner); // Default to owner
 
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Verify all state variables are set correctly
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
-        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > block.timestamp);
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipient);
+        assertTrue(proofOfCapital.collateralTokenDeferredWithdrawalDate() > block.timestamp);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), block.timestamp + Constants.THIRTY_DAYS);
     }
 
-    // Tests for stopSupportDeferredWithdrawal function
-    function testStopSupportDeferredWithdrawalSuccessByOwner() public {
+    // Tests for stopCollateralDeferredWithdrawal function
+    function testStopCollateralDeferredWithdrawalSuccessByOwner() public {
         address recipient = address(0x123);
 
-        // First schedule a support withdrawal
+        // First schedule a collateral withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Verify it was scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
-        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipient);
+        assertTrue(proofOfCapital.collateralTokenDeferredWithdrawalDate() > 0);
 
         // Stop the withdrawal using owner
         vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Verify it was stopped and state reset
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), owner);
     }
 
-    function testStopSupportDeferredWithdrawalSuccessByRoyalty() public {
+    function testStopCollateralDeferredWithdrawalSuccessByRoyalty() public {
         address recipient = address(0x123);
 
-        // First schedule a support withdrawal
+        // First schedule a collateral withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Verify it was scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
-        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipient);
+        assertTrue(proofOfCapital.collateralTokenDeferredWithdrawalDate() > 0);
 
         // Stop the withdrawal using royalty wallet
         vm.prank(royalty);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Verify it was stopped and state reset
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), owner);
     }
 
-    function testStopSupportDeferredWithdrawalAccessDenied() public {
+    function testStopCollateralDeferredWithdrawalAccessDenied() public {
         address recipient = address(0x123);
 
-        // First schedule a support withdrawal
+        // First schedule a collateral withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Try to stop with unauthorized addresses
         vm.prank(returnWallet);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         vm.prank(marketMaker);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         vm.prank(recipient);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
-        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipient);
+        assertTrue(proofOfCapital.collateralTokenDeferredWithdrawalDate() > 0);
     }
 
-    function testStopSupportDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
+    function testStopCollateralDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to stop without scheduling first - by owner
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Try to stop without scheduling first - by royalty
         vm.prank(royalty);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
     }
 
-    function testStopSupportDeferredWithdrawalStateReset() public {
+    function testStopCollateralDeferredWithdrawalStateReset() public {
         address recipient = address(0x123);
 
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Record initial scheduled state
-        uint256 scheduledDate = proofOfCapital.supportTokenDeferredWithdrawalDate();
-        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportToken();
+        uint256 scheduledDate = proofOfCapital.collateralTokenDeferredWithdrawalDate();
+        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalCollateralToken();
 
         // Verify initial state
         assertTrue(scheduledDate > 0);
@@ -1352,118 +1352,118 @@ contract ProofOfCapitalTest is Test {
 
         // Stop withdrawal
         vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Verify state is properly reset
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), owner);
 
         // Verify values actually changed
-        assertTrue(scheduledDate > 0 && proofOfCapital.supportTokenDeferredWithdrawalDate() == 0);
-        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalSupportToken() == owner);
+        assertTrue(scheduledDate > 0 && proofOfCapital.collateralTokenDeferredWithdrawalDate() == 0);
+        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalCollateralToken() == owner);
     }
 
-    function testStopSupportDeferredWithdrawalMultipleTimes() public {
+    function testStopCollateralDeferredWithdrawalMultipleTimes() public {
         address recipient = address(0x123);
 
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Stop withdrawal first time
         vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Try to stop again - should fail with NoDeferredWithdrawalScheduled
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Same with royalty
         vm.prank(royalty);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
     }
 
-    function testStopSupportDeferredWithdrawalAfterReschedule() public {
+    function testStopCollateralDeferredWithdrawalAfterReschedule() public {
         address recipient1 = address(0x123);
         address recipient2 = address(0x456);
 
         // Schedule first withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient1);
+        proofOfCapital.collateralDeferredWithdrawal(recipient1);
 
         // Stop first withdrawal
         vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Schedule second withdrawal (should work since first was stopped)
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient2);
+        proofOfCapital.collateralDeferredWithdrawal(recipient2);
 
         // Verify second withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient2);
-        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), recipient2);
+        assertTrue(proofOfCapital.collateralTokenDeferredWithdrawalDate() > 0);
 
         // Stop second withdrawal using royalty wallet
         vm.prank(royalty);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Verify it was stopped
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), owner);
     }
 
-    function testStopSupportDeferredWithdrawalOwnerVsRoyaltyAccess() public {
+    function testStopCollateralDeferredWithdrawalOwnerVsRoyaltyAccess() public {
         address recipient = address(0x123);
 
         // Test 1: Owner can stop withdrawal scheduled by owner
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Test 2: Royalty can stop withdrawal scheduled by owner
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(royalty);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Both should work since both owner and royalty have access
         // Verify final state
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), 0);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), owner);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), 0);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), owner);
     }
 
-    function testStopSupportDeferredWithdrawalConsistentBehavior() public {
+    function testStopCollateralDeferredWithdrawalConsistentBehavior() public {
         // Test that the function behaves consistently regardless of who calls it
         address recipient = address(0x123);
 
         // Test stopping by owner
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
-        uint256 scheduledDate1 = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        uint256 scheduledDate1 = proofOfCapital.collateralTokenDeferredWithdrawalDate();
 
         vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
-        uint256 resetDate1 = proofOfCapital.supportTokenDeferredWithdrawalDate();
-        address resetRecipient1 = proofOfCapital.recipientDeferredWithdrawalSupportToken();
+        uint256 resetDate1 = proofOfCapital.collateralTokenDeferredWithdrawalDate();
+        address resetRecipient1 = proofOfCapital.recipientDeferredWithdrawalCollateralToken();
 
         // Test stopping by royalty
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
-        uint256 scheduledDate2 = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        uint256 scheduledDate2 = proofOfCapital.collateralTokenDeferredWithdrawalDate();
 
         vm.prank(royalty);
-        proofOfCapital.stopSupportDeferredWithdrawal();
+        proofOfCapital.stopCollateralDeferredWithdrawal();
 
-        uint256 resetDate2 = proofOfCapital.supportTokenDeferredWithdrawalDate();
-        address resetRecipient2 = proofOfCapital.recipientDeferredWithdrawalSupportToken();
+        uint256 resetDate2 = proofOfCapital.collateralTokenDeferredWithdrawalDate();
+        address resetRecipient2 = proofOfCapital.recipientDeferredWithdrawalCollateralToken();
 
         // Both should have same behavior
         assertEq(resetDate1, resetDate2); // Both should be 0
@@ -1475,9 +1475,9 @@ contract ProofOfCapitalTest is Test {
         assertEq(resetRecipient2, owner);
     }
 
-    // Tests for confirmSupportDeferredWithdrawal function
-    function testConfirmSupportDeferredWithdrawalSuccess() public {
-        // По текущей логике контракта вызов confirmSupportDeferredWithdrawal
+    // Tests for confirmCollateralDeferredWithdrawal function
+    function testConfirmCollateralDeferredWithdrawalSuccess() public {
+        // По текущей логике контракта вызов confirmCollateralDeferredWithdrawal
         // всегда завершится revert`ом, так как функция deposit вызывается на
         // адресе владельца, который не реализует её. Поэтому ожидаем revert
         // без проверки последующих состояний.
@@ -1485,23 +1485,23 @@ contract ProofOfCapitalTest is Test {
 
         // Планируем отложенное снятие поддержки
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Перемещаем время вперёд, чтобы прошёл период ожидания
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
-        // Ожидаем, что confirmSupportDeferredWithdrawal вызовет revert
+        // Ожидаем, что confirmCollateralDeferredWithdrawal вызовет revert
         vm.prank(owner);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalDeferredWithdrawalBlocked() public {
+    function testConfirmCollateralDeferredWithdrawalDeferredWithdrawalBlocked() public {
         address recipient = address(0x123);
 
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Block withdrawals
         vm.prank(owner);
@@ -1513,41 +1513,41 @@ contract ProofOfCapitalTest is Test {
         // Try to confirm when blocked
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
+    function testConfirmCollateralDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to confirm without scheduling
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalWithdrawalDateNotReached() public {
+    function testConfirmCollateralDeferredWithdrawalWithdrawalDateNotReached() public {
         address recipient = address(0x123);
 
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Try to confirm before 30 days
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Move time forward but not enough
         vm.warp(block.timestamp + Constants.THIRTY_DAYS - 1);
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalOnlyOwner() public {
+    function testConfirmCollateralDeferredWithdrawalOnlyOwner() public {
         address recipient = address(0x123);
 
         // Schedule withdrawal
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -1555,54 +1555,54 @@ contract ProofOfCapitalTest is Test {
         // Try to confirm with non-owner addresses
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         vm.prank(recipient);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalWithZeroBalance() public {
+    function testConfirmCollateralDeferredWithdrawalWithZeroBalance() public {
         address recipient = address(0x123);
 
         // Планируем отложенное снятие поддержки (баланс контракта по умолчанию 0)
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Перемещаем время вперёд
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
-        // Теперь ожидаем, что confirmSupportDeferredWithdrawal завершится revert`ом
+        // Теперь ожидаем, что confirmCollateralDeferredWithdrawal завершится revert`ом
         vm.prank(owner);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalBasicValidation() public {
+    function testConfirmCollateralDeferredWithdrawalBasicValidation() public {
         // Test that all our basic require checks work as expected
 
         // Test 1: No withdrawal scheduled
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Test 2: Schedule and test date not reached
         address recipient = address(0x123);
 
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Test 3: Block withdrawals and test blocked error
         vm.prank(owner);
@@ -1612,10 +1612,10 @@ contract ProofOfCapitalTest is Test {
 
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmSupportDeferredWithdrawalContractDeactivation() public {
+    function testConfirmCollateralDeferredWithdrawalContractDeactivation() public {
         address recipient = address(0x123);
 
         // Контракт должен быть активен в начале
@@ -1623,7 +1623,7 @@ contract ProofOfCapitalTest is Test {
 
         // Планируем отложенное снятие поддержки
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         // Перемещаем время вперёд
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -1631,52 +1631,52 @@ contract ProofOfCapitalTest is Test {
         // Подтверждение должно привести к revert
         vm.prank(owner);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Контракт остаётся активным
         assertTrue(proofOfCapital.isActive());
     }
 
-    function testConfirmSupportDeferredWithdrawalStateConsistency() public {
+    function testConfirmCollateralDeferredWithdrawalStateConsistency() public {
         address recipient = address(0x123);
 
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
-        uint256 scheduledDate = proofOfCapital.supportTokenDeferredWithdrawalDate();
-        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportToken();
+        uint256 scheduledDate = proofOfCapital.collateralTokenDeferredWithdrawalDate();
+        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalCollateralToken();
 
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         vm.prank(owner);
         vm.expectRevert();
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Подтверждение завершилось revert`ом, поэтому данные должны остаться как были
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), scheduledDate);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), scheduledRecipient);
+        assertEq(proofOfCapital.collateralTokenDeferredWithdrawalDate(), scheduledDate);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalCollateralToken(), scheduledRecipient);
         assertTrue(proofOfCapital.isActive());
     }
 
-    function testConfirmSupportDeferredWithdrawalExpiredAfterSevenDays() public {
+    function testConfirmCollateralDeferredWithdrawalExpiredAfterSevenDays() public {
         address recipient = address(0x123);
 
-        uint256 supportBalanceAmount = 5000e18;
-        uint256 slotContractSupportBalance =
-            _stdStore.target(address(proofOfCapital)).sig("contractSupportBalance()").find();
-        vm.store(address(proofOfCapital), bytes32(slotContractSupportBalance), bytes32(supportBalanceAmount));
+        uint256 collateralBalanceAmount = 5000e18;
+        uint256 slotContractCollateralBalance =
+            _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
+        vm.store(address(proofOfCapital), bytes32(slotContractCollateralBalance), bytes32(collateralBalanceAmount));
 
         vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), supportBalanceAmount);
+        weth.transfer(address(proofOfCapital), collateralBalanceAmount);
         vm.stopPrank();
 
-        uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        assertTrue(supportBalance > 0, "Should have support balance");
+        uint256 collateralBalance = proofOfCapital.contractCollateralBalance();
+        assertTrue(collateralBalance > 0, "Should have collateral balance");
 
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
-        uint256 withdrawalDate = proofOfCapital.supportTokenDeferredWithdrawalDate();
+        uint256 withdrawalDate = proofOfCapital.collateralTokenDeferredWithdrawalDate();
         assertTrue(withdrawalDate > 0, "Withdrawal should be scheduled");
 
         vm.warp(withdrawalDate);
@@ -1684,8 +1684,8 @@ contract ProofOfCapitalTest is Test {
         vm.warp(withdrawalDate + Constants.SEVEN_DAYS + 1);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.SupportTokenWithdrawalWindowExpired.selector);
-        proofOfCapital.confirmSupportDeferredWithdrawal();
+        vm.expectRevert(ProofOfCapital.CollateralTokenWithdrawalWindowExpired.selector);
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
 
@@ -2195,24 +2195,24 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testTokenAvailableInitialState() public {
-        // Initially: offsetTokens go to unaccountedOffsetBalance, not totalTokensSold
-        // So totalTokensSold = 0, tokensEarned = 0
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        // Initially: offsetTokens go to unaccountedOffset, not totalLaunchSold
+        // So totalLaunchSold = 0, tokensEarned = 0
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
 
         // Verify initial state
-        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffsetBalance, not totalTokensSold
+        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffset, not totalLaunchSold
         assertEq(tokensEarned, 0);
 
-        // tokenAvailable should be totalTokensSold - tokensEarned
+        // tokenAvailable should be totalLaunchSold - tokensEarned
         uint256 expectedAvailable = totalSold - tokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
         assertEq(proofOfCapital.tokenAvailable(), 0); // No tokens available until offset is processed
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
-        // This tests edge case where tokensEarned equals totalTokensSold
-        // In initial state: totalTokensSold = 10000e18, tokensEarned = 0
+        // This tests edge case where tokensEarned equals totalLaunchSold
+        // In initial state: totalLaunchSold = 10000e18, tokensEarned = 0
 
         // We need to create scenario where tokensEarned increases
         // This happens when return wallet sells tokens back to contract
@@ -2230,7 +2230,7 @@ contract ProofOfCapitalTest is Test {
 
         // Check if tokensEarned increased
         uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
 
         // tokenAvailable should be totalSold - tokensEarned
         uint256 expectedAvailable = totalSold - tokensEarned;
@@ -2243,10 +2243,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testTokenAvailableStateConsistency() public {
-        // Test that tokenAvailable always equals totalTokensSold - tokensEarned
+        // Test that tokenAvailable always equals totalLaunchSold - tokensEarned
 
         // Record initial state
-        uint256 initialTotalSold = proofOfCapital.totalTokensSold();
+        uint256 initialTotalSold = proofOfCapital.totalLaunchSold();
         uint256 initialTokensEarned = proofOfCapital.tokensEarned();
         uint256 initialAvailable = proofOfCapital.tokenAvailable();
 
@@ -2255,7 +2255,7 @@ contract ProofOfCapitalTest is Test {
 
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
-        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalTokensSold() - proofOfCapital.tokensEarned());
+        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.tokensEarned());
     }
 
     function testViewFunctionsIntegration() public {
@@ -2290,15 +2290,15 @@ contract ProofOfCapitalTest is Test {
 
     // Tests for withdrawAllTokens function
     function testWithdrawAllTokensSuccess() public {
-        // The key insight: contractTokenBalance is only increased by returnWallet selling tokens back
-        // We need to create a scenario where returnWallet sells tokens to increase contractTokenBalance
+        // The key insight: launchBalance is only increased by returnWallet selling tokens back
+        // We need to create a scenario where returnWallet sells tokens to increase launchBalance
 
         // Give tokens to return wallet
         vm.startPrank(owner);
         token.transfer(returnWallet, 50000e18);
         vm.stopPrank();
 
-        // Return wallet sells tokens back (this increases contractTokenBalance)
+        // Return wallet sells tokens back (this increases launchBalance)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
         proofOfCapital.sellTokens(50000e18);
@@ -2309,8 +2309,8 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
 
         // Record initial state
-        uint256 contractBalance = proofOfCapital.contractTokenBalance();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 contractBalance = proofOfCapital.launchBalance();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 availableTokens = contractBalance - totalSold;
         address dao = proofOfCapital.daoAddress();
         uint256 daoBalanceBefore = token.balanceOf(dao);
@@ -2327,8 +2327,8 @@ contract ProofOfCapitalTest is Test {
 
         // Verify state reset
         assertEq(proofOfCapital.currentStep(), 0);
-        assertEq(proofOfCapital.contractTokenBalance(), 0);
-        assertEq(proofOfCapital.totalTokensSold(), 0);
+        assertEq(proofOfCapital.launchBalance(), 0);
+        assertEq(proofOfCapital.totalLaunchSold(), 0);
         assertEq(proofOfCapital.tokensEarned(), 0);
         assertEq(proofOfCapital.quantityTokensPerLevel(), proofOfCapital.firstLevelTokenQuantity());
         assertEq(proofOfCapital.currentPrice(), proofOfCapital.initialPricePerToken());
@@ -2348,7 +2348,7 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // In initial state: contractTokenBalance = 0, totalTokensSold = 10000e18 (offset)
+        // In initial state: launchBalance = 0, totalLaunchSold = 10000e18 (offset)
         // So availableTokens = 0 - 10000e18 = negative, but function checks > 0
 
         address dao = proofOfCapital.daoAddress();
@@ -2384,8 +2384,8 @@ contract ProofOfCapitalTest is Test {
 
         // Verify complete state reset
         assertEq(proofOfCapital.currentStep(), 0);
-        assertEq(proofOfCapital.contractTokenBalance(), 0);
-        assertEq(proofOfCapital.totalTokensSold(), 0);
+        assertEq(proofOfCapital.launchBalance(), 0);
+        assertEq(proofOfCapital.totalLaunchSold(), 0);
         assertEq(proofOfCapital.tokensEarned(), 0);
         assertEq(proofOfCapital.quantityTokensPerLevel(), firstLevelQuantity);
         assertEq(proofOfCapital.currentPrice(), initialPrice);
@@ -2416,7 +2416,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllTokens();
 
         // Verify withdrawal succeeded
-        assertEq(proofOfCapital.contractTokenBalance(), 0);
+        assertEq(proofOfCapital.launchBalance(), 0);
     }
 
     function testWithdrawAllTokensCalculatesAvailableCorrectly() public {
@@ -2440,8 +2440,8 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
 
         // Calculate expected available tokens
-        uint256 contractBalance = proofOfCapital.contractTokenBalance();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 contractBalance = proofOfCapital.launchBalance();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 expectedAvailable = contractBalance - totalSold;
 
         address dao = proofOfCapital.daoAddress();
@@ -2455,32 +2455,32 @@ contract ProofOfCapitalTest is Test {
         assertEq(token.balanceOf(dao), daoBalanceBefore + expectedAvailable);
     }
 
-    // Tests for withdrawAllSupportTokens function
+    // Tests for withdrawAllCollateralTokens function
 
-    function testWithdrawAllSupportTokensLockPeriodNotEnded() public {
+    function testWithdrawAllCollateralTokensLockPeriodNotEnded() public {
         // Try to withdraw before lock period ends
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
         vm.expectRevert(ProofOfCapital.LockPeriodNotEnded.selector);
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
     }
 
-    function testWithdrawAllSupportTokensNoSupportTokensToWithdraw() public {
+    function testWithdrawAllCollateralTokensNoCollateralTokensToWithdraw() public {
         // Move time past lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // In initial state, contractSupportBalance = 0
-        assertEq(proofOfCapital.contractSupportBalance(), 0);
+        // In initial state, contractCollateralBalance = 0
+        assertEq(proofOfCapital.contractCollateralBalance(), 0);
 
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoSupportTokensToWithdraw.selector);
-        proofOfCapital.withdrawAllSupportTokens();
+        vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
+        proofOfCapital.withdrawAllCollateralTokens();
     }
 
-    function testWithdrawAllSupportTokensOnlyDAO() public {
-        // Add support tokens to contract
+    function testWithdrawAllCollateralTokensOnlyDAO() public {
+        // Add collateral tokens to contract
         vm.startPrank(owner);
         weth.approve(address(proofOfCapital), 1000e18);
         proofOfCapital.deposit(1000e18);
@@ -2493,23 +2493,23 @@ contract ProofOfCapitalTest is Test {
         // Non-DAO tries to withdraw (should fail)
         vm.prank(owner);
         vm.expectRevert();
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
 
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
     }
 
 
-    function testWithdrawAllSupportTokensWithZeroBalance() public {
+    function testWithdrawAllCollateralTokensWithZeroBalance() public {
         // Move time past lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
@@ -2517,13 +2517,13 @@ contract ProofOfCapitalTest is Test {
         // Try to withdraw with zero balance
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoSupportTokensToWithdraw.selector);
-        proofOfCapital.withdrawAllSupportTokens();
+        vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
+        proofOfCapital.withdrawAllCollateralTokens();
     }
 
 
     function testWithdrawBothTypesOfTokens() public {
-        // Test withdrawing both main tokens and support tokens separately
+        // Test withdrawing both main tokens and collateral tokens separately
         // This test validates that both withdrawal functions work independently
 
         // First test: withdraw main tokens
@@ -2541,7 +2541,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
 
         // Test main token withdrawal
-        uint256 mainTokenBalance = proofOfCapital.contractTokenBalance() - proofOfCapital.totalTokensSold();
+        uint256 launchBalance = proofOfCapital.launchBalance() - proofOfCapital.totalLaunchSold();
         address dao = proofOfCapital.daoAddress();
         uint256 daoMainBalanceBefore = token.balanceOf(dao);
 
@@ -2549,17 +2549,17 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllTokens();
 
         // Verify main tokens withdrawn and state reset
-        assertEq(token.balanceOf(dao), daoMainBalanceBefore + mainTokenBalance);
-        assertEq(proofOfCapital.contractTokenBalance(), 0);
-        assertEq(proofOfCapital.totalTokensSold(), 0);
+        assertEq(token.balanceOf(dao), daoMainBalanceBefore + launchBalance);
+        assertEq(proofOfCapital.launchBalance(), 0);
+        assertEq(proofOfCapital.totalLaunchSold(), 0);
 
-        // Second test: test support token withdrawal with zero balance (expected to fail)
+        // Second test: test collateral token withdrawal with zero balance (expected to fail)
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoSupportTokensToWithdraw.selector);
-        proofOfCapital.withdrawAllSupportTokens();
+        vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
+        proofOfCapital.withdrawAllCollateralTokens();
 
         // This test validates that both functions exist and work correctly
-        // Even though we can't easily create support balance due to offset logic
+        // Even though we can't easily create collateral balance due to offset logic
     }
 
     // Tests for setMarketMaker function
@@ -2694,17 +2694,17 @@ contract ProofOfCapitalTest is Test {
 
     // // Tests for modifier requirements
     // function testOnlyActiveContractModifier() public {
-    //     // First make contract inactive by confirming support withdrawal
+    //     // First make contract inactive by confirming collateral withdrawal
     //     address recipient = address(0x123);
 
-    //     // Schedule support withdrawal
+    //     // Schedule collateral withdrawal
     //     vm.prank(owner);
-    //     proofOfCapital.supportDeferredWithdrawal(recipient);
+    //     proofOfCapital.collateralDeferredWithdrawal(recipient);
 
     //     // Move time forward and confirm
     //     vm.warp(block.timestamp + Constants.THIRTY_DAYS);
     //     vm.prank(owner);
-    //     proofOfCapital.confirmSupportDeferredWithdrawal();
+    //     proofOfCapital.confirmCollateralDeferredWithdrawal();
 
     //     // Verify contract is inactive
     //     assertFalse(proofOfCapital.isActive());
@@ -2790,7 +2790,7 @@ contract ProofOfCapitalTest is Test {
         assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 60 days is true
 
         // Test tokenAvailable consistency
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
         uint256 expectedAvailable = totalSold - tokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
@@ -2843,7 +2843,7 @@ contract ProofOfCapitalProfitTest is Test {
             profitPercentage: 100,
             offsetTokens: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -2969,7 +2969,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3193,7 +3193,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetTokens: 1000e18,
             controlPeriod: 1, // Way below minimum
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3227,7 +3227,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetTokens: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3264,7 +3264,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetTokens: 1000e18,
             controlPeriod: validPeriod, // Within valid range
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3300,7 +3300,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 profitPercentage: 100,
                 offsetTokens: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
-                tokenSupportAddress: address(weth),
+                collateralAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3330,7 +3330,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 profitPercentage: 100,
                 offsetTokens: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
-                tokenSupportAddress: address(weth),
+                collateralAddress: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

@@ -26,13 +26,13 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
 import "../utils/BaseTest.sol";
 
-contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
+contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
     address public user = address(0x5);
 
     function setUp() public override {
@@ -45,7 +45,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
 
-        // Create special parameters to hit the specific branch in _calculateChangeOffsetSupport
+        // Create special parameters to hit the specific branch in _calculateChangeOffsetCollateral
         // We need to ensure localCurrentStep > currentStepEarned and localCurrentStep <= trendChangeStep
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
             initialOwner: owner,
@@ -63,7 +63,7 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
             profitPercentage: 100,
             offsetTokens: 2000e18, // Medium offset - should create offsetStep around 3-4
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -92,12 +92,12 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
     }
 
     /**
-     * Test edge case: supportAmountToPay exactly equals 1 wei
+     * Test edge case: collateralAmountToPay exactly equals 1 wei
      * This tests the boundary condition of the if statement
      */
     function testHandleReturnWalletSaleMinimalPositiveTransfer() public {
         // This test is more complex to set up precisely, but demonstrates
-        // that even the smallest positive supportAmountToPay triggers the transfer
+        // that even the smallest positive collateralAmountToPay triggers the transfer
 
         // Setup return wallet
         vm.startPrank(owner);
@@ -108,13 +108,13 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
         token.approve(address(proofOfCapital), 100000e18);
         vm.stopPrank();
 
-        // Create initial state with support balance
+        // Create initial state with collateral balance
         vm.prank(returnWallet);
         proofOfCapital.sellTokens(20000e18);
 
         uint256 initialOwnerWethBalance = weth.balanceOf(owner);
 
-        // Sell a small amount that should generate minimal but positive supportAmountToPay
+        // Sell a small amount that should generate minimal but positive collateralAmountToPay
         uint256 smallSellAmount = 100e18;
 
         vm.prank(returnWallet);
@@ -122,14 +122,14 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
 
         uint256 finalOwnerWethBalance = weth.balanceOf(owner);
 
-        // Even minimal positive supportAmountToPay should trigger transfer
+        // Even minimal positive collateralAmountToPay should trigger transfer
         if (finalOwnerWethBalance > initialOwnerWethBalance) {
             uint256 transferred = finalOwnerWethBalance - initialOwnerWethBalance;
             console2.log("Minimal transfer amount:", transferred);
-            assertTrue(transferred > 0, "Even minimal supportAmountToPay > 0 should trigger transfer");
-            console2.log("SUCCESS: Lines 806-808 executed for minimal positive supportAmountToPay");
+            assertTrue(transferred > 0, "Even minimal collateralAmountToPay > 0 should trigger transfer");
+            console2.log("SUCCESS: Lines 806-808 executed for minimal positive collateralAmountToPay");
         } else {
-            console2.log("This case resulted in supportAmountToPay = 0 (covered by offset)");
+            console2.log("This case resulted in collateralAmountToPay = 0 (covered by offset)");
             console2.log("SUCCESS: Lines 806-808 condition correctly evaluated to false");
         }
     }

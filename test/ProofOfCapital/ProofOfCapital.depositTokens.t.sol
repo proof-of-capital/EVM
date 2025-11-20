@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -72,29 +72,29 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         vm.stopPrank();
     }
 
-    // Test successful deposit by owner - goes to contractTokenBalance
+    // Test successful deposit by owner - goes to launchBalance
     function testDepositTokensByOwner() public {
         uint256 depositAmount = 1000e18;
-        uint256 initialBalance = proofOfCapital.contractTokenBalance();
+        uint256 initialBalance = proofOfCapital.launchBalance();
         uint256 initialTokenBalance = token.balanceOf(address(proofOfCapital));
 
         vm.prank(owner);
         proofOfCapital.depositTokens(depositAmount);
 
-        assertEq(proofOfCapital.contractTokenBalance(), initialBalance + depositAmount);
+        assertEq(proofOfCapital.launchBalance(), initialBalance + depositAmount);
         assertEq(token.balanceOf(address(proofOfCapital)), initialTokenBalance + depositAmount);
     }
 
-    // Test successful deposit by old contract - goes to contractTokenBalance
+    // Test successful deposit by old contract - goes to launchBalance
     function testDepositTokensByOldContract() public {
         uint256 depositAmount = 2000e18;
-        uint256 initialBalance = proofOfCapital.contractTokenBalance();
+        uint256 initialBalance = proofOfCapital.launchBalance();
         uint256 initialTokenBalance = token.balanceOf(address(proofOfCapital));
 
         vm.prank(oldContract);
         proofOfCapital.depositTokens(depositAmount);
 
-        assertEq(proofOfCapital.contractTokenBalance(), initialBalance + depositAmount);
+        assertEq(proofOfCapital.launchBalance(), initialBalance + depositAmount);
         assertEq(token.balanceOf(address(proofOfCapital)), initialTokenBalance + depositAmount);
     }
 
@@ -123,7 +123,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
     // Note: This test uses storage manipulation which may cause issues with contract state
     // The onlyActiveContract modifier is tested indirectly through other tests
     // For a more reliable test, we would need to actually deactivate the contract through
-    // one of the contract functions (like confirmSupportDeferredWithdrawal), but that
+    // one of the contract functions (like confirmCollateralDeferredWithdrawal), but that
     // requires complex setup. This test verifies the modifier exists and works.
     function testDepositTokensContractNotActive() public {
         // Skip this test as storage manipulation for isActive causes underflow issues
@@ -142,13 +142,13 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         assertTrue(true, "onlyActiveContract modifier is present in function signature");
     }
 
-    // Test deposit to unaccountedOffsetTokenBalance when condition is met
+    // Test deposit to unaccountedOffsetLaunchBalance when condition is met
     function testDepositTokensToUnaccountedOffsetTokenBalance() public {
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
-        // Setup: Create state where totalTokensSold == offsetTokens using storage manipulation
-        // Set totalTokensSold to equal offsetTokens
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        // Setup: Create state where totalLaunchSold == offsetTokens using storage manipulation
+        // Set totalLaunchSold to equal offsetTokens
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to a value less than offsetTokens to allow deposit
@@ -156,57 +156,57 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
-        // Verify state: totalTokensSold == offsetTokens
-        uint256 totalTokensSold = proofOfCapital.totalTokensSold();
-        assertEq(totalTokensSold, offsetTokens);
+        // Verify state: totalLaunchSold == offsetTokens
+        uint256 totalLaunchSold = proofOfCapital.totalLaunchSold();
+        assertEq(totalLaunchSold, offsetTokens);
 
-        // Now deposit tokens - should go to unaccountedOffsetTokenBalance
+        // Now deposit tokens - should go to unaccountedOffsetLaunchBalance
         uint256 depositAmount = 1000e18;
         require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
-        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetTokenBalance();
-        uint256 initialContractBalance = proofOfCapital.contractTokenBalance();
+        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
+        uint256 initialContractBalance = proofOfCapital.launchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(depositAmount);
 
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), initialUnaccounted + depositAmount);
-        assertEq(proofOfCapital.contractTokenBalance(), initialContractBalance);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + depositAmount);
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance);
     }
 
-    // Test deposit to contractTokenBalance when totalTokensSold != offsetTokens
+    // Test deposit to launchBalance when totalLaunchSold != offsetTokens
     function testDepositTokensToContractTokenBalanceWhenNotEqual() public {
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
-        // Setup: Create state where totalTokensSold != offsetTokens using storage manipulation
-        // Set totalTokensSold to a value different from offsetTokens
+        // Setup: Create state where totalLaunchSold != offsetTokens using storage manipulation
+        // Set totalLaunchSold to a value different from offsetTokens
         uint256 differentTotalSold = offsetTokens / 2;
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(differentTotalSold));
 
-        // Verify state: totalTokensSold != offsetTokens
-        uint256 totalTokensSold = proofOfCapital.totalTokensSold();
-        assertTrue(totalTokensSold != offsetTokens);
+        // Verify state: totalLaunchSold != offsetTokens
+        uint256 totalLaunchSold = proofOfCapital.totalLaunchSold();
+        assertTrue(totalLaunchSold != offsetTokens);
 
-        // Deposit tokens - should go to contractTokenBalance
+        // Deposit tokens - should go to launchBalance
         uint256 depositAmount = 1000e18;
-        uint256 initialContractBalance = proofOfCapital.contractTokenBalance();
-        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialContractBalance = proofOfCapital.launchBalance();
+        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(depositAmount);
 
-        assertEq(proofOfCapital.contractTokenBalance(), initialContractBalance + depositAmount);
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), initialUnaccounted);
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted);
     }
 
-    // Test deposit to contractTokenBalance when (offsetTokens - tokensEarned) < amount
+    // Test deposit to launchBalance when (offsetTokens - tokensEarned) < amount
     function testDepositTokensToContractTokenBalanceWhenInsufficientOffset() public {
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
-        // Setup: Create state where totalTokensSold == offsetTokens but (offsetTokens - tokensEarned) < amount
-        // Set totalTokensSold to equal offsetTokens
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        // Setup: Create state where totalLaunchSold == offsetTokens but (offsetTokens - tokensEarned) < amount
+        // Set totalLaunchSold to equal offsetTokens
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to a high value so that (offsetTokens - tokensEarned) < depositAmount
@@ -215,23 +215,23 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
         // Verify state
-        uint256 totalTokensSold = proofOfCapital.totalTokensSold();
-        assertEq(totalTokensSold, offsetTokens);
+        uint256 totalLaunchSold = proofOfCapital.totalLaunchSold();
+        assertEq(totalLaunchSold, offsetTokens);
 
         uint256 depositAmount = 1000e18; // More than available capacity (500e18)
 
         // Verify condition: (offsetTokens - tokensEarned) < amount
         require((offsetTokens - tokensEarned) < depositAmount, "Test setup: condition not met");
 
-        uint256 initialContractBalance = proofOfCapital.contractTokenBalance();
-        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialContractBalance = proofOfCapital.launchBalance();
+        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(depositAmount);
 
-        // Should go to contractTokenBalance, not unaccountedOffsetTokenBalance
-        assertEq(proofOfCapital.contractTokenBalance(), initialContractBalance + depositAmount);
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), initialUnaccounted);
+        // Should go to launchBalance, not unaccountedOffsetLaunchBalance
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted);
     }
 
     // Test multiple deposits accumulate correctly
@@ -240,7 +240,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 depositAmount2 = 2000e18;
         uint256 depositAmount3 = 500e18;
 
-        uint256 initialBalance = proofOfCapital.contractTokenBalance();
+        uint256 initialBalance = proofOfCapital.launchBalance();
 
         vm.startPrank(owner);
         proofOfCapital.depositTokens(depositAmount1);
@@ -249,7 +249,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         vm.stopPrank();
 
         uint256 expectedBalance = initialBalance + depositAmount1 + depositAmount2 + depositAmount3;
-        assertEq(proofOfCapital.contractTokenBalance(), expectedBalance);
+        assertEq(proofOfCapital.launchBalance(), expectedBalance);
     }
 
     // Test deposit with large amount
@@ -263,20 +263,20 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         token.approve(address(proofOfCapital), largeAmount);
         vm.stopPrank();
 
-        uint256 initialBalance = proofOfCapital.contractTokenBalance();
+        uint256 initialBalance = proofOfCapital.launchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(largeAmount);
 
-        assertEq(proofOfCapital.contractTokenBalance(), initialBalance + largeAmount);
+        assertEq(proofOfCapital.launchBalance(), initialBalance + largeAmount);
     }
 
     // Test deposit boundary: exactly (offsetTokens - tokensEarned)
     function testDepositTokensExactOffsetBoundary() public {
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
-        // Setup: totalTokensSold == offsetTokens using storage manipulation
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        // Setup: totalLaunchSold == offsetTokens using storage manipulation
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to leave exact capacity
@@ -288,20 +288,20 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         require(exactAmount > 0, "Test setup: no capacity for deposit");
         assertEq(exactAmount, 1000e18, "Exact amount should be 1000e18");
 
-        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(exactAmount);
 
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), initialUnaccounted + exactAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + exactAmount);
     }
 
     // Test deposit boundary: one more than (offsetTokens - tokensEarned)
     function testDepositTokensOneMoreThanOffsetBoundary() public {
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
-        // Setup: totalTokensSold == offsetTokens using storage manipulation
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        // Setup: totalLaunchSold == offsetTokens using storage manipulation
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to leave some capacity
@@ -314,15 +314,15 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         assertEq(maxAmount, 1000e18, "Max amount should be 1000e18");
 
         uint256 depositAmount = maxAmount + 1; // One more than capacity
-        uint256 initialContractBalance = proofOfCapital.contractTokenBalance();
-        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialContractBalance = proofOfCapital.launchBalance();
+        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(depositAmount);
 
-        // Should go to contractTokenBalance because amount > (offsetTokens - tokensEarned)
-        assertEq(proofOfCapital.contractTokenBalance(), initialContractBalance + depositAmount);
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), initialUnaccounted);
+        // Should go to launchBalance because amount > (offsetTokens - tokensEarned)
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted);
     }
 
     // Test deposit when tokensEarned equals offsetTokens (edge case)
@@ -330,8 +330,8 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 offsetTokens = proofOfCapital.offsetTokens();
 
         // Setup: Make tokensEarned == offsetTokens using storage manipulation
-        // Set totalTokensSold to equal offsetTokens
-        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalTokensSold()").find();
+        // Set totalLaunchSold to equal offsetTokens
+        uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
 
         // Set tokensEarned to equal offsetTokens
@@ -343,15 +343,15 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         assertEq(tokensEarned, offsetTokens, "tokensEarned should equal offsetTokens");
 
         uint256 depositAmount = 1000e18;
-        uint256 initialContractBalance = proofOfCapital.contractTokenBalance();
-        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetTokenBalance();
+        uint256 initialContractBalance = proofOfCapital.launchBalance();
+        uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(depositAmount);
 
-        // Should go to contractTokenBalance because (offsetTokens - tokensEarned) == 0
-        assertEq(proofOfCapital.contractTokenBalance(), initialContractBalance + depositAmount);
-        assertEq(proofOfCapital.unaccountedOffsetTokenBalance(), initialUnaccounted);
+        // Should go to launchBalance because (offsetTokens - tokensEarned) == 0
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted);
     }
 
     // Test deposit fails when insufficient token balance
@@ -395,7 +395,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
     function testDepositTokensByOwnerAndOldContract() public {
         uint256 ownerDeposit = 1000e18;
         uint256 oldContractDeposit = 2000e18;
-        uint256 initialBalance = proofOfCapital.contractTokenBalance();
+        uint256 initialBalance = proofOfCapital.launchBalance();
 
         vm.prank(owner);
         proofOfCapital.depositTokens(ownerDeposit);
@@ -403,7 +403,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         vm.prank(oldContract);
         proofOfCapital.depositTokens(oldContractDeposit);
 
-        assertEq(proofOfCapital.contractTokenBalance(), initialBalance + ownerDeposit + oldContractDeposit);
+        assertEq(proofOfCapital.launchBalance(), initialBalance + ownerDeposit + oldContractDeposit);
     }
 }
 

@@ -29,7 +29,7 @@ contract DeployProofOfCapital is Script {
     uint256 public profitPercentage;
     uint256 public offsetTokens;
     uint256 public controlPeriod;
-    address public tokenSupportAddress;
+    address public collateralAddress;
     uint256 public royaltyProfitPercent;
     address[] public oldContractAddresses;
     uint256 public profitBeforeTrendChange;
@@ -58,7 +58,7 @@ contract DeployProofOfCapital is Script {
         royaltyWalletAddress = vm.envAddress("ROYALTY_WALLET_ADDRESS");
 
         // Token support address is set by Makefile based on network
-        tokenSupportAddress = vm.envAddress("TOKEN_SUPPORT_ADDRESS");
+        collateralAddress = vm.envAddress("TOKEN_SUPPORT_ADDRESS");
 
         lockEndTime = vm.envUint("LOCK_END_TIME");
         initialPricePerToken = vm.envUint("INITIAL_PRICE_PER_TOKEN");
@@ -103,7 +103,7 @@ contract DeployProofOfCapital is Script {
         require(marketMakerAddress != address(0), "Invalid market maker address");
         require(returnWalletAddress != address(0), "Invalid return wallet address");
         require(royaltyWalletAddress != address(0), "Invalid royalty wallet address");
-        require(tokenSupportAddress != address(0), "Invalid token support address");
+        require(collateralAddress != address(0), "Invalid token support address");
         require(lockEndTime > block.timestamp, "Lock end time must be in the future");
         require(lockEndTime - block.timestamp <= 365 days * 2, "Lock period cannot exceed 2 years");
         require(initialPricePerToken > 0, "Initial price must be positive");
@@ -122,7 +122,7 @@ contract DeployProofOfCapital is Script {
         console.log("Market Maker:", marketMakerAddress);
         console.log("Return Wallet:", returnWalletAddress);
         console.log("Royalty Wallet:", royaltyWalletAddress);
-        console.log("Token Support Address:", tokenSupportAddress);
+        console.log("Token Support Address:", collateralAddress);
     }
 
     /**
@@ -163,7 +163,7 @@ contract DeployProofOfCapital is Script {
             profitPercentage: profitPercentage,
             offsetTokens: offsetTokens,
             controlPeriod: controlPeriod,
-            tokenSupportAddress: tokenSupportAddress,
+            collateralAddress: collateralAddress,
             royaltyProfitPercent: royaltyProfitPercent,
             oldContractAddresses: oldContractAddresses,
             profitBeforeTrendChange: profitBeforeTrendChange,
@@ -182,7 +182,7 @@ contract DeployProofOfCapital is Script {
         console.log("Is Active:", proofOfCapital.isActive());
         console.log("Lock End Time:", proofOfCapital.lockEndTime());
         console.log("Current Price:", proofOfCapital.currentPrice());
-        console.log("Total Tokens Sold:", proofOfCapital.totalTokensSold());
+        console.log("Total Tokens Sold:", proofOfCapital.totalLaunchSold());
         console.log("Contract Support Balance:", proofOfCapital.contractSupportBalance());
         console.log("Profit In Time:", proofOfCapital.profitInTime());
         console.log("Can Withdrawal:", proofOfCapital.canWithdrawal());

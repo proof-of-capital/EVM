@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 
 pragma solidity 0.8.29;
@@ -34,34 +34,34 @@ pragma solidity 0.8.29;
 import "../utils/BaseTest.sol";
 import "forge-std/StdStorage.sol";
 
-contract ProofOfCapitalInsufficientSupportBalanceInReturnWalletSaleTest is BaseTest {
+contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is BaseTest {
     using stdStorage for StdStorage;
     StdStorage private _stdstore;
 
     address public user = address(0x5);
 
-    function testInsufficientSupportBalanceInReturnWalletSale() public {
-        // This test verifies that _handleReturnWalletSale reverts with InsufficientSupportBalance
-        // when contractSupportBalance is less than supportAmountToPay
+    function testInsufficientCollateralBalanceInReturnWalletSale() public {
+        // This test verifies that _handleReturnWalletSale reverts with InsufficientCollateralBalance
+        // when contractCollateralBalance is less than collateralAmountToPay
 
-        // Step 1: Owner deposits tokens to create contractTokenBalance
+        // Step 1: Owner deposits tokens to create launchBalance
         vm.startPrank(owner);
         token.approve(address(proofOfCapital), 100000e18);
-        proofOfCapital.depositTokens(50000e18); // This increases contractTokenBalance
+        proofOfCapital.depositTokens(50000e18); // This increases launchBalance
         vm.stopPrank();
 
-        // Now market maker can buy many tokens to create large totalTokensSold
+        // Now market maker can buy many tokens to create large totalLaunchSold
         vm.startPrank(owner);
         weth.transfer(marketMaker, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyTokens(5000e18); // Buy many tokens to create large totalTokensSold
+        proofOfCapital.buyTokens(5000e18); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
-        // Verify totalTokensSold increased
-        uint256 totalTokensSoldAfterBuy = proofOfCapital.totalTokensSold();
+        // Verify totalLaunchSold increased
+        uint256 totalTokensSoldAfterBuy = proofOfCapital.totalLaunchSold();
         assertTrue(totalTokensSoldAfterBuy > 0, "Should have tokens sold after market maker purchase");
 
         // Step 2: Now returnWallet can sell tokens back, which will increase tokensEarned
@@ -78,10 +78,10 @@ contract ProofOfCapitalInsufficientSupportBalanceInReturnWalletSaleTest is BaseT
         uint256 tokensEarnedAfterSale = proofOfCapital.tokensEarned();
         assertTrue(tokensEarnedAfterSale > 0, "Should have tokens earned after return wallet sale");
 
-        // Step 4: Now we have totalTokensSold = 5000e18, tokensEarned = 1000e18
+        // Step 4: Now we have totalLaunchSold = 5000e18, tokensEarned = 1000e18
         // So tokensAvailableForReturnBuyback = 5000e18 - 1000e18 = 4000e18
 
-        // Step 5: Use stdstore to reduce offsetTokens so that supportAmountToPay > 0
+        // Step 5: Use stdstore to reduce offsetTokens so that collateralAmountToPay > 0
         // This will make offsetAmount smaller, so effectiveAmount can exceed it
         uint256 offsetSlot = _stdstore.target(address(proofOfCapital)).sig("offsetTokens()").find();
         vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(uint256(500e18))); // Set offsetTokens to 500e18
@@ -89,15 +89,15 @@ contract ProofOfCapitalInsufficientSupportBalanceInReturnWalletSaleTest is BaseT
         // Verify we have the right conditions for the test
         uint256 currentTokensEarned = proofOfCapital.tokensEarned();
         uint256 currentOffsetTokens = proofOfCapital.offsetTokens();
-        assertTrue(currentTokensEarned > currentOffsetTokens, "tokensEarned should be > offsetTokens for supportAmountToPay > 0");
+        assertTrue(currentTokensEarned > currentOffsetTokens, "tokensEarned should be > offsetTokens for collateralAmountToPay > 0");
 
-        // Step 7: Use stdstore to set contractSupportBalance to 0
-        // This simulates a scenario where support balance was withdrawn or insufficient
-        uint256 slot = _stdstore.target(address(proofOfCapital)).sig("contractSupportBalance()").find();
+        // Step 7: Use stdstore to set contractCollateralBalance to 0
+        // This simulates a scenario where collateral balance was withdrawn or insufficient
+        uint256 slot = _stdstore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
         vm.store(address(proofOfCapital), bytes32(slot), bytes32(uint256(0)));
 
-        // Verify contractSupportBalance is now zero
-        assertEq(proofOfCapital.contractSupportBalance(), 0, "Support balance should be zero");
+        // Verify contractCollateralBalance is now zero
+        assertEq(proofOfCapital.contractCollateralBalance(), 0, "Collateral balance should be zero");
 
         // Step 8: Give returnWallet more tokens and try to sell again
         vm.startPrank(owner);
@@ -107,9 +107,9 @@ contract ProofOfCapitalInsufficientSupportBalanceInReturnWalletSaleTest is BaseT
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 2000e18);
 
-        // This should revert because contractSupportBalance < supportAmountToPay
+        // This should revert because contractCollateralBalance < collateralAmountToPay
         // This call goes to _handleReturnWalletSale since msg.sender == returnWalletAddress
-        vm.expectRevert(ProofOfCapital.InsufficientSupportBalance.selector);
+        vm.expectRevert(ProofOfCapital.InsufficientCollateralBalance.selector);
         proofOfCapital.sellTokens(1000e18);
 
         vm.stopPrank();

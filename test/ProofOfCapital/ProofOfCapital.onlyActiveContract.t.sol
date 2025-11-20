@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -75,26 +75,26 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
 
     // Test that onlyActiveContract modifier reverts with ContractNotActive error
     // This test verifies that the modifier on line 251-252 of ProofOfCapital.sol works correctly
-    // by deactivating the contract through withdrawAllSupportTokens and then testing functions
+    // by deactivating the contract through withdrawAllCollateralTokens and then testing functions
     function testOnlyActiveContractModifier() public {
         // Ensure contract is active initially
         assertTrue(proofOfCapital.isActive(), "Contract should be active initially");
 
-        // Setup: Create support balance and move time to after lock end
+        // Setup: Create collateral balance and move time to after lock end
         vm.startPrank(owner);
         weth.transfer(address(proofOfCapital), 10000e18);
-        // Set contractSupportBalance using storage manipulation
-        uint256 slotSupportBalance = _stdStore.target(address(proofOfCapital)).sig("contractSupportBalance()").find();
-        vm.store(address(proofOfCapital), bytes32(slotSupportBalance), bytes32(uint256(10000e18)));
+        // Set contractCollateralBalance using storage manipulation
+        uint256 slotCollateralBalance = _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
+        vm.store(address(proofOfCapital), bytes32(slotCollateralBalance), bytes32(uint256(10000e18)));
         vm.stopPrank();
 
         // Move time to after lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1 days);
 
-        // Deactivate contract by withdrawing all support tokens
+        // Deactivate contract by withdrawing all collateral tokens
         vm.prank(owner); // owner is DAO by default
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
 
         // Verify contract is now inactive
         assertFalse(proofOfCapital.isActive(), "Contract should be deactivated");
@@ -121,21 +121,21 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Ensure contract is active initially
         assertTrue(proofOfCapital.isActive(), "Contract should be active initially");
 
-        // Setup: Create support balance and move time to after lock end
+        // Setup: Create collateral balance and move time to after lock end
         vm.startPrank(owner);
         weth.transfer(address(proofOfCapital), 10000e18);
-        // Set contractSupportBalance using storage manipulation
-        uint256 slotSupportBalance = _stdStore.target(address(proofOfCapital)).sig("contractSupportBalance()").find();
-        vm.store(address(proofOfCapital), bytes32(slotSupportBalance), bytes32(uint256(10000e18)));
+        // Set contractCollateralBalance using storage manipulation
+        uint256 slotCollateralBalance = _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
+        vm.store(address(proofOfCapital), bytes32(slotCollateralBalance), bytes32(uint256(10000e18)));
         vm.stopPrank();
 
         // Move time to after lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1 days);
 
-        // Deactivate contract by withdrawing all support tokens
+        // Deactivate contract by withdrawing all collateral tokens
         vm.prank(owner); // owner is DAO by default
-        proofOfCapital.withdrawAllSupportTokens();
+        proofOfCapital.withdrawAllCollateralTokens();
 
         // Verify contract is now inactive
         assertFalse(proofOfCapital.isActive(), "Contract should be deactivated");

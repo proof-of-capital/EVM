@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project’s core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -74,7 +74,7 @@ contract BaseTest is Test {
             profitPercentage: 100,
             offsetTokens: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -105,7 +105,7 @@ contract BaseTest is Test {
             profitPercentage: 100,
             offsetTokens: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -118,15 +118,15 @@ contract BaseTest is Test {
         return new ProofOfCapital(params);
     }
 
-    // Helper function to create support balance in contract
-    function createSupportBalance(uint256 amount) internal {
+    // Helper function to create collateral balance in contract
+    function createCollateralBalance(uint256 amount) internal {
         vm.startPrank(owner);
         token.transfer(returnWallet, amount * 2); // Give enough for selling back
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), amount * 2);
-        proofOfCapital.sellTokens(amount); // This increases contractTokenBalance
+        proofOfCapital.sellTokens(amount); // This increases launchBalance
         vm.stopPrank();
     }
 
@@ -148,7 +148,7 @@ contract BaseTest is Test {
             profitPercentage: 100,
             offsetTokens: 0, // No offset
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
+            collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

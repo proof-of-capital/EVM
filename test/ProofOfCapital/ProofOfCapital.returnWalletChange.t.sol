@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -172,34 +172,21 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         assertEq(proofOfCapital.proposedReturnWalletAddress(), address(0));
     }
 
-    function testProposeReturnWalletChangeWithTokenSupportAddress() public {
+    function testProposeReturnWalletChangeWithTokenCollateralAddress() public {
         ensureLockIsActive();
 
-        address tokenSupportAddr = proofOfCapital.tokenSupportAddress();
+        address tokenCollateralAddr = proofOfCapital.collateralAddress();
 
-        // Try to propose with tokenSupportAddress
+        // Try to propose with collateralAddress
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
-        proofOfCapital.proposeReturnWalletChange(tokenSupportAddr);
+        proofOfCapital.proposeReturnWalletChange(tokenCollateralAddr);
 
         // Verify no proposal was made
         assertEq(proofOfCapital.proposedReturnWalletAddress(), address(0));
     }
 
-    function testProposeReturnWalletChangeWithAdditionalTokenAddress() public {
-        ensureLockIsActive();
 
-        // First, we need to set additionalTokenAddress
-        // Since it might be address(0) initially, we'll test if it's set
-        address additionalTokenAddr = proofOfCapital.additionalTokenAddress();
-
-        // If it's not zero, test the conflict
-        if (additionalTokenAddr != address(0)) {
-            vm.prank(owner);
-            vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
-            proofOfCapital.proposeReturnWalletChange(additionalTokenAddr);
-        }
-    }
 
     function testProposeReturnWalletChangeWithCurrentReturnWalletAddress() public {
         ensureLockIsActive();
@@ -225,20 +212,20 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         assertEq(proofOfCapital.proposedReturnWalletAddress(), address(0));
     }
 
-    function testProposeReturnWalletChangeWithRecipientDeferredWithdrawalMainToken() public {
+    function testProposeReturnWalletChangeWithRecipientDeferredWithdrawalLaunch() public {
         ensureLockIsActive();
 
-        // First, schedule a deferred withdrawal to set recipientDeferredWithdrawalMainToken
+        // First, schedule a deferred withdrawal to set recipientDeferredWithdrawalLaunch
         address recipient = address(0x777);
         uint256 amount = 1000e18;
 
-        // Create support balance first
-        createSupportBalance(amount * 2);
+        // Create collateral balance first
+        createCollateralBalance(amount * 2);
 
         vm.prank(owner);
         proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
-        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalMainToken();
+        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalLaunch();
 
         // After scheduling deferred withdrawal, trading becomes active (lock is not active)
         // So we cannot propose a change - we get LockIsActive error
@@ -251,20 +238,20 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         assertEq(proofOfCapital.proposedReturnWalletAddress(), address(0));
     }
 
-    function testProposeReturnWalletChangeWithRecipientDeferredWithdrawalSupportToken() public {
+    function testProposeReturnWalletChangeWithRecipientDeferredWithdrawalCollateralToken() public {
         ensureLockIsActive();
 
-        // First, schedule a deferred withdrawal to set recipientDeferredWithdrawalSupportToken
+        // First, schedule a deferred withdrawal to set recipientDeferredWithdrawalCollateralToken
         address recipient = address(0x888);
         uint256 amount = 1000e18;
 
-        // Create support balance first
-        createSupportBalance(amount * 2);
+        // Create collateral balance first
+        createCollateralBalance(amount * 2);
 
         vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+        proofOfCapital.collateralDeferredWithdrawal(recipient);
 
-        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalSupportToken();
+        address scheduledRecipient = proofOfCapital.recipientDeferredWithdrawalCollateralToken();
 
         // After scheduling deferred withdrawal, trading becomes active (lock is not active)
         // So we cannot propose a change - we get LockIsActive error

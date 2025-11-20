@@ -26,7 +26,7 @@
 // All royalties collected are automatically used to repurchase the project's core token, as
 // specified on the website, and are returned to the contract.
 
-// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as support, build support with an offset,
+// This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
@@ -90,24 +90,24 @@ contract ProofOfCapitalViewTest is BaseTest {
     }
 
     function testTokenAvailableInitialState() public {
-        // Initially: offsetTokens go to unaccountedOffsetBalance, not totalTokensSold
-        // So totalTokensSold = 0, tokensEarned = 0
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        // Initially: offsetTokens go to unaccountedOffset, not totalLaunchSold
+        // So totalLaunchSold = 0, tokensEarned = 0
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
 
         // Verify initial state
-        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffsetBalance, not totalTokensSold
+        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffset, not totalLaunchSold
         assertEq(tokensEarned, 0);
 
-        // tokenAvailable should be totalTokensSold - tokensEarned
+        // tokenAvailable should be totalLaunchSold - tokensEarned
         uint256 expectedAvailable = totalSold - tokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
         assertEq(proofOfCapital.tokenAvailable(), 0); // No tokens available until offset is processed
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
-        // This tests edge case where tokensEarned equals totalTokensSold
-        // In initial state: totalTokensSold = 10000e18, tokensEarned = 0
+        // This tests edge case where tokensEarned equals totalLaunchSold
+        // In initial state: totalLaunchSold = 10000e18, tokensEarned = 0
 
         // We need to create scenario where tokensEarned increases
         // This happens when return wallet sells tokens back to contract
@@ -125,7 +125,7 @@ contract ProofOfCapitalViewTest is BaseTest {
 
         // Check if tokensEarned increased
         uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
 
         // tokenAvailable should be totalSold - tokensEarned
         uint256 expectedAvailable = totalSold - tokensEarned;
@@ -138,10 +138,10 @@ contract ProofOfCapitalViewTest is BaseTest {
     }
 
     function testTokenAvailableStateConsistency() public {
-        // Test that tokenAvailable always equals totalTokensSold - tokensEarned
+        // Test that tokenAvailable always equals totalLaunchSold - tokensEarned
 
         // Record initial state
-        uint256 initialTotalSold = proofOfCapital.totalTokensSold();
+        uint256 initialTotalSold = proofOfCapital.totalLaunchSold();
         uint256 initialTokensEarned = proofOfCapital.tokensEarned();
         uint256 initialAvailable = proofOfCapital.tokenAvailable();
 
@@ -150,7 +150,7 @@ contract ProofOfCapitalViewTest is BaseTest {
 
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
-        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalTokensSold() - proofOfCapital.tokensEarned());
+        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.tokensEarned());
     }
 
     function testViewFunctionsIntegration() public {
@@ -211,7 +211,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 60 days is true
 
         // Test tokenAvailable consistency
-        uint256 totalSold = proofOfCapital.totalTokensSold();
+        uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
         uint256 expectedAvailable = totalSold - tokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);

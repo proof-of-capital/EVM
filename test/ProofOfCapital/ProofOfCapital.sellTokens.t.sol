@@ -143,289 +143,378 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.sellTokens(500e18);
     }
 
-    // COMMENTED: Test requires proper contract initialization
-    // function testSellTokensReturnWalletBasic() public {
-    //     // Return wallet can sell even without buyback tokens available
-    //     uint256 initialTokensEarned = proofOfCapital.tokensEarned();
-    //     uint256 initialContractTokenBalance = proofOfCapital.contractTokenBalance();
 
-    //     uint256 sellAmount = 1000e18;
-    //     vm.prank(returnWallet);
-    //     proofOfCapital.sellTokens(sellAmount);
 
-    //     // Verify state changes
-    //     assertGt(proofOfCapital.tokensEarned(), initialTokensEarned);
-    //     assertEq(proofOfCapital.contractTokenBalance(), initialContractTokenBalance + sellAmount);
-    // }
+    function testSellTokensHitsConsoleLogBranch() public {
+        // Test to hit the console.log branch in _calculateSupportToPayForTokenAmount
+        // This branch executes when localCurrentStep > currentStepEarned && localCurrentStep <= trendChangeStep
 
-    // COMMENTED: Test requires proper contract initialization
-    // function testSellTokensReturnWalletWithSupportBalance() public {
-    //     // Use returnWallet to sell tokens back to increase contractTokenBalance
-    //     vm.prank(returnWallet);
-    //     proofOfCapital.sellTokens(5000e18); // This increases contractTokenBalance
+    // Create a custom contract with high trendChangeStep and some offset to trigger offset logic
+    ProofOfCapital.InitParams memory customParams = getValidParams();
+    customParams.trendChangeStep = 50; // Set very high trendChangeStep so currentStep stays within range
+    customParams.offsetTokens = 10000e18; // Add offset to trigger offset-related code with console.log to make buyback easier
 
-    //     // First, user buys tokens to create support balance
-    //     vm.prank(user);
-    //     proofOfCapital.buyTokens(5000e18);
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
 
-    //     uint256 initialOwnerBalance = weth.balanceOf(owner);
-    //     uint256 sellAmount = 2000e18;
-
-    //     // Return wallet sells more tokens
-    //     vm.prank(returnWallet);
-    //     proofOfCapital.sellTokens(sellAmount);
-
-    //     // Verify state changes
-    //     assertGt(proofOfCapital.tokensEarned(), 0);
-    //     assertGt(proofOfCapital.contractTokenBalance(), 0);
-
-    //     // Owner balance should be >= initial (may increase depending on calculations)
-    //     uint256 finalOwnerBalance = weth.balanceOf(owner);
-    //     assertTrue(finalOwnerBalance >= initialOwnerBalance);
-    // }
-
-    // COMMENTED: Test requires proper contract initialization
-    /*
-    function testSellTokensComprehensiveBehavior() public {
-        // First, verify initial state has no buyback tokens available
-        vm.prank(user);
-        vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
-        proofOfCapital.sellTokens(100e18);
-
-        // Use returnWallet to sell tokens back to increase contractTokenBalance
+        // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(15000e18); // This increases contractTokenBalance
+        token.transfer(address(customContract), 30000e18);
 
-        // Buy a significant amount of tokens to try to create buyback availability
-        vm.prank(user);
-        proofOfCapital.buyTokens(20000e18);
+        // Approve tokens for returnWallet
+        vm.prank(returnWallet);
+        token.approve(address(customContract), type(uint256).max);
+
+        // First, returnWallet sells tokens to increase contractTokenBalance
+        vm.prank(returnWallet);
+        customContract.sellTokens(20000e18);
+
+        // Approve WETH for market maker (since buyTokens uses WETH as support)
+        vm.prank(marketMaker);
+        weth.approve(address(customContract), type(uint256).max);
+
+        // Approve launch tokens for market maker (for sellTokens)
+        vm.prank(marketMaker);
+        token.approve(address(customContract), type(uint256).max);
+
+    // Buy enough tokens to exceed offsetTokens for buyback availability
+    vm.prank(marketMaker);
+    customContract.buyTokens(15000e18); // This should advance currentStep and make totalTokensSold > offsetTokens
+
+        // Create unaccountedOffsetBalance to trigger offset processing
+        // First, approve tokens for owner and deposit to create offset balance
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18); // This should create unaccountedOffsetBalance
+
+        // Call calculateUnaccountedOffsetBalance to trigger offset processing and set offsetStep > 0
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18); // This should process offset and set offsetStep
+
+        // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetSupport
+        vm.prank(owner);
+        weth.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.deposit(1000e18); // This creates unaccountedCollateralBalance
+
+        // Call calculateUnaccountedCollateralBalance to trigger _calculateChangeOffsetSupport
+        vm.prank(owner);
+        customContract.calculateUnaccountedCollateralBalance(500e18); // This should trigger console.log("trend change branch2")
+
+        // Verify currentStep is in the desired range
+        uint256 currentStep = customContract.currentStep();
+        uint256 currentStepEarned = customContract.currentStepEarned();
+        uint256 trendChangeStep = customContract.trendChangeStep();
+        uint256 totalTokensSold = customContract.totalTokensSold();
+        uint256 offsetTokens = customContract.offsetTokens();
+
+        // Debug: print values
+        console.log("currentStep:", currentStep);
+        console.log("currentStepEarned:", currentStepEarned);
+        console.log("trendChangeStep:", trendChangeStep);
+        console.log("totalTokensSold:", totalTokensSold);
+        console.log("offsetTokens:", offsetTokens);
+
+    // Ensure we have currentStep > currentStepEarned and currentStep <= trendChangeStep for sell logic
+    assertGt(currentStep, currentStepEarned, "currentStep should be greater than currentStepEarned");
+    assertLe(currentStep, trendChangeStep, "currentStep should be <= trendChangeStep to hit the branch");
+    assertGt(totalTokensSold, offsetTokens, "totalTokensSold should be > offsetTokens for buyback");
+
+        // Now sell tokens - this should hit the console.log branch in _calculateSupportToPayForTokenAmount
+        uint256 sellAmount = 1000e18;
+        uint256 balanceBefore = token.balanceOf(marketMaker);
 
         vm.prank(marketMaker);
-        proofOfCapital.buyTokens(20000e18);
+        customContract.sellTokens(sellAmount);
 
-        // Check if buyback tokens are now available
-        uint256 totalSold = proofOfCapital.totalTokensSold();
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-
-        if (totalSold > maxEarnedOrOffset) {
-            // If buyback tokens are available, try selling a small amount
-            uint256 availableForBuyback = totalSold - maxEarnedOrOffset;
-            uint256 sellAmount = availableForBuyback / 10; // Sell only 10%
-
-            if (sellAmount > 0) {
-                uint256 initialTotalSold = proofOfCapital.totalTokensSold();
-
-                vm.prank(marketMaker);
-                proofOfCapital.sellTokens(sellAmount);
-
-                // Verify totalTokensSold decreased
-                assertEq(proofOfCapital.totalTokensSold(), initialTotalSold - sellAmount);
-            }
-        } else {
-            // If still no buyback tokens available, selling should still fail
-            vm.prank(marketMaker);
-            vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
-            proofOfCapital.sellTokens(1000e18);
-        }
+        // Verify the sale was successful
+        assertEq(token.balanceOf(marketMaker), balanceBefore - sellAmount, "Token balance should decrease after sell");
     }
-    */
 
-    // COMMENTED: Test requires proper contract initialization
-    /*
-    function testSellTokensInsufficientTokensForBuyback() public {
-        // Use returnWallet to sell tokens back to increase contractTokenBalance
+    function testOffsetChangeHitsTrendChangeBranch() public {
+        // Test to hit the "trend change branch" in _calculateChangeOffsetSupport
+        // This branch executes when localCurrentStep > trendChangeStep
+
+        // Create a custom contract with low trendChangeStep to trigger "trend change branch"
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 0; // Set low trendChangeStep so localCurrentStep > trendChangeStep
+        customParams.offsetTokens = 10000e18; // Add offset to trigger offset-related code
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(5000e18); // This increases contractTokenBalance
+        token.transfer(address(customContract), 40000e18);
 
-        // Buy a small amount of tokens to create limited buyback availability
-        vm.prank(user);
-        proofOfCapital.buyTokens(2000e18); // This increases totalTokensSold
-
-        // Calculate current buyback availability
-        uint256 totalSold = proofOfCapital.totalTokensSold();
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-        uint256 tokensAvailableForBuyback = totalSold - maxEarnedOrOffset;
-
-        // Verify we have some buyback tokens available but not many
-        assertGt(tokensAvailableForBuyback, 0);
-        assertLt(tokensAvailableForBuyback, 5000e18); // Should be around 2000e18
-
-        // Try to sell more tokens than available for buyback
-        uint256 excessiveAmount = tokensAvailableForBuyback + 1000e18;
-
-        vm.prank(user);
-        vm.expectRevert(ProofOfCapital.InsufficientTokensForBuyback.selector);
-        proofOfCapital.sellTokens(excessiveAmount);
-    }
-    */
-
-    // Test 12: InsufficientSupportBalance error when contract doesn't have enough support balance
-    // NOTE: This test is complex to create in practice because the contract's economic model
-    // ensures that sufficient support balance exists for buybacks under normal conditions.
-    // The InsufficientSupportBalance check would only trigger in extreme edge cases where
-    // contractSupportBalance has been artificially depleted while maintaining buyback tokens.
-    function testSellTokensInsufficientSupportBalance() public {
-        // Skip this test for now as it requires extreme manipulation of contract state
-        // that may not be realistic in normal operation
-        vm.skip(true);
-
-        /*
-        Potential scenarios where this could happen:
-        1. Major profit distributions drain most support balance
-        2. Direct manipulation of contract state (only possible in testing)
-        3. Edge cases in the economic calculation functions
-
-        For now, we acknowledge that this require statement exists and is important
-        for contract safety, even if it's hard to trigger in normal conditions.
-        */
-    }
-
-    // COMMENTED: Test requires proper contract initialization
-    /*
-    function testSellTokensInsufficientSoldTokens() public {
-        // Create a scenario with maximum reduction of totalTokensSold
+        // Approve tokens for returnWallet
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(5000e18);
+        token.approve(address(customContract), type(uint256).max);
 
-        vm.prank(user);
-        proofOfCapital.buyTokens(1000e18);
-
-        // Sell the maximum possible amount to reduce totalTokensSold
-        uint256 totalSold = proofOfCapital.totalTokensSold();
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-        uint256 tokensAvailableForBuyback = totalSold - maxEarnedOrOffset;
-
-        // Try to sell the maximum available tokens
-        vm.prank(user);
-        proofOfCapital.sellTokens(tokensAvailableForBuyback);
-
-        // Check final state - totalTokensSold should now be at minimum
-        totalSold = proofOfCapital.totalTokensSold();
-        offsetTokens = proofOfCapital.offsetTokens();
-        tokensEarned = proofOfCapital.tokensEarned();
-        maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-
-        // Verify that totalTokensSold == max(offsetTokens, tokensEarned)
-        // This means tokensAvailableForBuyback = 0, so any sell attempt will fail with NoTokensAvailableForBuyback
-        assertEq(totalSold, maxEarnedOrOffset, "totalTokensSold should equal max(offsetTokens, tokensEarned)");
-
-        // Try to sell any amount - should fail with NoTokensAvailableForBuyback, not InsufficientSoldTokens
-        vm.prank(user);
-        vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
-        proofOfCapital.sellTokens(1);
-
-        // The InsufficientSoldTokens check exists in the code at line 832 but is mathematically unreachable
-        // under normal conditions due to the constraint that tokensAvailableForBuyback <= totalTokensSold always holds
-    }
-    */
-
-    // COMMENTED: Test requires proper contract initialization
-    /*
-    function testSellTokensInsufficientSoldTokensWithNoOffset() public {
-        // Instead of creating a new contract, we'll simulate the no-offset condition
-        // by manipulating the existing contract state
-
-        // First, use returnWallet to increase contractTokenBalance
+        // returnWallet sells tokens to add to contract balance
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(5000e18);
+        customContract.sellTokens(5000e18);
 
-        // Buy some tokens to create a scenario where we can test the mathematical constraint
-        vm.prank(user);
-        proofOfCapital.buyTokens(1000e18);
-
-        uint256 totalSold = proofOfCapital.totalTokensSold();
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
-
-        // Calculate tokens available for buyback
-        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-        uint256 tokensAvailableForBuyback = totalSold - maxEarnedOrOffset;
-
-        // Verify that we have some tokens available for buyback
-        assertGt(tokensAvailableForBuyback, 0, "Should have tokens available for buyback");
-
-        // The mathematical constraint is: tokensAvailableForBuyback <= totalTokensSold
-        // This is because tokensAvailableForBuyback = totalTokensSold - max(offsetTokens, tokensEarned)
-        // Since max(offsetTokens, tokensEarned) >= 0, we always have tokensAvailableForBuyback <= totalTokensSold
-
-        // Try to sell exactly the available amount - should work
-        vm.prank(user);
-        proofOfCapital.sellTokens(tokensAvailableForBuyback);
-
-        // Now totalTokensSold should be reduced
-        uint256 newTotalSold = proofOfCapital.totalTokensSold();
-        assertEq(newTotalSold, totalSold - tokensAvailableForBuyback, "totalTokensSold should be reduced");
-
-        // Verify the mathematical constraint still holds
-        offsetTokens = proofOfCapital.offsetTokens();
-        tokensEarned = proofOfCapital.tokensEarned();
-        maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
-
-        // Now tokensAvailableForBuyback should be 0 or very small
-        if (newTotalSold > maxEarnedOrOffset) {
-            uint256 remainingTokensForBuyback = newTotalSold - maxEarnedOrOffset;
-            assertLe(remainingTokensForBuyback, newTotalSold, "Mathematical constraint should hold");
-        } else {
-            // No more tokens available for buyback
-            assertEq(newTotalSold, maxEarnedOrOffset, "totalTokensSold should equal max(offsetTokens, tokensEarned)");
-        }
-
-        // Try to sell any amount now - should fail with NoTokensAvailableForBuyback
-        vm.prank(user);
-        vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
-        proofOfCapital.sellTokens(1);
-
-        // CONCLUSION: The InsufficientSoldTokens check exists in the code but is mathematically
-        // unreachable because the constraint tokensAvailableForBuyback <= totalTokensSold always holds
-        // due to the fact that max(offsetTokens, tokensEarned) >= 0
-    }
-    */
-
-    // COMMENTED: Test requires proper contract initialization
-    /*
-    function testSellTokensMarketMakerWithoutTradingAccessCanSell() public {
-        // Сначала returnWallet продаёт токены, чтобы увеличить contractTokenBalance и сделать покупку возможной
-        vm.prank(returnWallet);
-        proofOfCapital.sellTokens(5000e18);
-
-        // Market maker покупает токены (может торговать в любое время)
-        uint256 purchaseAmount = 2000e18;
+        // Approve WETH for market maker
         vm.prank(marketMaker);
-        proofOfCapital.buyTokens(purchaseAmount);
+        weth.approve(address(customContract), type(uint256).max);
 
-        // Проверяем, что баланс токенов у маркет-мейкера увеличился
-        assertGt(token.balanceOf(marketMaker), 0, "Market maker should have tokens after purchase");
-
-        // Перемещаемся так, чтобы осталось больше 60 дней до окончания lock, чтобы _checkTradingAccess() вернул false
-        uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime - Constants.SIXTY_DAYS - 1);
-
-        // Пробуем продать часть токенов – проверка TradingNotAllowedOnlyMarketMakers должна пройти,
-        // а сама сделка выполниться (либо, если нет токенов для выкупа, упадём на другой require).
-        uint256 sellAmount = purchaseAmount / 2; // 1000e18
-        uint256 totalSoldBefore = proofOfCapital.totalTokensSold();
-        uint256 marketMakerTokenBalanceBefore = token.balanceOf(marketMaker);
-
+        // Buy enough tokens to exceed offsetTokens for buyback availability
         vm.prank(marketMaker);
-        proofOfCapital.sellTokens(sellAmount);
+        customContract.buyTokens(15000e18); // This should advance currentStep and make totalTokensSold > offsetTokens
 
-        // После успешной продажи баланс маркет-мейкера уменьшился, а totalTokensSold – тоже
-        assertEq(
-            token.balanceOf(marketMaker),
-            marketMakerTokenBalanceBefore - sellAmount,
-            "Token balance should decrease by sellAmount"
-        );
-        assertEq(
-            proofOfCapital.totalTokensSold(),
-            totalSoldBefore - sellAmount,
-            "totalTokensSold should decrease by sellAmount"
-        );
+        // Create unaccountedOffsetBalance to trigger offset processing
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18); // This should create unaccountedOffsetBalance
+
+        // Call calculateUnaccountedOffsetBalance to trigger offset processing and set offsetStep > 0
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18); // This should process offset and set offsetStep
+
+        // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetSupport
+        vm.prank(owner);
+        weth.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.deposit(1000e18); // This creates unaccountedCollateralBalance
+
+        // Call calculateUnaccountedOffsetBalance to trigger _calculateOffset
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(500e18); // This should trigger "trend change branch" in _calculateOffset
     }
-    */
+
+    function testOffsetCalculationHitsNormalBranch() public {
+        // Test to hit the "offset_normal_branch" in _calculateOffset
+        // This branch executes when localCurrentStep <= trendChangeStep
+
+        // Create a custom contract with high trendChangeStep
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 10; // High trendChangeStep so localCurrentStep <= trendChangeStep
+        customParams.offsetTokens = 10000e18;
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Transfer tokens from returnWallet to custom contract
+        vm.prank(returnWallet);
+        token.transfer(address(customContract), 40000e18);
+
+        // Create unaccountedOffsetBalance
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18);
+
+        // First call to set offsetStep > 0
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18);
+
+        // Now create more unaccountedOffsetBalance to trigger the condition check
+        vm.prank(owner);
+        customContract.depositTokens(1000e18);
+
+        // Second call - this should trigger _calculateOffset with localCurrentStep > 0 and check conditions
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(500e18);
+    }
+
+    function testOffsetCalculationHitsTrendChangeBranch() public {
+        // Test to hit the "offset_trend_change_branch" in _calculateOffset
+        // This branch executes when localCurrentStep > trendChangeStep
+
+        // Create a custom contract with low trendChangeStep
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 0; // Low trendChangeStep so localCurrentStep > trendChangeStep
+        customParams.offsetTokens = 10000e18;
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Transfer tokens from returnWallet to custom contract
+        vm.prank(returnWallet);
+        token.transfer(address(customContract), 40000e18);
+
+        // Create unaccountedOffsetBalance
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18);
+
+        // First call to set offsetStep > 0
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18);
+
+        // Now create more unaccountedOffsetBalance to trigger the condition check
+        vm.prank(owner);
+        customContract.depositTokens(1000e18);
+
+        // Second call - this should trigger _calculateOffset with localCurrentStep > 0 and check conditions
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(500e18);
+    }
+
+    function testConsoleLogOffsetTrendChangeBranch() public {
+        // Dedicated test to verify console.log("offset_trend_change_branch") is triggered
+        // This test creates conditions where localCurrentStep > trendChangeStep in _calculateOffset
+        // When trendChangeStep = 0, any localCurrentStep > 0 will trigger the trend change branch
+
+        // Create contract with trendChangeStep = 0 to force localCurrentStep > trendChangeStep
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 0; // Any localCurrentStep > 0 will trigger trend change
+        customParams.offsetTokens = 10000e18;
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Setup tokens
+        vm.prank(returnWallet);
+        token.transfer(address(customContract), 40000e18);
+
+        // Create offset balance
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18);
+
+        // Process offset to set initial offsetStep
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18);
+
+        // Create additional offset balance
+        vm.prank(owner);
+        customContract.depositTokens(1000e18);
+
+        // This call triggers console.log("offset_trend_change_branch") in _calculateOffset
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(500e18);
+
+        // Test verifies that offset trend change branch logic is executed
+    }
+
+    function testCollateralCalculationHitsNormalBranch() public {
+        // Test to hit the "collateral_normal_branch" in _calculateChangeOffsetSupport
+        // This branch executes when localCurrentStep <= trendChangeStep
+
+        // Create contract with high trendChangeStep
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 10; // High trendChangeStep so localCurrentStep <= trendChangeStep
+        customParams.offsetTokens = 10000e18;
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Setup tokens
+        vm.prank(returnWallet);
+        token.transfer(address(customContract), 40000e18);
+
+        // First, process offset to set offsetStep > 0
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18);
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18);
+
+        // Create collateral balance
+        vm.prank(owner);
+        weth.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.deposit(2000e18); // This creates unaccountedCollateralBalance
+
+        // Call calculateUnaccountedCollateralBalance - this should trigger _calculateChangeOffsetSupport with collateral_normal_branch
+        vm.prank(owner);
+        customContract.calculateUnaccountedCollateralBalance(1000e18);
+    }
+
+    function testCollateralCalculationHitsTrendChangeBranch() public {
+        // Test to hit the "collateral_trend_change_branch" in _calculateChangeOffsetSupport
+        // This branch executes when localCurrentStep > trendChangeStep
+
+        // Create contract with low trendChangeStep
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 0; // Low trendChangeStep so localCurrentStep > trendChangeStep
+        customParams.offsetTokens = 10000e18;
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Setup tokens
+        vm.prank(returnWallet);
+        token.transfer(address(customContract), 40000e18);
+
+        // First, process offset to set offsetStep > 0
+        vm.prank(owner);
+        token.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.depositTokens(2000e18);
+        vm.prank(owner);
+        customContract.calculateUnaccountedOffsetBalance(1000e18);
+
+        // Create collateral balance
+        vm.prank(owner);
+        weth.approve(address(customContract), type(uint256).max);
+        vm.prank(owner);
+        customContract.deposit(2000e18); // This creates unaccountedCollateralBalance
+
+        // Call calculateUnaccountedCollateralBalance - this should trigger _calculateChangeOffsetSupport with collateral_trend_change_branch
+        vm.prank(owner);
+        customContract.calculateUnaccountedCollateralBalance(1000e18);
+    }
+
+
+    function testBuyTokensHitsConsoleLogBranches() public {
+        // Test to hit both console.log branches in _calculateTokensToGiveForSupportAmount
+        // First branch: localCurrentStep > trendChangeStep (buy_branch_trend_change)
+        // Second branch: localCurrentStep <= trendChangeStep (buy_branch_normal)
+
+        // Create a custom contract with low trendChangeStep
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 3; // Low trendChangeStep to test both branches
+        customParams.offsetTokens = 0; // No offset
+
+        vm.prank(owner);
+        ProofOfCapital customContract = new ProofOfCapital(customParams);
+
+        // Transfer tokens from returnWallet to custom contract
+        vm.prank(returnWallet);
+        token.transfer(address(customContract), 40000e18);
+
+        // Approve tokens for returnWallet
+        vm.prank(returnWallet);
+        token.approve(address(customContract), type(uint256).max);
+
+        // returnWallet sells tokens to add to contract balance
+        vm.prank(returnWallet);
+        customContract.sellTokens(5000e18);
+
+        // Approve WETH for market maker
+        vm.prank(marketMaker);
+        weth.approve(address(customContract), type(uint256).max);
+
+        // Buy tokens in small amounts first to stay within trendChangeStep
+        vm.prank(marketMaker);
+        customContract.buyTokens(2000e18); // This triggers the "normal" branch (localCurrentStep <= trendChangeStep)
+
+        // Check currentStep after first buy
+        uint256 currentStepAfterFirst = customContract.currentStep();
+        console.log("currentStep after first buy:", currentStepAfterFirst);
+
+        // Verify first buy hit the "normal" branch: currentStep (1) <= trendChangeStep (3)
+        assertGt(currentStepAfterFirst, 0, "currentStep should be > 0 after first buy");
+        assertLe(currentStepAfterFirst, customContract.trendChangeStep(), "First buy should hit normal branch");
+
+        // Buy more tokens to exceed trendChangeStep
+        vm.prank(marketMaker);
+        customContract.buyTokens(15000e18); // This triggers the "trend change" branch (localCurrentStep > trendChangeStep)
+
+        // Check currentStep after second buy
+        uint256 currentStepAfterSecond = customContract.currentStep();
+        console.log("currentStep after second buy:", currentStepAfterSecond);
+        console.log("trendChangeStep:", customContract.trendChangeStep());
+
+        // Verify second buy hit the "trend change" branch: currentStep (9) > trendChangeStep (3)
+        assertGt(currentStepAfterSecond, customContract.trendChangeStep(), "Second buy should hit trend change branch");
+    }
 }

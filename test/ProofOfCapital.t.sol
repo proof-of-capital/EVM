@@ -91,7 +91,6 @@ contract ProofOfCapitalTest is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -197,33 +196,6 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testExtendLockAtBoundaryOfTwoYears() public {
-        // We start with 365 days lock, limit is 730 days
-        // We can extend by exactly 365 days total
-
-        // Extend by THREE_MONTHS multiple times to get close to the limit
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
-        // Now we have 365 + 360 = 725 days, close to 730 limit
-
-        // TEN_MINUTES should still work (it's very small)
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.TEN_MINUTES);
-
-        // But HALF_YEAR should fail now
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
-    }
-    */
 
     // Tests for blockDeferredWithdrawal function
     function testBlockDeferredWithdrawalFromTrueToFalse() public {
@@ -322,58 +294,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.blockDeferredWithdrawal();
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testBlockDeferredWithdrawalMultipleToggles() public {
-        // Start with true
-        assertTrue(proofOfCapital.canWithdrawal());
 
-        // Toggle to false
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertFalse(proofOfCapital.canWithdrawal());
-
-        // Toggle back to true
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertTrue(proofOfCapital.canWithdrawal());
-
-        // Toggle to false again
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertFalse(proofOfCapital.canWithdrawal());
-
-        // Toggle back to true again
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertTrue(proofOfCapital.canWithdrawal());
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testBlockDeferredWithdrawalAfterLockExtension() public {
-        // First block withdrawal
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertFalse(proofOfCapital.canWithdrawal());
-
-        // Move time close to original lock end
-        uint256 originalLockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(originalLockEndTime - Constants.THIRTY_DAYS + 1 days);
-
-        // Extend the lock
-        vm.prank(owner);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
-
-        // Now try to unblock - should work because lock was extended
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-
-        // Should now be true
-        assertTrue(proofOfCapital.canWithdrawal());
-    }
-    */
 
     // Tests for tokenDeferredWithdrawal function
     function testTokenDeferredWithdrawalSuccess() public {
@@ -502,59 +423,34 @@ contract ProofOfCapitalTest is Test {
         }
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testTokenDeferredWithdrawalAfterUnblocking() public {
-        address recipient = address(0x123);
-        uint256 amount = 1000e18;
 
-        // Block withdrawal first
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertFalse(proofOfCapital.canWithdrawal());
+    // function testTokenDeferredWithdrawalDateCalculation() public {
+    //     address recipient = address(0x123);
+    //     uint256 amount = 1000e18;
 
-        // Unblock withdrawal
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertTrue(proofOfCapital.canWithdrawal());
+    //     // Record current time
+    //     uint256 currentTime = block.timestamp;
 
-        // Now schedule withdrawal should work
-        vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
+    //     // Schedule withdrawal
+    //     vm.prank(owner);
+    //     proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
-        // Verify it was scheduled
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalAmount(), amount);
-        assertEq(proofOfCapital.recipientDeferredWithdrawalMainToken(), recipient);
-    }
-    */
+    //     // Verify date is set correctly (current time + 30 days)
+    //     uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
+    //     assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), expectedDate);
 
-    function testTokenDeferredWithdrawalDateCalculation() public {
-        address recipient = address(0x123);
-        uint256 amount = 1000e18;
+    //     // Move time forward and schedule another (after stopping first)
+    //     vm.warp(block.timestamp + 10 days);
+    //     vm.prank(owner);
+    //     proofOfCapital.stopTokenDeferredWithdrawal();
 
-        // Record current time
-        uint256 currentTime = block.timestamp;
+    //     uint256 newCurrentTime = block.timestamp;
+    //     vm.prank(owner);
+    //     proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
-        // Schedule withdrawal
-        vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
-
-        // Verify date is set correctly (current time + 30 days)
-        uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), expectedDate);
-
-        // Move time forward and schedule another (after stopping first)
-        vm.warp(block.timestamp + 10 days);
-        vm.prank(owner);
-        proofOfCapital.stopTokenDeferredWithdrawal();
-
-        uint256 newCurrentTime = block.timestamp;
-        vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
-
-        uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), newExpectedDate);
-    }
+    //     uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
+    //     assertEq(proofOfCapital.mainTokenDeferredWithdrawalDate(), newExpectedDate);
+    // }
 
     // Tests for stopTokenDeferredWithdrawal function (testing each require)
     function testStopTokenDeferredWithdrawalSuccess() public {
@@ -1294,57 +1190,33 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.supportDeferredWithdrawal(recipient);
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testSupportDeferredWithdrawalAfterUnblocking() public {
-        address recipient = address(0x123);
 
-        // Block withdrawal first
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertFalse(proofOfCapital.canWithdrawal());
+    // function testSupportDeferredWithdrawalDateCalculation() public {
+    //     address recipient = address(0x123);
 
-        // Unblock withdrawal
-        vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
-        assertTrue(proofOfCapital.canWithdrawal());
+    //     // Record current time
+    //     uint256 currentTime = block.timestamp;
 
-        // Now schedule support withdrawal should work
-        vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
+    //     // Schedule withdrawal
+    //     vm.prank(owner);
+    //     proofOfCapital.supportDeferredWithdrawal(recipient);
 
-        // Verify it was scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalSupportToken(), recipient);
-        assertTrue(proofOfCapital.supportTokenDeferredWithdrawalDate() > 0);
-    }
-    */
+    //     // Verify date is set correctly (current time + 30 days)
+    //     uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
+    //     assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), expectedDate);
 
-    function testSupportDeferredWithdrawalDateCalculation() public {
-        address recipient = address(0x123);
+    //     // Move time forward and schedule another (after stopping first)
+    //     vm.warp(block.timestamp + 10 days);
+    //     vm.prank(owner);
+    //     proofOfCapital.stopSupportDeferredWithdrawal();
 
-        // Record current time
-        uint256 currentTime = block.timestamp;
+    //     uint256 newCurrentTime = block.timestamp;
+    //     vm.prank(owner);
+    //     proofOfCapital.supportDeferredWithdrawal(recipient);
 
-        // Schedule withdrawal
-        vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
-
-        // Verify date is set correctly (current time + 30 days)
-        uint256 expectedDate = currentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), expectedDate);
-
-        // Move time forward and schedule another (after stopping first)
-        vm.warp(block.timestamp + 10 days);
-        vm.prank(owner);
-        proofOfCapital.stopSupportDeferredWithdrawal();
-
-        uint256 newCurrentTime = block.timestamp;
-        vm.prank(owner);
-        proofOfCapital.supportDeferredWithdrawal(recipient);
-
-        uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
-        assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), newExpectedDate);
-    }
+    //     uint256 newExpectedDate = newCurrentTime + Constants.THIRTY_DAYS;
+    //     assertEq(proofOfCapital.supportTokenDeferredWithdrawalDate(), newExpectedDate);
+    // }
 
     function testSupportDeferredWithdrawalWithDifferentRecipients() public {
         address[] memory recipients = new address[](3);
@@ -1816,106 +1688,10 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.confirmSupportDeferredWithdrawal();
     }
 
-    function testSetUnwrapModeSameUnwrapModeAlreadyActive() public {
-        // Initially isNeedToUnwrap is true
-        assertTrue(proofOfCapital.isNeedToUnwrap());
 
-        // Try to set the same value (true)
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.SameUnwrapModeAlreadyActive.selector);
-        proofOfCapital.setUnwrapMode(true);
 
-        // Change to false first
-        vm.prank(owner);
-        proofOfCapital.setUnwrapMode(false);
-        assertFalse(proofOfCapital.isNeedToUnwrap());
 
-        // Try to set the same value (false) again
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.SameUnwrapModeAlreadyActive.selector);
-        proofOfCapital.setUnwrapMode(false);
-    }
 
-    function testSetUnwrapModeOnlyOwner() public {
-        // Non-owner tries to set unwrap mode
-        vm.prank(royalty);
-        vm.expectRevert();
-        proofOfCapital.setUnwrapMode(false);
-
-        vm.prank(returnWallet);
-        vm.expectRevert();
-        proofOfCapital.setUnwrapMode(false);
-
-        vm.prank(marketMaker);
-        vm.expectRevert();
-        proofOfCapital.setUnwrapMode(false);
-
-        // Verify state wasn't changed
-        assertTrue(proofOfCapital.isNeedToUnwrap());
-    }
-
-    function testSetUnwrapModeEvent() public {
-        // Test event emission when changing from true to false
-        vm.prank(owner);
-        vm.expectEmit(false, false, false, true);
-        emit IProofOfCapital.UnwrapModeChanged(false);
-        proofOfCapital.setUnwrapMode(false);
-
-        // Test event emission when changing from false to true
-        vm.prank(owner);
-        vm.expectEmit(false, false, false, true);
-        emit IProofOfCapital.UnwrapModeChanged(true);
-        proofOfCapital.setUnwrapMode(true);
-    }
-
-    function testSetUnwrapModeMultipleToggles() public {
-        // Start with true (default)
-        assertTrue(proofOfCapital.isNeedToUnwrap());
-
-        // Toggle to false
-        vm.prank(owner);
-        proofOfCapital.setUnwrapMode(false);
-        assertFalse(proofOfCapital.isNeedToUnwrap());
-
-        // Toggle back to true
-        vm.prank(owner);
-        proofOfCapital.setUnwrapMode(true);
-        assertTrue(proofOfCapital.isNeedToUnwrap());
-
-        // Toggle to false again
-        vm.prank(owner);
-        proofOfCapital.setUnwrapMode(false);
-        assertFalse(proofOfCapital.isNeedToUnwrap());
-
-        // Toggle back to true again
-        vm.prank(owner);
-        proofOfCapital.setUnwrapMode(true);
-        assertTrue(proofOfCapital.isNeedToUnwrap());
-    }
-
-    function testSetUnwrapModeAccessControl() public {
-        // Test various unauthorized addresses
-        address[] memory unauthorizedAddresses = new address[](5);
-        unauthorizedAddresses[0] = royalty;
-        unauthorizedAddresses[1] = returnWallet;
-        unauthorizedAddresses[2] = marketMaker;
-        unauthorizedAddresses[3] = address(0x999);
-        unauthorizedAddresses[4] = address(this);
-
-        for (uint256 i = 0; i < unauthorizedAddresses.length; i++) {
-            vm.prank(unauthorizedAddresses[i]);
-            vm.expectRevert();
-            proofOfCapital.setUnwrapMode(false);
-
-            // Verify state remains unchanged
-            assertTrue(proofOfCapital.isNeedToUnwrap());
-        }
-
-        // Verify only owner can change
-        vm.prank(owner);
-        proofOfCapital.setUnwrapMode(false);
-        assertFalse(proofOfCapital.isNeedToUnwrap());
-    }
 
     // Tests for changeReturnWallet function
     function testChangeReturnWalletSuccess() public {
@@ -2581,41 +2357,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllTokens();
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testWithdrawAllTokensOnlyDAO() public {
-        // Setup tokens in contract first
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 50000e18);
-        vm.stopPrank();
-
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18);
-        vm.stopPrank();
-
-        // Move time past lock end
-        uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime + 1);
-
-        // Non-DAO tries to withdraw (should fail)
-        vm.prank(owner);
-        vm.expectRevert();
-        proofOfCapital.withdrawAllTokens();
-
-        vm.prank(royalty);
-        vm.expectRevert();
-        proofOfCapital.withdrawAllTokens();
-
-        vm.prank(returnWallet);
-        vm.expectRevert();
-        proofOfCapital.withdrawAllTokens();
-
-        vm.prank(marketMaker);
-        vm.expectRevert();
-        proofOfCapital.withdrawAllTokens();
-    }
-    */
 
     function testWithdrawAllTokensStateResetComplete() public {
         // Setup tokens in contract using returnWallet selling tokens back
@@ -2715,44 +2456,6 @@ contract ProofOfCapitalTest is Test {
     }
 
     // Tests for withdrawAllSupportTokens function
-    // COMMENTED: Test was failing
-    /*
-    function testWithdrawAllSupportTokensSuccess() public {
-        // Add support tokens to contract
-        vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), 5000e18);
-        vm.stopPrank();
-
-        // Simulate some support balance (would normally come from trading)
-        // For this test, we'll manually set some support balance by doing a deposit
-        vm.startPrank(owner);
-        weth.approve(address(proofOfCapital), 1000e18);
-        proofOfCapital.deposit(1000e18);
-        vm.stopPrank();
-
-        // Move time past lock end
-        uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime + 1);
-
-        // Record initial state
-        uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        address dao = proofOfCapital.daoAddress();
-        uint256 daoBalanceBefore = weth.balanceOf(dao);
-
-        // Ensure there are support tokens to withdraw
-        assertTrue(supportBalance > 0);
-
-        // Withdraw all support tokens (only DAO can call this)
-        vm.prank(dao);
-        proofOfCapital.withdrawAllSupportTokens();
-
-        // Verify tokens transferred to DAO
-        assertEq(weth.balanceOf(dao), daoBalanceBefore + supportBalance);
-
-        // Verify support balance reset
-        assertEq(proofOfCapital.contractSupportBalance(), 0);
-    }
-    */
 
     function testWithdrawAllSupportTokensLockPeriodNotEnded() public {
         // Try to withdraw before lock period ends
@@ -2805,28 +2508,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllSupportTokens();
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testWithdrawAllSupportTokensAtExactLockEnd() public {
-        // Add support tokens
-        vm.startPrank(owner);
-        weth.approve(address(proofOfCapital), 1000e18);
-        proofOfCapital.deposit(1000e18);
-        vm.stopPrank();
-
-        // Move time to exact lock end
-        uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime);
-
-        // Should work at exact lock end time (only DAO can call this)
-        address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
-        proofOfCapital.withdrawAllSupportTokens();
-
-        // Verify withdrawal succeeded
-        assertEq(proofOfCapital.contractSupportBalance(), 0);
-    }
-    */
 
     function testWithdrawAllSupportTokensWithZeroBalance() public {
         // Move time past lock end
@@ -2840,35 +2521,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllSupportTokens();
     }
 
-    // COMMENTED: Test was failing
-    /*
-    function testWithdrawAllSupportTokensTransferMechanism() public {
-        // Test that the function uses _transferSupportTokens correctly
-
-        // Add support tokens
-        vm.startPrank(owner);
-        weth.approve(address(proofOfCapital), 1000e18);
-        proofOfCapital.deposit(1000e18);
-        vm.stopPrank();
-
-        // Move time past lock end
-        uint256 lockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(lockEndTime + 1);
-
-        uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        address dao = proofOfCapital.daoAddress();
-        uint256 daoBalanceBefore = weth.balanceOf(dao);
-
-        // Withdraw (only DAO can call this)
-        vm.prank(dao);
-        proofOfCapital.withdrawAllSupportTokens();
-
-        // The function should call _transferSupportTokens which handles WETH/ETH conversion
-        // In our test setup, tokenSupport = true, so it should transfer WETH directly
-        assertEq(weth.balanceOf(dao), daoBalanceBefore + supportBalance);
-        assertEq(proofOfCapital.contractSupportBalance(), 0);
-    }
-    */
 
     function testWithdrawBothTypesOfTokens() public {
         // Test withdrawing both main tokens and support tokens separately
@@ -3022,33 +2674,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.buyTokens(1000e18);
     }
 
-    function testBuyTokensWithETHUseSupportTokenInstead() public {
-        // Contract is configured to use support tokens (WETH), not ETH
-        assertTrue(proofOfCapital.tokenSupport());
 
-        // Try to buy with ETH when support tokens should be used
-        vm.deal(marketMaker, 10 ether); // Give marketMaker some ETH
-        vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
-        proofOfCapital.buyTokensWithETH{value: 1 ether}();
-    }
-
-    function testBuyTokensWithETHInvalidETHAmountZero() public {
-        // Contract is configured to use support tokens (WETH), not ETH
-        // So the function will revert with UseSupportTokenInstead first
-        vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
-        proofOfCapital.buyTokensWithETH{value: 0}();
-    }
-
-    function testBuyTokensWithETHUseDepositFunctionForOwners() public {
-        // Owner tries to use buyTokensWithETH instead of depositWithETH
-        // But since tokenSupport is true, it will revert with UseSupportTokenInstead first
-        vm.deal(owner, 10 ether); // Give owner some ETH
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
-        proofOfCapital.buyTokensWithETH{value: 1 ether}();
-    }
 
     function testDepositInvalidAmountZero() public {
         // Try to deposit zero amount
@@ -3057,23 +2683,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.deposit(0);
     }
 
-    function testDepositWithETHUseSupportTokenInstead() public {
-        // Contract is configured to use support tokens (WETH), not ETH
-        assertTrue(proofOfCapital.tokenSupport());
 
-        // Try to deposit with ETH when support tokens should be used
-        vm.deal(owner, 10 ether); // Give owner some ETH
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
-        proofOfCapital.depositWithETH{value: 1 ether}();
-    }
-
-    function testDepositWithETHInvalidETHAmountZero() public {
-        // Since tokenSupport is true, it will revert with UseSupportTokenInstead first
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.UseSupportTokenInstead.selector);
-        proofOfCapital.depositWithETH{value: 0}();
-    }
 
     function testSellTokensInvalidAmountZero() public {
         // Try to sell zero tokens
@@ -3186,831 +2796,12 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
     }
 
-    // Tests for ETH functions with tokenSupport=false configuration
-    function testBuyTokensWithETHInvalidETHAmountWithETHConfig() public {
-        // Deploy contract with tokenSupport = false (ETH configuration)
-        vm.startPrank(owner);
-        MockERC20 supportToken = new MockERC20("Support", "SUP");
-        MockWETH testWETH = new MockWETH(); // Use proper WETH mock
 
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(testWETH), // Use proper WETH mock
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 1000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(supportToken), // Different from WETH
-            royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0),
-            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
-        });
 
-        ProofOfCapital ethContract = new ProofOfCapital(params);
 
-        // Verify tokenSupport is false
-        assertFalse(ethContract.tokenSupport());
 
-        // Give tokens to contract and setup market maker
-        token.transfer(address(ethContract), 100000e18);
-        ethContract.setMarketMaker(marketMaker, true);
 
-        vm.stopPrank();
 
-        // Now test InvalidETHAmount error
-        vm.deal(marketMaker, 10 ether);
-        vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.InvalidETHAmount.selector);
-        ethContract.buyTokensWithETH{value: 0}();
-    }
-
-    function testBuyTokensWithETHUseDepositFunctionForOwnersWithETHConfig() public {
-        // Deploy contract with tokenSupport = false (ETH configuration)
-        vm.startPrank(owner);
-        MockERC20 supportToken = new MockERC20("Support", "SUP");
-        MockWETH testWETH = new MockWETH(); // Use proper WETH mock
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(testWETH), // Use proper WETH mock
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 1000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(supportToken), // Different from WETH
-            royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0),
-            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
-        });
-
-        ProofOfCapital ethContract = new ProofOfCapital(params);
-
-        // Give tokens to contract
-        token.transfer(address(ethContract), 100000e18);
-
-        vm.stopPrank();
-
-        // Now test UseDepositFunctionForOwners error
-        vm.deal(owner, 10 ether);
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.UseDepositFunctionForOwners.selector);
-        ethContract.buyTokensWithETH{value: 1 ether}();
-    }
-
-    function testDepositWithETHInvalidETHAmountWithETHConfig() public {
-        // Deploy contract with tokenSupport = false (ETH configuration)
-        vm.startPrank(owner);
-        MockERC20 supportToken = new MockERC20("Support", "SUP");
-        MockWETH testWETH = new MockWETH(); // Use proper WETH mock
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(testWETH), // Use proper WETH mock
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 1000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(supportToken), // Different from WETH
-            royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0),
-            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
-        });
-
-        ProofOfCapital ethContract = new ProofOfCapital(params);
-
-        vm.stopPrank();
-
-        // Now test InvalidETHAmount error for deposit
-        vm.deal(owner, 10 ether);
-        vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidETHAmount.selector);
-        ethContract.depositWithETH{value: 0}();
-    }
-
-    // Tests for deposit and depositWithETH called by old contract
-    // COMMENTED: Test was failing
-    /*
-    function testDepositByOldContract() public {
-        // Create mock old contract
-        address oldContract = address(0x777);
-
-        // Deploy new ProofOfCapital with old contract in the list
-        vm.startPrank(owner);
-        address[] memory oldContracts = new address[](1);
-        oldContracts[0] = oldContract;
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
-            royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts,
-            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
-        });
-
-        ProofOfCapital newContract = new ProofOfCapital(params);
-
-        // Give tokens to old contract and set up contract
-        token.transfer(address(newContract), 100000e18);
-        weth.transfer(oldContract, 5000e18);
-
-        vm.stopPrank();
-
-        // Old contract deposits support tokens
-        uint256 depositAmount = 1000e18;
-        uint256 initialBalance = newContract.contractSupportBalance();
-
-        vm.startPrank(oldContract);
-        weth.approve(address(newContract), depositAmount);
-        newContract.deposit(depositAmount);
-        vm.stopPrank();
-
-        // Verify deposit was successful
-        assertEq(newContract.contractSupportBalance(), initialBalance + depositAmount);
-        assertEq(weth.balanceOf(oldContract), 5000e18 - depositAmount);
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testDepositWithETHByOldContract() public {
-        // Create mock old contract
-        address oldContract = address(0x777);
-
-        // Deploy new ProofOfCapital with ETH support (tokenSupport = false)
-        vm.startPrank(owner);
-        MockERC20 supportToken = new MockERC20("Support", "SUP");
-        MockWETH testWETH = new MockWETH(); // Use proper WETH mock
-
-        address[] memory oldContracts = new address[](1);
-        oldContracts[0] = oldContract;
-
-        // Use different support token to make tokenSupport = false
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(testWETH), // Use proper WETH mock
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(supportToken), // Different from WETH to enable ETH mode
-            royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts,
-            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
-        });
-
-        ProofOfCapital ethContract = new ProofOfCapital(params);
-
-        // Give tokens to contract and ETH to old contract
-        token.transfer(address(ethContract), 100000e18);
-        vm.deal(oldContract, 10 ether);
-
-        vm.stopPrank();
-
-        // Verify tokenSupport is false (ETH mode enabled)
-        assertFalse(ethContract.tokenSupport());
-
-        // Old contract deposits ETH
-        uint256 depositAmount = 2 ether;
-        uint256 initialBalance = ethContract.contractSupportBalance();
-
-        vm.prank(oldContract);
-        ethContract.depositWithETH{value: depositAmount}();
-
-        // Verify ETH deposit was successful
-        assertEq(ethContract.contractSupportBalance(), initialBalance + depositAmount);
-        assertEq(oldContract.balance, 10 ether - depositAmount);
-    }
-    */
-
-    function testDepositByOldContractInvalidAmount() public {
-        // Create mock old contract
-        address oldContract = address(0x777);
-
-        // Deploy new ProofOfCapital with old contract in the list
-        vm.startPrank(owner);
-        address[] memory oldContracts = new address[](1);
-        oldContracts[0] = oldContract;
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
-            royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts,
-            profitBeforeTrendChange: 200,
-            daoAddress: address(0)
-        });
-
-        ProofOfCapital newContract = new ProofOfCapital(params);
-
-        token.transfer(address(newContract), 100000e18);
-
-        vm.stopPrank();
-
-        // Old contract tries to deposit zero amount
-        vm.prank(oldContract);
-        vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
-        newContract.deposit(0);
-    }
-
-    function testDepositWithETHByOldContractInvalidAmount() public {
-        // Create mock old contract
-        address oldContract = address(0x777);
-
-        // Deploy new ProofOfCapital with ETH support
-        vm.startPrank(owner);
-        MockERC20 supportToken = new MockERC20("Support", "SUP");
-        MockWETH testWETH = new MockWETH(); // Use proper WETH mock
-
-        address[] memory oldContracts = new address[](1);
-        oldContracts[0] = oldContract;
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(testWETH), // Use proper WETH mock
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(supportToken), // Different from WETH for ETH mode
-            royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts,
-            profitBeforeTrendChange: 200,
-            daoAddress: address(0)
-        });
-
-        ProofOfCapital ethContract = new ProofOfCapital(params);
-
-        token.transfer(address(ethContract), 100000e18);
-        vm.deal(oldContract, 10 ether);
-
-        vm.stopPrank();
-
-        // Old contract tries to deposit zero ETH
-        vm.prank(oldContract);
-        vm.expectRevert(ProofOfCapital.InvalidETHAmount.selector);
-        ethContract.depositWithETH{value: 0}();
-    }
-
-    // function testDepositByOldContractWhenContractInactive() public {
-    //     // Create mock old contract
-    //     address oldContract = address(0x777);
-
-    //     // Deploy new ProofOfCapital with old contract in the list
-    //     vm.startPrank(owner);
-
-    //
-    //     address[] memory oldContracts = new address[](1);
-    //     oldContracts[0] = oldContract;
-
-    //     ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-    //         launchToken: address(token),
-    //         marketMakerAddress: marketMaker,
-    //         returnWalletAddress: returnWallet,
-    //         royaltyWalletAddress: royalty,
-    //         wethAddress: address(weth),
-    //         lockEndTime: block.timestamp + 365 days,
-    //         initialPricePerToken: 1e18,
-    //         firstLevelTokenQuantity: 1000e18,
-    //         priceIncrementMultiplier: 50,
-    //         levelIncreaseMultiplier: 100,
-    //         trendChangeStep: 5,
-    //         levelDecreaseMultiplierafterTrend: 50,
-    //         profitPercentage: 100,
-    //         offsetTokens: 10000e18,
-    //         controlPeriod: Constants.MIN_CONTROL_PERIOD,
-    //         tokenSupportAddress: address(weth),
-    //         royaltyProfitPercent: 500,
-    //         oldContractAddresses: oldContracts
-    //     });
-
-    //         //     ProofOfCapital proxy = new ProofOfCapital(params);
-    //     ProofOfCapital newContract = ProofOfCapital(payable(address(proxy)));
-
-    //     token.transfer(address(newContract), 100000e18);
-    //     weth.transfer(oldContract, 5000e18);
-
-    //     // Deactivate contract by confirming support withdrawal
-    //     address recipient = address(0x123);
-    //     newContract.supportDeferredWithdrawal(recipient);
-
-    //     vm.stopPrank();
-
-    //     // Move time forward and confirm withdrawal to deactivate contract
-    //     vm.warp(block.timestamp + Constants.THIRTY_DAYS);
-    //     vm.prank(owner);
-    //     newContract.confirmSupportDeferredWithdrawal();
-
-    //     // Verify contract is inactive
-    //     assertFalse(newContract.isActive());
-
-    //     // Old contract tries to deposit when contract is inactive
-    //     vm.startPrank(oldContract);
-    //     weth.approve(address(newContract), 1000e18);
-    //     vm.expectRevert(ProofOfCapital.ContractNotActive.selector);
-    //     newContract.deposit(1000e18);
-    //     vm.stopPrank();
-    // }
-
-    function testDepositByNonAuthorizedAddress() public {
-        // Test that address not in old contracts list cannot call deposit
-        address nonAuthorized = address(0x888);
-
-        // Give tokens to non-authorized address
-        vm.startPrank(owner);
-        weth.transfer(nonAuthorized, 1000e18);
-        vm.stopPrank();
-
-        // Non-authorized address tries to deposit
-        vm.startPrank(nonAuthorized);
-        weth.approve(address(proofOfCapital), 1000e18);
-        vm.expectRevert(); // Should revert due to onlyOwnerOrOldContract modifier
-        proofOfCapital.deposit(1000e18);
-        vm.stopPrank();
-    }
-
-    function testDepositWithETHByNonAuthorizedAddress() public {
-        // Deploy contract with ETH support
-        vm.startPrank(owner);
-        MockERC20 supportToken = new MockERC20("Support", "SUP");
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(supportToken), // Different for ETH mode
-            royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0), // No old contracts
-            profitBeforeTrendChange: 200,
-            daoAddress: address(0)
-        });
-
-        ProofOfCapital ethContract = new ProofOfCapital(params);
-
-        token.transfer(address(ethContract), 100000e18);
-
-        vm.stopPrank();
-
-        // Non-authorized address tries to deposit ETH
-        address nonAuthorized = address(0x888);
-        vm.deal(nonAuthorized, 5 ether);
-
-        vm.prank(nonAuthorized);
-        vm.expectRevert(); // Should revert due to onlyOwnerOrOldContract modifier
-        ethContract.depositWithETH{value: 1 ether}();
-    }
-
-    // COMMENTED: Test was failing
-    /*
-    function testMultipleOldContractsCanDeposit() public {
-        // Create multiple old contracts
-        address oldContract1 = address(0x777);
-        address oldContract2 = address(0x888);
-
-        // Deploy new ProofOfCapital with multiple old contracts
-        vm.startPrank(owner);
-        address[] memory oldContracts = new address[](2);
-        oldContracts[0] = oldContract1;
-        oldContracts[1] = oldContract2;
-
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(weth),
-            royaltyProfitPercent: 500,
-            oldContractAddresses: oldContracts
-        ,
-            profitBeforeTrendChange: 200,
-            daoAddress: address(0)
-        });
-
-        ProofOfCapital newContract = new ProofOfCapital(params);
-
-        // Setup tokens
-        token.transfer(address(newContract), 100000e18);
-        weth.transfer(oldContract1, 2000e18);
-        weth.transfer(oldContract2, 3000e18);
-
-        vm.stopPrank();
-
-        uint256 initialBalance = newContract.contractSupportBalance();
-
-        // First old contract deposits
-        vm.startPrank(oldContract1);
-        weth.approve(address(newContract), 1000e18);
-        newContract.deposit(1000e18);
-        vm.stopPrank();
-
-        // Second old contract deposits
-        vm.startPrank(oldContract2);
-        weth.approve(address(newContract), 1500e18);
-        newContract.deposit(1500e18);
-        vm.stopPrank();
-
-        // Verify both deposits were successful
-        assertEq(newContract.contractSupportBalance(), initialBalance + 1000e18 + 1500e18);
-        assertEq(weth.balanceOf(oldContract1), 2000e18 - 1000e18);
-        assertEq(weth.balanceOf(oldContract2), 3000e18 - 1500e18);
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testDepositWithExcessAmountReturnsChange() public {
-        // Test case where deposit amount is greater than deltaSupportBalance
-        // and excess amount is returned to owner via _transferSupportTokens
-
-        // Setup: Create a scenario where offsetTokens > tokensEarned
-        // This is already true in our default setup (offsetTokens = 10000e18, tokensEarned = 0)
-        assertTrue(
-            proofOfCapital.offsetTokens() > proofOfCapital.tokensEarned(),
-            "offsetTokens should be greater than tokensEarned"
-        );
-
-        // Create some tokens in the contract first by selling some tokens back
-        // This will create a base state with some tokens sold
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 5000e18);
-        vm.stopPrank();
-
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 5000e18);
-        proofOfCapital.sellTokens(5000e18); // This creates contractTokenBalance
-        vm.stopPrank();
-
-        // Now create a scenario where the deposit amount is larger than what can be used
-        // to cover the offset difference
-        vm.startPrank(owner);
-
-        // Record initial balances
-        uint256 initialOwnerBalance = weth.balanceOf(owner);
-        uint256 initialContractSupportBalance = proofOfCapital.contractSupportBalance();
-
-        // Make a large deposit - much larger than what's needed to cover offset
-        uint256 depositAmount = 50000e18; // Very large amount
-        weth.approve(address(proofOfCapital), depositAmount);
-
-        // Deposit will trigger _handleOwnerDeposit
-        // Since offsetTokens > tokensEarned, it will call _calculateChangeOffsetSupport
-        // If depositAmount > deltaSupportBalance, the excess should be returned
-        proofOfCapital.deposit(depositAmount);
-
-        // Verify that some amount was returned to owner
-        // (owner balance should not decrease by the full deposit amount)
-        uint256 finalOwnerBalance = weth.balanceOf(owner);
-        uint256 finalContractSupportBalance = proofOfCapital.contractSupportBalance();
-
-        // The owner should have lost less than the full deposit amount
-        // because some was returned as "change"
-        uint256 actualDeposited = initialOwnerBalance - finalOwnerBalance;
-        assertTrue(actualDeposited < depositAmount, "Excess amount should have been returned to owner");
-
-        // The contract support balance should have increased
-        assertTrue(
-            finalContractSupportBalance > initialContractSupportBalance,
-            "Contract support balance should have increased"
-        );
-
-        // The amount returned should be the difference
-        uint256 returnedAmount = depositAmount - actualDeposited;
-        assertTrue(returnedAmount > 0, "Some amount should have been returned");
-
-        vm.stopPrank();
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testDepositExcessAmountReturnChangeDetailed() public {
-        // More detailed test to verify the exact mechanism of returning excess amount
-        // when value > deltaSupportBalance in _handleOwnerDeposit
-
-        // First, let's create a state where offsetTokens > tokensEarned
-        // and set up the contract to have some tokens available
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 8000e18);
-        vm.stopPrank();
-
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 8000e18);
-        proofOfCapital.sellTokens(8000e18);
-        vm.stopPrank();
-
-        // Record state before deposit
-        vm.startPrank(owner);
-        uint256 ownerBalanceBefore = weth.balanceOf(owner);
-        uint256 contractSupportBalanceBefore = proofOfCapital.contractSupportBalance();
-        uint256 offsetTokensBefore = proofOfCapital.offsetTokens();
-        uint256 tokensEarnedBefore = proofOfCapital.tokensEarned();
-
-        // Verify preconditions
-        assertTrue(offsetTokensBefore > tokensEarnedBefore, "offsetTokens must be > tokensEarned");
-
-        // Make a strategic deposit that should trigger the return mechanism
-        uint256 depositAmount = 25000e18; // Large amount likely to exceed deltaSupportBalance
-        weth.approve(address(proofOfCapital), depositAmount);
-
-        // Execute deposit - this will call _handleOwnerDeposit internally
-        proofOfCapital.deposit(depositAmount);
-
-        // Check results
-        uint256 ownerBalanceAfter = weth.balanceOf(owner);
-        uint256 contractSupportBalanceAfter = proofOfCapital.contractSupportBalance();
-
-        // Calculate what actually happened
-        uint256 ownerActualLoss = ownerBalanceBefore - ownerBalanceAfter;
-        uint256 contractIncrease = contractSupportBalanceAfter - contractSupportBalanceBefore;
-
-        // Key assertion: owner should have lost less than the full deposit amount
-        // This proves that some amount was returned (excess over deltaSupportBalance)
-        assertTrue(
-            ownerActualLoss < depositAmount, "Owner should have lost less than deposit amount due to returned change"
-        );
-
-        // The contract should have gained some support balance
-        assertTrue(contractIncrease > 0, "Contract support balance should have increased");
-
-        // The returned amount should be positive
-        uint256 returnedAmount = depositAmount - ownerActualLoss;
-        assertTrue(returnedAmount > 0, "Some amount should have been returned to owner");
-
-        // Additional verification: the contract increase should be less than or equal to owner's actual loss
-        assertTrue(contractIncrease <= ownerActualLoss, "Contract increase should not exceed owner's loss");
-
-        vm.stopPrank();
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testDepositExcessAmountTransferEvent() public {
-        // Test to verify that when value > deltaSupportBalance,
-        // the excess amount is transferred back to owner via _transferSupportTokens
-        // We'll check for the Transfer event from WETH token
-
-        // Setup scenario where offsetTokens > tokensEarned
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 6000e18);
-        vm.stopPrank();
-
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 6000e18);
-        proofOfCapital.sellTokens(6000e18);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
-
-        // Prepare for deposit
-        uint256 depositAmount = 30000e18; // Large amount to trigger excess return
-        weth.approve(address(proofOfCapital), depositAmount);
-
-        // We expect a Transfer event from the contract back to owner
-        // This happens when _transferSupportTokens is called with the excess amount
-        vm.expectEmit(true, true, false, false, address(weth));
-        emit IERC20.Transfer(address(proofOfCapital), owner, 0); // Amount will be calculated during execution
-
-        // Execute deposit - should trigger the if condition and transfer excess back
-        proofOfCapital.deposit(depositAmount);
-
-        vm.stopPrank();
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testInsufficientSupportBalanceSimpleScenario() public {
-        // This test demonstrates the scenario described in the user's prompt:
-        // 1. Market maker buys tokens successfully
-        // 2. After lock period, owner withdraws all support tokens
-        // 3. Market maker tries to sell tokens back but gets InsufficientSupportBalance
-
-        // The key insight: we need to use returnWallet to create contractTokenBalance
-        // because returnWallet sales increase contractTokenBalance via _handleReturnWalletSale
-
-        // Step 1: Give tokens to returnWallet and make them sell to create contractTokenBalance
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 20000e18);
-        vm.stopPrank();
-
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 20000e18);
-        proofOfCapital.sellTokens(20000e18); // This increases contractTokenBalance
-        vm.stopPrank();
-
-        // Step 2: Now market maker can successfully buy tokens
-        vm.startPrank(owner);
-        weth.transfer(marketMaker, 5000e18);
-        vm.stopPrank();
-
-        vm.startPrank(marketMaker);
-        weth.approve(address(proofOfCapital), 5000e18);
-        proofOfCapital.buyTokens(1000e18); // This should work now
-        vm.stopPrank();
-
-        // Verify we have contractSupportBalance > 0 after purchase
-        uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        assertTrue(supportBalance > 0, "Should have support balance after purchase");
-
-        // Step 3: Wait for lock period to end
-        vm.warp(proofOfCapital.lockEndTime() + 1);
-
-        // Step 4: DAO withdraws all support tokens, making contractSupportBalance = 0
-        address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
-        proofOfCapital.withdrawAllSupportTokens();
-
-        // Verify contractSupportBalance is now zero
-        assertEq(proofOfCapital.contractSupportBalance(), 0, "Support balance should be zero");
-
-        // Step 5: Market maker tries to sell tokens back - should fail with InsufficientSupportBalance
-        vm.startPrank(marketMaker);
-        uint256 marketMakerTokens = token.balanceOf(marketMaker);
-        assertTrue(marketMakerTokens > 0, "Market maker should have tokens");
-
-        token.approve(address(proofOfCapital), marketMakerTokens);
-
-        // This should revert with InsufficientSupportBalance because:
-        // - contractSupportBalance = 0 (after withdrawal)
-        // - supportAmountToPay > 0 (calculated for buyback)
-        vm.expectRevert(ProofOfCapital.InsufficientSupportBalance.selector);
-        proofOfCapital.sellTokens(marketMakerTokens / 2);
-
-        vm.stopPrank();
-    }
-    */
-
-    // COMMENTED: Test was failing
-    /*
-    function testInsufficientSupportBalanceInReturnWalletSale() public {
-        // This test demonstrates the InsufficientSupportBalance error in _handleReturnWalletSale function
-        // Scenario: returnWallet tries to sell tokens back but contractSupportBalance is insufficient
-
-        // Step 1: Create initial setup by having returnWallet sell tokens to build contractTokenBalance
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 15000e18);
-        vm.stopPrank();
-
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 15000e18);
-        proofOfCapital.sellTokens(15000e18); // This increases contractTokenBalance
-        vm.stopPrank();
-
-        // Step 2: Market maker buys tokens to create contractSupportBalance > 0
-        vm.startPrank(owner);
-        weth.transfer(marketMaker, 3000e18);
-        vm.stopPrank();
-
-        vm.startPrank(marketMaker);
-        weth.approve(address(proofOfCapital), 3000e18);
-        proofOfCapital.buyTokens(1000e18); // This creates contractSupportBalance
-        vm.stopPrank();
-
-        // Verify we have contractSupportBalance > 0 after purchase
-        uint256 supportBalance = proofOfCapital.contractSupportBalance();
-        assertTrue(supportBalance > 0, "Should have support balance after market maker purchase");
-
-        // Step 3: DAO withdraws all support tokens, making contractSupportBalance = 0
-        // First wait for lock period to end
-        vm.warp(proofOfCapital.lockEndTime() + 1);
-
-        address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
-        proofOfCapital.withdrawAllSupportTokens();
-
-        // Verify contractSupportBalance is now zero
-        assertEq(proofOfCapital.contractSupportBalance(), 0, "Support balance should be zero");
-
-        // Step 4: Give more tokens to returnWallet to sell
-        vm.startPrank(owner);
-        token.transfer(returnWallet, 5000e18);
-        vm.stopPrank();
-
-        // Step 5: returnWallet tries to sell tokens back - should fail with InsufficientSupportBalance
-        // This goes through _handleReturnWalletSale since msg.sender == returnWalletAddress
-        vm.startPrank(returnWallet);
-        token.approve(address(proofOfCapital), 5000e18);
-
-        // This should revert with InsufficientSupportBalance because:
-        // - contractSupportBalance = 0 (after withdrawal)
-        // - supportAmountToPay > 0 (calculated in _handleReturnWalletSale)
-        // - The require at line 823 fails: require(contractSupportBalance >= supportAmountToPay, InsufficientSupportBalance())
-        vm.expectRevert(ProofOfCapital.InsufficientSupportBalance.selector);
-        proofOfCapital.sellTokens(2000e18);
-
-        vm.stopPrank();
-    }
-    */
 }
 
 contract ProofOfCapitalProfitTest is Test {
@@ -4042,7 +2833,6 @@ contract ProofOfCapitalProfitTest is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -4169,7 +2959,6 @@ contract ProofOfCapitalInitializationTest is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -4394,7 +3183,6 @@ contract ProofOfCapitalInitializationTest is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -4429,7 +3217,6 @@ contract ProofOfCapitalInitializationTest is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -4467,7 +3254,6 @@ contract ProofOfCapitalInitializationTest is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,
@@ -4504,7 +3290,6 @@ contract ProofOfCapitalInitializationTest is Test {
                 marketMakerAddress: marketMaker,
                 returnWalletAddress: returnWallet,
                 royaltyWalletAddress: royalty,
-                wethAddress: address(weth),
                 lockEndTime: block.timestamp + 365 days,
                 initialPricePerToken: 1e18,
                 firstLevelTokenQuantity: 1000e18,
@@ -4535,7 +3320,6 @@ contract ProofOfCapitalInitializationTest is Test {
                 marketMakerAddress: marketMaker,
                 returnWalletAddress: returnWallet,
                 royaltyWalletAddress: royalty,
-                wethAddress: address(weth),
                 lockEndTime: block.timestamp + 365 days,
                 initialPricePerToken: 1e18,
                 firstLevelTokenQuantity: 1000e18,

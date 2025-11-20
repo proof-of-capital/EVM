@@ -12,7 +12,7 @@ fs_permissions = [
 # Compiler settings
 optimizer = true
 optimizer_runs = 200
-via_ir = false
+via_ir = true
 
 
 

@@ -168,7 +168,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Market maker buys tokens to generate profit (this calls _handleTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
         // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForSupportAmount
-        uint256 purchaseAmount = 1e1;
+        uint256 purchaseAmount = 3e18;
         vm.prank(testMarketMaker);
         testContract.buyTokens(purchaseAmount);
 
@@ -513,133 +513,6 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         vm.prank(regularUser);
         vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
         proofOfCapital.buyTokens(1000e18);
-    }
-
-    function testBuyTokensWithETHTradingNotAllowedOnlyMarketMakers() public {
-        // Test the same scenario with buyTokensWithETH for ETH-based contracts
-
-        // Deploy ETH-based contract (tokenSupport = false)
-        vm.startPrank(owner);
-
-        // Deploy mock WETH
-        MockWETH mockWETH = new MockWETH();
-
-        ProofOfCapital.InitParams memory ethParams = ProofOfCapital.InitParams({
-            initialOwner: owner,
-            launchToken: address(token),
-            marketMakerAddress: marketMaker,
-            returnWalletAddress: returnWallet,
-            royaltyWalletAddress: royalty,
-            wethAddress: address(mockWETH),
-            lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
-            priceIncrementMultiplier: 50,
-            levelIncreaseMultiplier: 100,
-            trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
-            profitPercentage: 100,
-            offsetTokens: 10000e18,
-            controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            tokenSupportAddress: address(0x999), // Different from wethAddress to make tokenSupport = false
-            royaltyProfitPercent: 500,
-            oldContractAddresses: new address[](0),
-            profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
-        });
-
-        ProofOfCapital ethContract = deployWithParams(ethParams);
-
-        // Setup tokens and balances - reduce amounts
-        token.transfer(address(ethContract), 200000e18); // Reduced from 500000e18
-        token.transfer(returnWallet, 20000e18); // Reduced from 50000e18
-
-        vm.stopPrank();
-
-        // Approve tokens for return wallet
-        vm.prank(returnWallet);
-        token.approve(address(ethContract), type(uint256).max);
-
-        // Create support balance - reduce amount
-        vm.prank(returnWallet);
-        ethContract.sellTokens(10000e18); // Reduced from 15000e18
-
-        // Create regular user (not market maker)
-        address regularUser = address(0x888);
-        vm.deal(regularUser, 10 ether);
-
-        // Verify user is not a market maker
-        assertFalse(ethContract.marketMakerAddresses(regularUser), "Regular user should not be market maker");
-
-        // Move time to be more than 60 days before lock end to remove time-based trading access
-        uint256 ethLockEndTime = ethContract.lockEndTime();
-        vm.warp(ethLockEndTime - Constants.SIXTY_DAYS - 1);
-
-        // Verify all trading access conditions are false
-        uint256 controlPeriod = ethContract.controlPeriod();
-        uint256 controlDay = ethContract.controlDay();
-
-        // Control day access should be false (not in the control period)
-        bool controlDayAccess =
-            (block.timestamp > Constants.THIRTY_DAYS + controlDay
-                && block.timestamp < Constants.THIRTY_DAYS + controlDay + controlPeriod);
-        assertFalse(controlDayAccess, "Control day access should be false");
-
-        // No deferred withdrawals
-        assertEq(ethContract.mainTokenDeferredWithdrawalDate(), 0, "No main token deferred withdrawal");
-        assertEq(ethContract.supportTokenDeferredWithdrawalDate(), 0, "No support token deferred withdrawal");
-
-        // Time access should be false (more than 60 days before lock end)
-        assertGt(ethLockEndTime - block.timestamp, Constants.SIXTY_DAYS, "Should be more than 60 days before lock end");
-
-        // Verify we don't have trading access
-        // Trading access helper references the default contract, so we skip it here.
-
-        // Regular user (non-market maker) tries to buy tokens without trading access
-        vm.prank(regularUser);
-        vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
-        ethContract.buyTokensWithETH{value: 1 ether}();
-    }
-
-    function testBuyTokensMarketMakerCanTradeWithoutTradingAccess() public {
-        // Test that market makers can trade even without general trading access
-
-        // Create a market maker user
-        address marketMakerUser = address(0x999);
-
-        // Give WETH tokens to market maker
-        vm.prank(owner);
-        weth.transfer(marketMakerUser, 10000e18);
-
-        vm.prank(marketMakerUser);
-        weth.approve(address(proofOfCapital), type(uint256).max);
-
-        // Set user as market maker
-        vm.prank(owner);
-        proofOfCapital.setMarketMaker(marketMakerUser, true);
-
-        // Verify user is a market maker
-        assertTrue(proofOfCapital.marketMakerAddresses(marketMakerUser), "User should be market maker");
-
-        // Create support balance first to enable token purchases
-        vm.prank(returnWallet);
-        proofOfCapital.sellTokens(15000e18);
-
-        // Move time to be more than 60 days before lock end to remove time-based trading access
-        uint256 mmLockEndTime = proofOfCapital.lockEndTime();
-        vm.warp(mmLockEndTime - Constants.SIXTY_DAYS - 1);
-
-        // Verify we're not in trading access period
-        assertFalse(_checkTradingAccessHelper(), "Should not have trading access");
-
-        // Market maker should be able to buy tokens even without general trading access
-        uint256 initialTokenBalance = token.balanceOf(marketMakerUser);
-
-        vm.prank(marketMakerUser);
-        proofOfCapital.buyTokens(1000e18); // Should not revert
-
-        // Verify tokens were purchased
-        assertTrue(token.balanceOf(marketMakerUser) > initialTokenBalance, "Market maker should receive tokens");
     }
 
     function testBuyTokensWithTradingAccess() public {

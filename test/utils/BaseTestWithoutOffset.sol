@@ -64,7 +64,6 @@ contract BaseTestWithoutOffset is Test {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,

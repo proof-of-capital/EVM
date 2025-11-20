@@ -43,7 +43,6 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
             marketMakerAddress: buyer,
             returnWalletAddress: retWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(wethLocal),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 1000e18,

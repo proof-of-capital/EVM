@@ -36,7 +36,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IWETH.sol";
 import "./interfaces/IProofOfCapital.sol";
 import "./utils/Constant.sol";
 
@@ -75,7 +74,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     error InvalidNewOwner();
     error InvalidReserveOwner();
     error SameModeAlreadyActive();
-    error SameUnwrapModeAlreadyActive();
     error InvalidAddress();
     error OnlyRoyaltyWalletCanChange();
     error InvalidPercentage();
@@ -84,8 +82,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     error CannotBeSelf();
     error InvalidAmount();
     error UseDepositFunctionForOwners();
-    error UseSupportTokenInstead();
-    error InvalidETHAmount();
     error LockPeriodNotEnded();
     error NoTokensToWithdraw();
     error NoSupportTokensToWithdraw();
@@ -126,7 +122,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         address marketMakerAddress;
         address returnWalletAddress;
         address royaltyWalletAddress;
-        address wethAddress;
         uint256 lockEndTime;
         uint256 initialPricePerToken;
         uint256 firstLevelTokenQuantity;
@@ -153,7 +148,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     IERC20 public launchToken;
     address public returnWalletAddress;
     address public royaltyWalletAddress;
-    address public wethAddress;
     address public daoAddress; // DAO address for governance
 
     // Time and control variables
@@ -200,7 +194,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public sizeOffsetStep;
 
     // Support token variables
-    bool public override tokenSupport; // If true, uses support token instead of WETH
     address public tokenSupportAddress;
     address public additionalTokenAddress;
 
@@ -219,8 +212,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     address public recipientDeferredWithdrawalMainToken;
     uint256 public supportTokenDeferredWithdrawalDate;
     address public recipientDeferredWithdrawalSupportToken;
-
-    bool public isNeedToUnwrap; // Controls whether to unwrap WETH to ETH when sending
 
     // Return wallet change proposal
     address public proposedReturnWalletAddress; // Proposed return wallet address
@@ -274,7 +265,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         returnWalletAddress = params.returnWalletAddress;
         royaltyWalletAddress = params.royaltyWalletAddress;
-        wethAddress = params.wethAddress;
         lockEndTime = params.lockEndTime;
         initialPricePerToken = params.initialPricePerToken;
         firstLevelTokenQuantity = params.firstLevelTokenQuantity;
@@ -285,7 +275,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         profitPercentage = params.profitPercentage;
         offsetTokens = params.offsetTokens;
         controlPeriod = _getPeriod(params.controlPeriod);
-        tokenSupport = params.tokenSupportAddress == wethAddress;
         tokenSupportAddress = params.tokenSupportAddress;
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
@@ -320,7 +309,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         profitInTime = true;
         canWithdrawal = true;
-        isNeedToUnwrap = true; // Default to true - unwrap WETH to ETH when sending
 
         if (params.offsetTokens > 0) {
             unaccountedOffsetBalance = params.offsetTokens;
@@ -387,7 +375,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
             oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)
-                && oldContractAddr != wethAddress && oldContractAddr != tokenSupportAddress
+                && oldContractAddr != tokenSupportAddress
                 && oldContractAddr != additionalTokenAddress && oldContractAddr != returnWalletAddress
                 && oldContractAddr != royaltyWalletAddress && oldContractAddr != recipientDeferredWithdrawalMainToken
                 && oldContractAddr != recipientDeferredWithdrawalSupportToken && !marketMakerAddresses[oldContractAddr],
@@ -529,15 +517,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         emit ProfitModeChanged(flag);
     }
 
-    /**
-     * @dev Set whether to unwrap WETH to ETH when sending
-     */
-    function setUnwrapMode(bool needToUnwrap) external onlyOwner {
-        require(needToUnwrap != isNeedToUnwrap, SameUnwrapModeAlreadyActive());
-
-        isNeedToUnwrap = needToUnwrap;
-        emit UnwrapModeChanged(needToUnwrap);
-    }
 
     /**
      * @dev Propose return wallet address change (requires lock to be active)
@@ -547,8 +526,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(newReturnWalletAddress != address(0), InvalidAddress());
         require(
             newReturnWalletAddress != owner() && newReturnWalletAddress != reserveOwner
-                && newReturnWalletAddress != address(launchToken) && newReturnWalletAddress != wethAddress
-                && newReturnWalletAddress != tokenSupportAddress && newReturnWalletAddress != additionalTokenAddress
+                && newReturnWalletAddress != address(launchToken) && newReturnWalletAddress != tokenSupportAddress
+                && newReturnWalletAddress != additionalTokenAddress
                 && newReturnWalletAddress != returnWalletAddress && newReturnWalletAddress != royaltyWalletAddress
                 && newReturnWalletAddress != recipientDeferredWithdrawalMainToken
                 && newReturnWalletAddress != recipientDeferredWithdrawalSupportToken
@@ -638,18 +617,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         _handleTokenPurchaseCommon(amount);
     }
 
-    /**
-     * @dev Buy tokens with ETH
-     */
-    function buyTokensWithETH() external payable override nonReentrant onlyActiveContract {
-        require(!tokenSupport, UseSupportTokenInstead());
-        require(msg.value > 0, InvalidETHAmount());
-        require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
-
-        // Wrap received ETH to WETH
-        _wrapETH(msg.value);
-        _handleTokenPurchaseCommon(msg.value);
-    }
 
     /**
      * @dev Deposit support tokens (for owners and old contracts)
@@ -661,17 +628,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         _handleOwnerDeposit(amount);
     }
 
-    /**
-     * @dev Deposit ETH (for owners and old contracts)
-     */
-    function depositWithETH() external payable override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
-        require(!tokenSupport, UseSupportTokenInstead());
-        require(msg.value > 0, InvalidETHAmount());
-
-        // Wrap received ETH to WETH
-        _wrapETH(msg.value);
-        _handleOwnerDeposit(msg.value);
-    }
 
     /**
      * @dev Deposit launch tokens back to contract (for owners and old contracts)
@@ -885,20 +841,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         return period;
     }
 
-    /**
-     * @dev Safe transfer ETH - unwraps WETH and sends native ETH
-     */
-    function _safeTransferETH(address to, uint256 amount) internal {
-        if (isNeedToUnwrap) {
-            // Unwrap WETH to ETH before sending
-            IWETH(wethAddress).withdraw(amount);
-            (bool success,) = to.call{value: amount}("");
-            require(success, ETHTransferFailed());
-        } else {
-            // Transfer WETH directly without unwrapping
-            IERC20(wethAddress).safeTransfer(to, amount);
-        }
-    }
 
     function _handleOwnerDeposit(uint256 value) internal {
         if (offsetTokens > tokensEarned) {
@@ -1404,28 +1346,17 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         return supportAmountToPay;
     }
 
-    /**
-     * @dev Wrap received ETH to WETH
-     */
-    function _wrapETH(uint256 amount) internal {
-        IWETH(wethAddress).deposit{value: amount}();
-    }
 
     /**
-     * @dev General transfer function for support tokens (ETH or ERC20)
+     * @dev General transfer function for support tokens (ERC20 only)
      * @param to Recipient address
      * @param amount Amount to transfer
      */
     function _transferSupportTokens(address to, uint256 amount) internal {
         if (amount == 0) return;
 
-        if (!tokenSupport) {
-            // Transfer ETH (unwrap WETH first)
-            _safeTransferETH(to, amount);
-        } else {
-            // Transfer support tokens
-            IERC20(tokenSupportAddress).safeTransfer(to, amount);
-        }
+        // Transfer support tokens
+        IERC20(tokenSupportAddress).safeTransfer(to, amount);
     }
 
     /**

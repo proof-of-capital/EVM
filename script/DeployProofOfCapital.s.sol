@@ -19,7 +19,6 @@ contract DeployProofOfCapital is Script {
     address public marketMakerAddress;
     address public returnWalletAddress;
     address public royaltyWalletAddress;
-    address public wethAddress;
     uint256 public lockEndTime;
     uint256 public initialPricePerToken;
     uint256 public firstLevelTokenQuantity;
@@ -58,8 +57,7 @@ contract DeployProofOfCapital is Script {
         returnWalletAddress = vm.envAddress("RETURN_WALLET_ADDRESS");
         royaltyWalletAddress = vm.envAddress("ROYALTY_WALLET_ADDRESS");
 
-        // These addresses are set by Makefile based on network
-        wethAddress = vm.envAddress("WETH_ADDRESS");
+        // Token support address is set by Makefile based on network
         tokenSupportAddress = vm.envAddress("TOKEN_SUPPORT_ADDRESS");
 
         lockEndTime = vm.envUint("LOCK_END_TIME");
@@ -105,7 +103,7 @@ contract DeployProofOfCapital is Script {
         require(marketMakerAddress != address(0), "Invalid market maker address");
         require(returnWalletAddress != address(0), "Invalid return wallet address");
         require(royaltyWalletAddress != address(0), "Invalid royalty wallet address");
-        require(wethAddress != address(0), "Invalid WETH address");
+        require(tokenSupportAddress != address(0), "Invalid token support address");
         require(lockEndTime > block.timestamp, "Lock end time must be in the future");
         require(lockEndTime - block.timestamp <= 365 days * 2, "Lock period cannot exceed 2 years");
         require(initialPricePerToken > 0, "Initial price must be positive");
@@ -124,7 +122,7 @@ contract DeployProofOfCapital is Script {
         console.log("Market Maker:", marketMakerAddress);
         console.log("Return Wallet:", returnWalletAddress);
         console.log("Royalty Wallet:", royaltyWalletAddress);
-        console.log("WETH Address:", wethAddress);
+        console.log("Token Support Address:", tokenSupportAddress);
     }
 
     /**
@@ -155,7 +153,6 @@ contract DeployProofOfCapital is Script {
             marketMakerAddress: marketMakerAddress,
             returnWalletAddress: returnWalletAddress,
             royaltyWalletAddress: royaltyWalletAddress,
-            wethAddress: wethAddress,
             lockEndTime: lockEndTime,
             initialPricePerToken: initialPricePerToken,
             firstLevelTokenQuantity: firstLevelTokenQuantity,
@@ -187,7 +184,6 @@ contract DeployProofOfCapital is Script {
         console.log("Current Price:", proofOfCapital.currentPrice());
         console.log("Total Tokens Sold:", proofOfCapital.totalTokensSold());
         console.log("Contract Support Balance:", proofOfCapital.contractSupportBalance());
-        console.log("Token Support:", proofOfCapital.tokenSupport());
         console.log("Profit In Time:", proofOfCapital.profitInTime());
         console.log("Can Withdrawal:", proofOfCapital.canWithdrawal());
     }

@@ -47,7 +47,6 @@ interface IProofOfCapital {
     event RoyaltyWalletChanged(address indexed newRoyaltyWalletAddress);
     event ReturnWalletChanged(address indexed newReturnWalletAddress);
     event ProfitPercentageChanged(uint256 newRoyaltyProfitPercentage);
-    event UnwrapModeChanged(bool isNeedToUnwrap);
     event SupportDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
     event AllTokensWithdrawn(address indexed owner, uint256 amount);
     event AllSupportTokensWithdrawn(address indexed owner, uint256 amount);
@@ -69,9 +68,7 @@ interface IProofOfCapital {
 
     // Trading functions
     function buyTokens(uint256 amount) external;
-    function buyTokensWithETH() external payable;
     function deposit(uint256 amount) external;
-    function depositWithETH() external payable;
     function sellTokens(uint256 amount) external;
 
     // Deferred withdrawals
@@ -98,7 +95,6 @@ interface IProofOfCapital {
     function currentPrice() external view returns (uint256);
     function totalTokensSold() external view returns (uint256);
     function contractSupportBalance() external view returns (uint256);
-    function tokenSupport() external view returns (bool);
     function profitInTime() external view returns (bool);
     function canWithdrawal() external view returns (bool);
 }

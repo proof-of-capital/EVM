@@ -53,7 +53,6 @@ contract ProofOfCapitalCalculateChangeOffsetSupportTest is BaseTest {
             marketMakerAddress: marketMaker,
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
-            wethAddress: address(weth),
             lockEndTime: block.timestamp + 365 days,
             initialPricePerToken: 1e18,
             firstLevelTokenQuantity: 500e18, // Smaller level to make it easier to trigger conditions

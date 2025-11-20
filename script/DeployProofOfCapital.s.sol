@@ -183,7 +183,6 @@ contract DeployProofOfCapital is Script {
         console.log("Lock End Time:", proofOfCapital.lockEndTime());
         console.log("Current Price:", proofOfCapital.currentPrice());
         console.log("Total Tokens Sold:", proofOfCapital.totalLaunchSold());
-        console.log("Contract Support Balance:", proofOfCapital.contractSupportBalance());
         console.log("Profit In Time:", proofOfCapital.profitInTime());
         console.log("Can Withdrawal:", proofOfCapital.canWithdrawal());
     }

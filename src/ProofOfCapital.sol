@@ -125,9 +125,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 initialPricePerToken;
         uint256 firstLevelTokenQuantity;
         uint256 priceIncrementMultiplier;
-        uint256 levelIncreaseMultiplier;
+        int256 levelIncreaseMultiplier;
         uint256 trendChangeStep;
-        uint256 levelDecreaseMultiplierafterTrend;
+        int256 levelDecreaseMultiplierafterTrend;
         uint256 profitPercentage;
         uint256 offsetTokens;
         uint256 controlPeriod;
@@ -164,9 +164,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     // Multipliers and percentages
     uint256 public priceIncrementMultiplier;
-    uint256 public levelIncreaseMultiplier;
+    int256 public levelIncreaseMultiplier;
     uint256 public trendChangeStep;
-    uint256 public levelDecreaseMultiplierafterTrend;
+    int256 public levelDecreaseMultiplierafterTrend;
     uint256 public profitPercentage;
     uint256 public royaltyProfitPercent;
     uint256 public creatorProfitPercent;
@@ -248,7 +248,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     constructor(InitParams memory params) Ownable(params.initialOwner) {
         require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
-        require(params.levelDecreaseMultiplierafterTrend < Constants.PERCENTAGE_DIVISOR, MultiplierTooHigh());
+        require(params.levelDecreaseMultiplierafterTrend < int256(Constants.PERCENTAGE_DIVISOR), MultiplierTooHigh());
         require(params.levelIncreaseMultiplier > 0, MultiplierTooLow());
         require(params.priceIncrementMultiplier > 0, PriceIncrementTooLow());
         require(
@@ -990,11 +990,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         returns (uint256)
     {
         if (currentStepParam > trendChangeStep) {
-            return (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend))
+            return (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend))
                 / Constants.PERCENTAGE_DIVISOR;
         } else {
             return
-                (tokensPerLevel * (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier))
+                (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
         }
     }
@@ -1059,10 +1059,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
-                            / (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend);
+                            / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend);
                     } else {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
-                            / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
+                            / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
@@ -1119,10 +1119,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
-                            / (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend);
+                            / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend);
                     } else {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
-                            / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
+                            / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
@@ -1250,10 +1250,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
-                            / (Constants.PERCENTAGE_DIVISOR - levelDecreaseMultiplierafterTrend);
+                            / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend);
                     } else {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
-                            / (Constants.PERCENTAGE_DIVISOR + levelIncreaseMultiplier);
+                            / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);

@@ -3000,7 +3000,7 @@ contract ProofOfCapitalInitializationTest is Test {
     // Test MultiplierTooHigh error
     function testInitializeMultiplierTooHigh() public {
         ProofOfCapital.InitParams memory params = getValidParams();
-        params.levelDecreaseMultiplierafterTrend = Constants.PERCENTAGE_DIVISOR; // Invalid: equal to divisor
+        params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
         vm.expectRevert(ProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
@@ -3008,7 +3008,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
     function testInitializeMultiplierTooHighAboveDivisor() public {
         ProofOfCapital.InitParams memory params = getValidParams();
-        params.levelDecreaseMultiplierafterTrend = Constants.PERCENTAGE_DIVISOR + 1; // Invalid: above divisor
+        params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
         vm.expectRevert(ProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
@@ -3016,14 +3016,14 @@ contract ProofOfCapitalInitializationTest is Test {
 
     function testInitializeMultiplierValidAtBoundary() public {
         ProofOfCapital.InitParams memory params = getValidParams();
-        params.levelDecreaseMultiplierafterTrend = Constants.PERCENTAGE_DIVISOR - 1; // Valid: just below divisor
+        params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
         params.offsetTokens = 100e18; // Smaller offset to avoid overflow in calculations
 
         // Should not revert
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify multiplier was set
-        assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), Constants.PERCENTAGE_DIVISOR - 1);
+        assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), int256(Constants.PERCENTAGE_DIVISOR - 1));
     }
 
     // Test MultiplierTooLow error for levelIncreaseMultiplier

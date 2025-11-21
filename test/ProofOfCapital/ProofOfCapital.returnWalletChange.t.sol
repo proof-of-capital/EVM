@@ -69,7 +69,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
-        emit ProofOfCapital.ReturnWalletChangeProposed(newReturnWallet, block.timestamp);
+        emit IProofOfCapital.ReturnWalletChangeProposed(newReturnWallet, block.timestamp);
         proofOfCapital.proposeReturnWalletChange(newReturnWallet);
 
         assertEq(proofOfCapital.proposedReturnWalletAddress(), newReturnWallet);
@@ -103,7 +103,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose when trading is active (lock is not active)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockIsActive.selector);
+        vm.expectRevert(IProofOfCapital.LockIsActive.selector);
         proofOfCapital.proposeReturnWalletChange(newReturnWallet);
 
         // Verify no proposal was made
@@ -115,7 +115,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.proposeReturnWalletChange(address(0));
 
         // Verify no proposal was made
@@ -127,7 +127,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with owner address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(owner);
 
         // Verify no proposal was made
@@ -141,7 +141,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with reserveOwner address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(reserveOwnerAddr);
 
         // Verify no proposal was made
@@ -153,7 +153,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with launchToken address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(address(token));
 
         // Verify no proposal was made
@@ -165,7 +165,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with wethAddress
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(address(weth));
 
         // Verify no proposal was made
@@ -179,7 +179,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with collateralAddress
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(tokenCollateralAddr);
 
         // Verify no proposal was made
@@ -191,7 +191,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with current returnWalletAddress
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(returnWallet);
 
         // Verify no proposal was made
@@ -203,7 +203,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with royaltyWalletAddress
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(royalty);
 
         // Verify no proposal was made
@@ -229,7 +229,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         // So we cannot propose a change - we get LockIsActive error
         // Note: The conflict check happens after the lock check, so we get LockIsActive first
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockIsActive.selector);
+        vm.expectRevert(IProofOfCapital.LockIsActive.selector);
         proofOfCapital.proposeReturnWalletChange(scheduledRecipient);
 
         // Verify no proposal was made
@@ -255,7 +255,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         // So we cannot propose a change - we get LockIsActive error
         // Note: The conflict check happens after the lock check, so we get LockIsActive first
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockIsActive.selector);
+        vm.expectRevert(IProofOfCapital.LockIsActive.selector);
         proofOfCapital.proposeReturnWalletChange(scheduledRecipient);
 
         // Verify no proposal was made
@@ -267,7 +267,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with marketMaker address (already a market maker)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(marketMaker);
 
         // Verify no proposal was made
@@ -284,7 +284,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with new market maker address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(newMarketMaker);
 
         // Verify no proposal was made
@@ -301,7 +301,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to propose with old contract address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.proposeReturnWalletChange(oldContract);
 
         // Verify no proposal was made
@@ -346,7 +346,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         // Confirm the change
         vm.prank(owner);
         vm.expectEmit(true, false, false, false);
-        emit ProofOfCapital.ReturnWalletChangeConfirmed(newReturnWallet);
+        emit IProofOfCapital.ReturnWalletChangeConfirmed(newReturnWallet);
         proofOfCapital.confirmReturnWalletChange();
 
         // Verify change was applied
@@ -396,7 +396,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to confirm when trading is active
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockIsActive.selector);
+        vm.expectRevert(IProofOfCapital.LockIsActive.selector);
         proofOfCapital.confirmReturnWalletChange();
 
         // Verify change was not applied
@@ -410,7 +410,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to confirm without a proposal
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoReturnWalletChangeProposed.selector);
+        vm.expectRevert(IProofOfCapital.NoReturnWalletChangeProposed.selector);
         proofOfCapital.confirmReturnWalletChange();
 
         // Verify return wallet unchanged
@@ -427,13 +427,13 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
 
         // Try to confirm immediately (delay not passed)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.ReturnWalletChangeDelayNotPassed.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletChangeDelayNotPassed.selector);
         proofOfCapital.confirmReturnWalletChange();
 
         // Try to confirm after 23 hours (still not enough)
         vm.warp(proposalTime + Constants.ONE_DAY - 1);
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.ReturnWalletChangeDelayNotPassed.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletChangeDelayNotPassed.selector);
         proofOfCapital.confirmReturnWalletChange();
 
         // Verify change was not applied
@@ -497,7 +497,7 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         // Try to confirm based on first proposal time (should fail)
         vm.warp(firstProposalTime + Constants.ONE_DAY);
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.ReturnWalletChangeDelayNotPassed.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletChangeDelayNotPassed.selector);
         proofOfCapital.confirmReturnWalletChange();
 
         // Confirm based on second proposal time (should succeed)

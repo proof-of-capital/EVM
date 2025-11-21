@@ -74,25 +74,25 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Function doesn't check profitInTime, it only checks if balance > 0
         // So it will revert with NoProfitAvailable instead
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
     function testGetProfitOnRequestWithNoProfitAvailable() public {
         // Try to get profit when there's no profit
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
     function testGetProfitOnRequestUnauthorized() public {
         // Unauthorized user tries to get profit (without any trading)
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
@@ -112,14 +112,14 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Owner requests profit when no profit available
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
     function testGetProfitOnRequestRoyaltySimple() public {
         // Royalty requests profit when no profit available
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
@@ -310,15 +310,15 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Unauthorized users try to change profit percentage
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         vm.prank(address(0x999));
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         // Verify state wasn't changed
@@ -328,11 +328,11 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
     function testChangeProfitPercentageInvalidPercentageZero() public {
         // Try to set percentage to 0
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(0);
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(0);
     }
 
@@ -341,11 +341,11 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 invalidPercentage = Constants.PERCENTAGE_DIVISOR + 1;
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(invalidPercentage);
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(invalidPercentage);
     }
 
@@ -354,7 +354,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 lowerPercentage = 400; // 40%
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotDecreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotDecreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(lowerPercentage);
 
         // Verify state wasn't changed
@@ -366,7 +366,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 higherPercentage = 600; // 60%
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.CannotIncreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotIncreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(higherPercentage);
 
         // Verify state wasn't changed
@@ -409,7 +409,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 currentPercentage = proofOfCapital.royaltyProfitPercent(); // 500
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotDecreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotDecreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(currentPercentage);
     }
 
@@ -418,7 +418,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 currentPercentage = proofOfCapital.royaltyProfitPercent(); // 500
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.CannotIncreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotIncreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(currentPercentage);
     }
 
@@ -478,7 +478,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Old royalty wallet should not have access anymore
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         // New royalty wallet should have access
@@ -515,7 +515,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Regular user (non-market maker) tries to buy tokens without trading access
         vm.prank(regularUser);
-        vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
+        vm.expectRevert(IProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
         proofOfCapital.buyTokens(1000e18);
     }
 

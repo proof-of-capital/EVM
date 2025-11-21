@@ -80,7 +80,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     // Test 1: InvalidAmount error when amount == 0
     function testSellTokensInvalidAmountZero() public {
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
         proofOfCapital.sellTokens(0);
     }
 
@@ -95,7 +95,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // User (not market maker) tries to sell without trading access
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
+        vm.expectRevert(IProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
         proofOfCapital.sellTokens(1000e18);
     }
 
@@ -112,7 +112,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // User tries to sell during control period - gets NoTokensAvailableForBuyback
         // because no buyback tokens are available in initial state
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
+        vm.expectRevert(IProofOfCapital.NoTokensAvailableForBuyback.selector);
         proofOfCapital.sellTokens(100e18);
     }
 
@@ -128,7 +128,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // User tries to sell - gets NoTokensAvailableForBuyback in initial state
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.NoTokensAvailableForBuyback.selector);
+        vm.expectRevert(IProofOfCapital.NoTokensAvailableForBuyback.selector);
         proofOfCapital.sellTokens(100e18);
     }
 
@@ -149,7 +149,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // This branch executes when localCurrentStep > currentStepEarned && localCurrentStep <= trendChangeStep
 
         // Create a custom contract with high trendChangeStep and some offset to trigger offset logic
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 50; // Set very high trendChangeStep so currentStep stays within range
         customParams.offsetLaunch = 10000e18; // Add offset to trigger offset-related code with console.log to make buyback easier
 
@@ -236,7 +236,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // This branch executes when localCurrentStep > trendChangeStep
 
         // Create a custom contract with low trendChangeStep to trigger "trend change branch"
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Set low trendChangeStep so localCurrentStep > trendChangeStep
         customParams.offsetLaunch = 10000e18; // Add offset to trigger offset-related code
 
@@ -289,7 +289,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // This branch executes when localCurrentStep <= trendChangeStep
 
         // Create a custom contract with high trendChangeStep
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 10; // High trendChangeStep so localCurrentStep <= trendChangeStep
         customParams.offsetLaunch = 10000e18;
 
@@ -324,7 +324,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // This branch executes when localCurrentStep > trendChangeStep
 
         // Create a custom contract with low trendChangeStep
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Low trendChangeStep so localCurrentStep > trendChangeStep
         customParams.offsetLaunch = 10000e18;
 
@@ -360,7 +360,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // When trendChangeStep = 0, any localCurrentStep > 0 will trigger the trend change branch
 
         // Create contract with trendChangeStep = 0 to force localCurrentStep > trendChangeStep
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Any localCurrentStep > 0 will trigger trend change
         customParams.offsetLaunch = 10000e18;
 
@@ -397,7 +397,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // This branch executes when localCurrentStep <= trendChangeStep
 
         // Create contract with high trendChangeStep
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 10; // High trendChangeStep so localCurrentStep <= trendChangeStep
         customParams.offsetLaunch = 10000e18;
 
@@ -432,7 +432,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // This branch executes when localCurrentStep > trendChangeStep
 
         // Create contract with low trendChangeStep
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Low trendChangeStep so localCurrentStep > trendChangeStep
         customParams.offsetLaunch = 10000e18;
 
@@ -468,7 +468,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Second branch: localCurrentStep <= trendChangeStep (buy_branch_normal)
 
         // Create a custom contract with low trendChangeStep
-        ProofOfCapital.InitParams memory customParams = getValidParams();
+        IProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 3; // Low trendChangeStep to test both branches
         customParams.offsetLaunch = 0; // No offset
 

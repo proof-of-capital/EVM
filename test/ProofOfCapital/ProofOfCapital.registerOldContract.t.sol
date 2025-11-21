@@ -50,7 +50,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         }
         vm.warp(targetTime);
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressZero.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressZero.selector);
         proofOfCapital.registerOldContract(address(0));
     }
 
@@ -65,7 +65,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // Within 60 days
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockIsActive.selector);
+        vm.expectRevert(IProofOfCapital.LockIsActive.selector);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
     }
 
@@ -81,7 +81,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         }
         vm.warp(targetTime);
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(owner);
     }
 
@@ -98,7 +98,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(targetTime);
         address reserveOwner = proofOfCapital.reserveOwner();
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(reserveOwner);
     }
 
@@ -115,7 +115,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(targetTime);
         address launchToken = address(token); // Using token from BaseTest
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(launchToken);
     }
 
@@ -132,7 +132,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(targetTime);
         address wethAddress = address(weth); // Using weth from BaseTest
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(wethAddress);
     }
 
@@ -149,7 +149,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(targetTime);
         address collateralAddress = proofOfCapital.collateralAddress();
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(collateralAddress);
     }
 
@@ -172,7 +172,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
         // Try to register the same address as old contract
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.registerOldContract(marketMaker);
     }
 
@@ -205,7 +205,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(targetTime);
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
-        emit ProofOfCapital.OldContractRegistered(MOCK_OLD_CONTRACT);
+        emit IProofOfCapital.OldContractRegistered(MOCK_OLD_CONTRACT);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
     }
 

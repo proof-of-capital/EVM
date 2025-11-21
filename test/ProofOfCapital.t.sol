@@ -87,7 +87,7 @@ contract ProofOfCapitalTest is Test {
         weth = new MockERC20("WETH", "WETH");
 
         // Prepare initialization parameters
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -153,7 +153,7 @@ contract ProofOfCapitalTest is Test {
 
     function testExtendLockExceedsFiveYears() public {
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
+        vm.expectRevert(IProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(block.timestamp + Constants.FIVE_YEARS + 1);
     }
 
@@ -162,7 +162,7 @@ contract ProofOfCapitalTest is Test {
         uint256 pastTime = block.timestamp - 1; // Time in the past
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidTimePeriod.selector);
+        vm.expectRevert(IProofOfCapital.InvalidTimePeriod.selector);
         proofOfCapital.extendLock(pastTime);
     }
 
@@ -236,7 +236,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to unblock - should fail
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
+        vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
 
         // Should still be false
@@ -255,7 +255,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to unblock - should fail (condition is <, not <=)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
+        vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
     }
 
@@ -322,7 +322,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try with zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidRecipientOrAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRecipientOrAmount.selector);
         proofOfCapital.tokenDeferredWithdrawal(address(0), amount);
     }
 
@@ -331,14 +331,14 @@ contract ProofOfCapitalTest is Test {
 
         // Try with zero amount
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidRecipientOrAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRecipientOrAmount.selector);
         proofOfCapital.tokenDeferredWithdrawal(recipient, 0);
     }
 
     function testTokenDeferredWithdrawalInvalidRecipientAndAmount() public {
         // Try with both zero address and zero amount
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidRecipientOrAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRecipientOrAmount.selector);
         proofOfCapital.tokenDeferredWithdrawal(address(0), 0);
     }
 
@@ -353,7 +353,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to schedule deferred withdrawal when blocked
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalBlocked.selector);
         proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
     }
 
@@ -369,7 +369,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to schedule second withdrawal (should fail)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LaunchDeferredWithdrawalAlreadyScheduled.selector);
+        vm.expectRevert(IProofOfCapital.LaunchDeferredWithdrawalAlreadyScheduled.selector);
         proofOfCapital.tokenDeferredWithdrawal(recipient2, amount2);
     }
 
@@ -493,23 +493,23 @@ contract ProofOfCapitalTest is Test {
 
         // Try to stop with unauthorized addresses
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.stopTokenDeferredWithdrawal();
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.stopTokenDeferredWithdrawal();
     }
 
     function testStopTokenDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to stop without scheduling first
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.stopTokenDeferredWithdrawal();
 
         // Try with royalty wallet
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.stopTokenDeferredWithdrawal();
     }
 
@@ -528,14 +528,14 @@ contract ProofOfCapitalTest is Test {
 
         // Try to confirm when blocked
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalBlocked.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
     function testConfirmTokenDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to confirm without scheduling
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -549,13 +549,13 @@ contract ProofOfCapitalTest is Test {
 
         // Try to confirm before 30 days
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
 
         // Move time forward but not enough
         vm.warp(block.timestamp + Constants.THIRTY_DAYS - 1);
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -595,7 +595,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 5: Try to confirm withdrawal - should revert because more than 7 days have passed
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -624,7 +624,7 @@ contract ProofOfCapitalTest is Test {
         // Try to confirm - should fail with InsufficientTokenBalance
         // because launchBalance (0) <= totalLaunchSold (10000e18)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientTokenBalance.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -653,7 +653,7 @@ contract ProofOfCapitalTest is Test {
         // Try to confirm - should fail with InsufficientTokenBalance
         // because launchBalance (0) <= totalLaunchSold (10000e18)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InsufficientTokenBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientTokenBalance.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -703,7 +703,7 @@ contract ProofOfCapitalTest is Test {
 
         // Now confirm withdrawal - should fail with exactly InsufficientAmount
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InsufficientAmount.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientAmount.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -742,7 +742,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 1: No withdrawal scheduled
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
 
         // Test 2: Schedule and test date not reached
@@ -753,7 +753,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.tokenDeferredWithdrawal(recipient, amount);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
 
         // Test 3: Block withdrawals and test blocked error
@@ -763,7 +763,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalBlocked.selector);
         proofOfCapital.confirmTokenDeferredWithdrawal();
     }
 
@@ -873,7 +873,7 @@ contract ProofOfCapitalTest is Test {
     function testAssignNewOwnerInvalidNewOwner() public {
         // Try to assign zero address as new owner
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidNewOwner.selector);
+        vm.expectRevert(IProofOfCapital.InvalidNewOwner.selector);
         proofOfCapital.assignNewOwner(address(0));
     }
 
@@ -898,7 +898,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to assign the old contract address as new owner - should revert
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OldContractAddressConflict.selector);
+        vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
         proofOfCapital.assignNewOwner(oldContractAddr);
     }
 
@@ -907,15 +907,15 @@ contract ProofOfCapitalTest is Test {
 
         // Non-reserveOwner tries to assign new owner
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewOwner(newOwner);
 
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewOwner(newOwner);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewOwner(newOwner);
     }
 
@@ -1016,7 +1016,7 @@ contract ProofOfCapitalTest is Test {
     function testAssignNewReserveOwnerInvalidReserveOwner() public {
         // Try to assign zero address as new reserve owner
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.InvalidReserveOwner.selector);
         proofOfCapital.assignNewReserveOwner(address(0));
     }
 
@@ -1025,15 +1025,15 @@ contract ProofOfCapitalTest is Test {
 
         // Non-reserveOwner tries to assign new reserve owner
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewReserveOwner(newReserveOwner);
 
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewReserveOwner(newReserveOwner);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewReserveOwner(newReserveOwner);
     }
 
@@ -1134,14 +1134,14 @@ contract ProofOfCapitalTest is Test {
 
         // Try to schedule collateral withdrawal when blocked
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalBlocked.selector);
         proofOfCapital.collateralDeferredWithdrawal(recipient);
     }
 
     function testCollateralDeferredWithdrawalInvalidRecipient() public {
         // Try to schedule with zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidRecipient.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRecipient.selector);
         proofOfCapital.collateralDeferredWithdrawal(address(0));
     }
 
@@ -1155,7 +1155,7 @@ contract ProofOfCapitalTest is Test {
 
         // Try to schedule second collateral withdrawal (should fail)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CollateralDeferredWithdrawalAlreadyScheduled.selector);
+        vm.expectRevert(IProofOfCapital.CollateralDeferredWithdrawalAlreadyScheduled.selector);
         proofOfCapital.collateralDeferredWithdrawal(recipient2);
     }
 
@@ -1296,15 +1296,15 @@ contract ProofOfCapitalTest is Test {
 
         // Try to stop with unauthorized addresses
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
 
         vm.prank(recipient);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Verify state wasn't changed
@@ -1315,12 +1315,12 @@ contract ProofOfCapitalTest is Test {
     function testStopCollateralDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to stop without scheduling first - by owner
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Try to stop without scheduling first - by royalty
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
     }
 
@@ -1367,12 +1367,12 @@ contract ProofOfCapitalTest is Test {
 
         // Try to stop again - should fail with NoDeferredWithdrawalScheduled
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
 
         // Same with royalty
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.stopCollateralDeferredWithdrawal();
     }
 
@@ -1503,14 +1503,14 @@ contract ProofOfCapitalTest is Test {
 
         // Try to confirm when blocked
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalBlocked.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
     function testConfirmCollateralDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to confirm without scheduling
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
@@ -1523,13 +1523,13 @@ contract ProofOfCapitalTest is Test {
 
         // Try to confirm before 30 days
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Move time forward but not enough
         vm.warp(block.timestamp + Constants.THIRTY_DAYS - 1);
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
@@ -1582,7 +1582,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 1: No withdrawal scheduled
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Test 2: Schedule and test date not reached
@@ -1592,7 +1592,7 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.collateralDeferredWithdrawal(recipient);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.WithdrawalDateNotReached.selector);
+        vm.expectRevert(IProofOfCapital.WithdrawalDateNotReached.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         // Test 3: Block withdrawals and test blocked error
@@ -1602,7 +1602,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.DeferredWithdrawalBlocked.selector);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalBlocked.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
@@ -1675,7 +1675,7 @@ contract ProofOfCapitalTest is Test {
         vm.warp(withdrawalDate + Constants.SEVEN_DAYS + 1);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CollateralTokenWithdrawalWindowExpired.selector);
+        vm.expectRevert(IProofOfCapital.CollateralTokenWithdrawalWindowExpired.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
@@ -1697,7 +1697,7 @@ contract ProofOfCapitalTest is Test {
     function testChangeReturnWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.changeReturnWallet(address(0));
 
         // Verify state wasn't changed
@@ -1791,7 +1791,7 @@ contract ProofOfCapitalTest is Test {
     function testChangeRoyaltyWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.changeRoyaltyWallet(address(0));
 
         // Verify state wasn't changed
@@ -1803,19 +1803,19 @@ contract ProofOfCapitalTest is Test {
 
         // Non-royalty wallet tries to change royalty wallet
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         vm.prank(address(0x123));
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         // Verify state wasn't changed
@@ -1883,7 +1883,7 @@ contract ProofOfCapitalTest is Test {
 
         // Verify old royalty wallet can't change anymore
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(address(0x111));
 
         // Verify new royalty wallet can change
@@ -1898,7 +1898,7 @@ contract ProofOfCapitalTest is Test {
         address newRoyaltyWallet = address(0x999);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         // Verify state wasn't changed
@@ -1947,15 +1947,15 @@ contract ProofOfCapitalTest is Test {
 
         // Unauthorized users try to change profit percentage
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         vm.prank(address(0x999));
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         // Verify state wasn't changed
@@ -1965,11 +1965,11 @@ contract ProofOfCapitalTest is Test {
     function testChangeProfitPercentageInvalidPercentageZero() public {
         // Try to set percentage to 0
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(0);
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(0);
     }
 
@@ -1978,11 +1978,11 @@ contract ProofOfCapitalTest is Test {
         uint256 invalidPercentage = Constants.PERCENTAGE_DIVISOR + 1;
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(invalidPercentage);
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.InvalidPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidPercentage.selector);
         proofOfCapital.changeProfitPercentage(invalidPercentage);
     }
 
@@ -1991,7 +1991,7 @@ contract ProofOfCapitalTest is Test {
         uint256 lowerPercentage = 400; // 40%
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotDecreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotDecreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(lowerPercentage);
 
         // Verify state wasn't changed
@@ -2003,7 +2003,7 @@ contract ProofOfCapitalTest is Test {
         uint256 higherPercentage = 600; // 60%
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.CannotIncreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotIncreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(higherPercentage);
 
         // Verify state wasn't changed
@@ -2046,7 +2046,7 @@ contract ProofOfCapitalTest is Test {
         uint256 currentPercentage = proofOfCapital.royaltyProfitPercent(); // 500
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotDecreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotDecreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(currentPercentage);
     }
 
@@ -2055,7 +2055,7 @@ contract ProofOfCapitalTest is Test {
         uint256 currentPercentage = proofOfCapital.royaltyProfitPercent(); // 500
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.CannotIncreaseRoyalty.selector);
+        vm.expectRevert(IProofOfCapital.CannotIncreaseRoyalty.selector);
         proofOfCapital.changeProfitPercentage(currentPercentage);
     }
 
@@ -2115,7 +2115,7 @@ contract ProofOfCapitalTest is Test {
 
         // Old royalty wallet should not have access anymore
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.changeProfitPercentage(newPercentage);
 
         // New royalty wallet should have access
@@ -2325,7 +2325,7 @@ contract ProofOfCapitalTest is Test {
         // Try to withdraw before lock period ends
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.LockPeriodNotEnded.selector);
+        vm.expectRevert(IProofOfCapital.LockPeriodNotEnded.selector);
         proofOfCapital.withdrawAllTokens();
     }
 
@@ -2339,7 +2339,7 @@ contract ProofOfCapitalTest is Test {
 
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoTokensToWithdraw.selector);
+        vm.expectRevert(IProofOfCapital.NoTokensToWithdraw.selector);
         proofOfCapital.withdrawAllTokens();
     }
 
@@ -2446,7 +2446,7 @@ contract ProofOfCapitalTest is Test {
         // Try to withdraw before lock period ends
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.LockPeriodNotEnded.selector);
+        vm.expectRevert(IProofOfCapital.LockPeriodNotEnded.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
 
@@ -2460,7 +2460,7 @@ contract ProofOfCapitalTest is Test {
 
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
+        vm.expectRevert(IProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
 
@@ -2501,7 +2501,7 @@ contract ProofOfCapitalTest is Test {
         // Try to withdraw with zero balance
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
+        vm.expectRevert(IProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
 
@@ -2538,7 +2538,7 @@ contract ProofOfCapitalTest is Test {
 
         // Second test: test collateral token withdrawal with zero balance (expected to fail)
         vm.prank(dao);
-        vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
+        vm.expectRevert(IProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
 
         // This test validates that both functions exist and work correctly
@@ -2549,7 +2549,7 @@ contract ProofOfCapitalTest is Test {
     function testSetMarketMakerInvalidAddress() public {
         // Try to set market maker with zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.setMarketMaker(address(0), true);
     }
 
@@ -2646,28 +2646,28 @@ contract ProofOfCapitalTest is Test {
     function testBuyTokensInvalidAmountZero() public {
         // Try to buy tokens with zero amount
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
         proofOfCapital.buyTokens(0);
     }
 
     function testBuyTokensUseDepositFunctionForOwners() public {
         // Owner tries to use buyTokens instead of deposit
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.UseDepositFunctionForOwners.selector);
+        vm.expectRevert(IProofOfCapital.UseDepositFunctionForOwners.selector);
         proofOfCapital.buyTokens(1000e18);
     }
 
     function testDepositInvalidAmountZero() public {
         // Try to deposit zero amount
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
         proofOfCapital.deposit(0);
     }
 
     function testSellTokensInvalidAmountZero() public {
         // Try to sell zero tokens
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
         proofOfCapital.sellTokens(0);
     }
 
@@ -2690,15 +2690,15 @@ contract ProofOfCapitalTest is Test {
 
     //     // Try to call functions that require active contract
     //     vm.prank(marketMaker);
-    //     vm.expectRevert(ProofOfCapital.ContractNotActive.selector);
+    //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
     //     proofOfCapital.buyTokens(1000e18);
 
     //     vm.prank(owner);
-    //     vm.expectRevert(ProofOfCapital.ContractNotActive.selector);
+    //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
     //     proofOfCapital.deposit(1000e18);
 
     //     vm.prank(marketMaker);
-    //     vm.expectRevert(ProofOfCapital.ContractNotActive.selector);
+    //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
     //     proofOfCapital.sellTokens(1000e18);
     // }
 
@@ -2708,15 +2708,15 @@ contract ProofOfCapitalTest is Test {
 
         // Non-reserve owner tries to assign new owner
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewOwner(newOwner);
 
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewOwner(newOwner);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.OnlyReserveOwner.selector);
+        vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
         proofOfCapital.assignNewOwner(newOwner);
     }
 
@@ -2799,7 +2799,7 @@ contract ProofOfCapitalProfitTest is Test {
 
         // Deploy implementation
         // Prepare initialization parameters
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -2852,25 +2852,25 @@ contract ProofOfCapitalProfitTest is Test {
         // Function doesn't check profitInTime, it only checks if balance > 0
         // So it will revert with NoProfitAvailable instead
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
     function testGetProfitOnRequestWithNoProfitAvailable() public {
         // Try to get profit when there's no profit
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
 
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
     function testGetProfitOnRequestUnauthorized() public {
         // Unauthorized user tries to get profit (without any trading)
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
@@ -2890,14 +2890,14 @@ contract ProofOfCapitalProfitTest is Test {
 
         // Owner requests profit when no profit available
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 
     function testGetProfitOnRequestRoyaltySimple() public {
         // Royalty requests profit when no profit available
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.NoProfitAvailable.selector);
+        vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
         proofOfCapital.getProfitOnRequest();
     }
 }
@@ -2924,8 +2924,8 @@ contract ProofOfCapitalInitializationTest is Test {
         vm.stopPrank();
     }
 
-    function getValidParams() internal view returns (ProofOfCapital.InitParams memory) {
-        return ProofOfCapital.InitParams({
+    function getValidParams() internal view returns (IProofOfCapital.InitParams memory) {
+        return IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -2951,15 +2951,15 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test InitialPriceMustBePositive error
     function testInitializeInitialPriceMustBePositiveZero() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.initialPricePerToken = 0; // Invalid: zero price
 
-        vm.expectRevert(ProofOfCapital.InitialPriceMustBePositive.selector);
+        vm.expectRevert(IProofOfCapital.InitialPriceMustBePositive.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeInitialPriceMustBePositiveValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.initialPricePerToken = 1; // Valid: minimum positive price
 
         // Should not revert
@@ -2971,23 +2971,23 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test MultiplierTooHigh error
     function testInitializeMultiplierTooHigh() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeMultiplierTooHighAboveDivisor() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeMultiplierValidAtBoundary() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
         params.offsetLaunch = 100e18; // Smaller offset to avoid overflow in calculations
 
@@ -3000,15 +3000,15 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test MultiplierTooLow error for levelIncreaseMultiplier
     function testInitializeLevelIncreaseMultiplierTooLow() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = -int256(Constants.PERCENTAGE_DIVISOR); // Invalid: below minimum range
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeLevelIncreaseMultiplierValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = 1; // Valid: minimum positive value
 
         // Should not revert
@@ -3020,24 +3020,24 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test MultiplierTooLow error for levelIncreaseMultiplier above range
     function testInitializeLevelIncreaseMultiplierTooHigh() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: above maximum range
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
         new ProofOfCapital(params);
     }
 
     // Test PriceIncrementTooLow error for priceIncrementMultiplier
     function testInitializePriceIncrementMultiplierTooLow() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.priceIncrementMultiplier = 0; // Invalid: zero multiplier
 
-        vm.expectRevert(ProofOfCapital.PriceIncrementTooLow.selector);
+        vm.expectRevert(IProofOfCapital.PriceIncrementTooLow.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializePriceIncrementMultiplierValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.priceIncrementMultiplier = 1; // Valid: minimum positive value
 
         // Should not revert
@@ -3049,32 +3049,32 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test InvalidRoyaltyProfitPercentage error - too low
     function testInitializeRoyaltyProfitPercentageTooLow() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = 1; // Invalid: must be > 1
 
-        vm.expectRevert(ProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeRoyaltyProfitPercentageZero() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = 0; // Invalid: must be > 1
 
-        vm.expectRevert(ProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
         new ProofOfCapital(params);
     }
 
     // Test InvalidRoyaltyProfitPercentage error - too high
     function testInitializeRoyaltyProfitPercentageTooHigh() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT + 1; // Invalid: above maximum
 
-        vm.expectRevert(ProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeRoyaltyProfitPercentageValidMinimum() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = 2; // Valid: minimum value > 1
 
         // Should not revert
@@ -3085,7 +3085,7 @@ contract ProofOfCapitalInitializationTest is Test {
     }
 
     function testInitializeRoyaltyProfitPercentageValidMaximum() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Valid: exactly at maximum
 
         // Should not revert
@@ -3097,7 +3097,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test boundary values for all parameters
     function testInitializeBoundaryValues() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set all parameters to their boundary values with smaller offsetLaunch
         params.initialPricePerToken = 1; // Minimum valid
@@ -3120,20 +3120,20 @@ contract ProofOfCapitalInitializationTest is Test {
 
     // Test multiple failing conditions together
     function testInitializeMultipleInvalidParameters() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set multiple invalid parameters - should fail on first one (initialPricePerToken)
         params.initialPricePerToken = 0; // Invalid
         params.levelIncreaseMultiplier = 0; // Also invalid, but won't be reached
 
         // Should fail with the first error it encounters
-        vm.expectRevert(ProofOfCapital.InitialPriceMustBePositive.selector);
+        vm.expectRevert(IProofOfCapital.InitialPriceMustBePositive.selector);
         new ProofOfCapital(params);
     }
 
     // Test maximum valid values
     function testInitializeMaximumValidValues() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set to reasonable maximum values to avoid overflow
         params.initialPricePerToken = 1000e18; // Large but reasonable price
@@ -3158,7 +3158,7 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeControlPeriodBelowMin() public {
         vm.startPrank(owner);
         // Setup init params with control period below minimum (1 second)
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -3192,7 +3192,7 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeControlPeriodAboveMax() public {
         vm.startPrank(owner);
         // Setup init params with control period above maximum
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -3229,7 +3229,7 @@ contract ProofOfCapitalInitializationTest is Test {
         uint256 validPeriod = (Constants.MIN_CONTROL_PERIOD + Constants.MAX_CONTROL_PERIOD) / 2;
 
         // Setup init params with control period within valid range
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -3265,7 +3265,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Test at minimum boundary
         {
-            ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+            IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
                 initialOwner: owner,
                 launchToken: address(token),
                 marketMakerAddress: marketMaker,
@@ -3295,7 +3295,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Test at maximum boundary
         {
-            ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+            IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
                 initialOwner: owner,
                 launchToken: address(token),
                 marketMakerAddress: marketMaker,

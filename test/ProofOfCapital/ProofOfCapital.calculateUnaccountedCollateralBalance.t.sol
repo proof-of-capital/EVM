@@ -48,7 +48,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
         // Setup: Create contract with daoAddress
         vm.startPrank(owner);
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.daoAddress = daoAddress;
 
         proofOfCapital = deployWithParams(params);
@@ -208,7 +208,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
         uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
         vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
 
-        vm.expectRevert(ProofOfCapital.InsufficientUnaccountedCollateralBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientUnaccountedCollateralBalance.selector);
         vm.prank(owner);
         proofOfCapital.calculateUnaccountedCollateralBalance(excessiveAmount);
     }

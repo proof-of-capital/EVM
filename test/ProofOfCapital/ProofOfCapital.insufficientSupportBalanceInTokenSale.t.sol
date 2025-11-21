@@ -115,7 +115,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
 
         // This should revert because contractCollateralBalance < collateralAmountToPay
         // This call goes to _handleTokenSale since msg.sender is a market maker (not returnWallet)
-        vm.expectRevert(ProofOfCapital.InsufficientCollateralBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientCollateralBalance.selector);
         proofOfCapital.sellTokens(1000e18);
 
         vm.stopPrank();

@@ -50,15 +50,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test InitialPriceMustBePositive error
     function testInitializeInitialPriceMustBePositiveZero() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.initialPricePerToken = 0; // Invalid: zero price
 
-        vm.expectRevert(ProofOfCapital.InitialPriceMustBePositive.selector);
+        vm.expectRevert(IProofOfCapital.InitialPriceMustBePositive.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeInitialPriceMustBePositiveValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.initialPricePerToken = 1; // Valid: minimum positive price
 
         // Should not revert
@@ -70,23 +70,23 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test MultiplierTooHigh error
     function testInitializeMultiplierTooHigh() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeMultiplierTooHighAboveDivisor() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeMultiplierValidAtBoundary() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
         params.offsetLaunch = 100e18; // Smaller offset to avoid overflow in calculations
 
@@ -99,15 +99,15 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test MultiplierTooLow error for levelIncreaseMultiplier
     function testInitializeLevelIncreaseMultiplierTooLow() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = -int256(Constants.PERCENTAGE_DIVISOR); // Invalid: below minimum range
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeLevelIncreaseMultiplierValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = 1; // Valid: minimum positive value
 
         // Should not revert
@@ -119,24 +119,24 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test MultiplierTooLow error for levelIncreaseMultiplier above range
     function testInitializeLevelIncreaseMultiplierTooHigh() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: above maximum range
 
-        vm.expectRevert(ProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
         new ProofOfCapital(params);
     }
 
     // Test PriceIncrementTooLow error for priceIncrementMultiplier
     function testInitializePriceIncrementMultiplierTooLow() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.priceIncrementMultiplier = 0; // Invalid: zero multiplier
 
-        vm.expectRevert(ProofOfCapital.PriceIncrementTooLow.selector);
+        vm.expectRevert(IProofOfCapital.PriceIncrementTooLow.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializePriceIncrementMultiplierValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.priceIncrementMultiplier = 1; // Valid: minimum positive value
 
         // Should not revert
@@ -148,32 +148,32 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test InvalidRoyaltyProfitPercentage error - too low
     function testInitializeRoyaltyProfitPercentageTooLow() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = 1; // Invalid: must be > 1
 
-        vm.expectRevert(ProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeRoyaltyProfitPercentageZero() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = 0; // Invalid: must be > 1
 
-        vm.expectRevert(ProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
         new ProofOfCapital(params);
     }
 
     // Test InvalidRoyaltyProfitPercentage error - too high
     function testInitializeRoyaltyProfitPercentageTooHigh() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT + 1; // Invalid: above maximum
 
-        vm.expectRevert(ProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
+        vm.expectRevert(IProofOfCapital.InvalidRoyaltyProfitPercentage.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeRoyaltyProfitPercentageValidMinimum() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = 2; // Valid: minimum value > 1
 
         // Should not revert
@@ -184,7 +184,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     }
 
     function testInitializeRoyaltyProfitPercentageValidMaximum() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Valid: exactly at maximum
 
         // Should not revert
@@ -196,7 +196,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test boundary values for all parameters
     function testInitializeBoundaryValues() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set all parameters to their boundary values with smaller offsetLaunch
         params.initialPricePerToken = 1; // Minimum valid
@@ -219,20 +219,20 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Test multiple failing conditions together
     function testInitializeMultipleInvalidParameters() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set multiple invalid parameters - should fail on first one (initialPricePerToken)
         params.initialPricePerToken = 0; // Invalid
         params.levelIncreaseMultiplier = 0; // Also invalid, but won't be reached
 
         // Should fail with the first error it encounters
-        vm.expectRevert(ProofOfCapital.InitialPriceMustBePositive.selector);
+        vm.expectRevert(IProofOfCapital.InitialPriceMustBePositive.selector);
         new ProofOfCapital(params);
     }
 
     // Test maximum valid values
     function testInitializeMaximumValidValues() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set to reasonable maximum values to avoid overflow
         params.initialPricePerToken = 1000e18; // Large but reasonable price
@@ -257,7 +257,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeControlPeriodBelowMin() public {
         vm.startPrank(owner);
         // Setup init params with control period below minimum (1 second)
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -291,7 +291,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeControlPeriodAboveMax() public {
         vm.startPrank(owner);
         // Setup init params with control period above maximum
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -328,7 +328,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         uint256 validPeriod = (Constants.MIN_CONTROL_PERIOD + Constants.MAX_CONTROL_PERIOD) / 2;
 
         // Setup init params with control period within valid range
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -364,7 +364,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
         // Test at minimum boundary
         {
-            ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+            IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
                 initialOwner: owner,
                 launchToken: address(token),
                 marketMakerAddress: marketMaker,
@@ -394,7 +394,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
         // Test at maximum boundary
         {
-            ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+            IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
                 initialOwner: owner,
                 launchToken: address(token),
                 marketMakerAddress: marketMaker,
@@ -433,11 +433,11 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         address[] memory oldContracts = new address[](1);
         oldContracts[0] = oldContract;
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.returnWalletAddress = oldContract; // Invalid: matches old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
@@ -447,11 +447,11 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         address[] memory oldContracts = new address[](1);
         oldContracts[0] = oldContract;
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyWalletAddress = oldContract; // Invalid: matches old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
@@ -459,11 +459,11 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeReturnWalletEqualsRoyaltyWallet() public {
         address sameAddress = address(0x999);
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.returnWalletAddress = sameAddress; // Invalid: same as royalty wallet
         params.royaltyWalletAddress = sameAddress; // Invalid: same as return wallet
 
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
@@ -478,11 +478,11 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         oldContracts[1] = oldContract2;
         oldContracts[2] = oldContract3;
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.returnWalletAddress = oldContract2; // Invalid: matches middle old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
@@ -497,11 +497,11 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         oldContracts[1] = oldContract2;
         oldContracts[2] = oldContract3;
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.royaltyWalletAddress = oldContract3; // Invalid: matches last old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
@@ -516,7 +516,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         oldContracts[0] = oldContract1;
         oldContracts[1] = oldContract2;
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.returnWalletAddress = uniqueReturnWallet; // Valid: unique address
         params.royaltyWalletAddress = uniqueRoyaltyWallet; // Valid: unique address
         params.oldContractAddresses = oldContracts;
@@ -533,7 +533,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeEmptyOldContractsArray() public {
         address[] memory emptyOldContracts = new address[](0);
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.oldContractAddresses = emptyOldContracts;
 
         // Should not revert - no old contracts to check against
@@ -550,7 +550,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         address[] memory oldContracts = new address[](1);
         oldContracts[0] = sameAddress;
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         // Multiple violations:
         // 1. returnWalletAddress matches old contract (checked first)
         // 2. returnWalletAddress equals royaltyWalletAddress (checked third)
@@ -559,7 +559,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.oldContractAddresses = oldContracts;
 
         // Should fail with first error encountered (returnWallet matches old contract)
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
@@ -570,7 +570,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         oldContracts[0] = oldContract;
 
         // Test valid case first
-        ProofOfCapital.InitParams memory paramsValid = getValidParams();
+        IProofOfCapital.InitParams memory paramsValid = getValidParams();
         paramsValid.oldContractAddresses = oldContracts;
         paramsValid.returnWalletAddress = address(0x777); // Different from old contract
         paramsValid.royaltyWalletAddress = address(0x888); // Different from old contract
@@ -588,25 +588,25 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         oldContracts[0] = address(0);
         oldContracts[1] = address(0x123);
 
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.returnWalletAddress = address(0); // Zero address - matches old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(ProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
         new ProofOfCapital(params);
     }
 
     // Test ProfitBeforeTrendChangeMustBePositive error
     function testInitializeProfitBeforeTrendChangeMustBePositiveZero() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.profitBeforeTrendChange = 0; // Invalid: zero value
 
-        vm.expectRevert(ProofOfCapital.ProfitBeforeTrendChangeMustBePositive.selector);
+        vm.expectRevert(IProofOfCapital.ProfitBeforeTrendChangeMustBePositive.selector);
         new ProofOfCapital(params);
     }
 
     function testInitializeProfitBeforeTrendChangeMustBePositiveValid() public {
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.profitBeforeTrendChange = 1; // Valid: minimum positive value
 
         // Should not revert

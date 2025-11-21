@@ -37,7 +37,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
         wethLocal.transfer(buyer, 2000e18);
 
         // prepare params with offsetLaunch = 0
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(tokenLocal),
             marketMakerAddress: buyer,

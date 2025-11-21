@@ -112,7 +112,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Try to buy tokens - should revert with ContractNotActive error
         // This tests the require(isActive, ContractNotActive()) on line 251
         vm.prank(user);
-        vm.expectRevert(ProofOfCapital.ContractNotActive.selector);
+        vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
         proofOfCapital.buyTokens(1000e18);
     }
 
@@ -151,7 +151,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Try to deposit tokens - should revert with ContractNotActive error
         // This tests the require(isActive, ContractNotActive()) on line 251
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.ContractNotActive.selector);
+        vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
         proofOfCapital.depositTokens(1000e18);
     }
 }

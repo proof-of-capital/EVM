@@ -101,7 +101,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
     // Test deposit fails with zero amount
     function testDepositTokensZeroAmount() public {
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
         proofOfCapital.depositTokens(0);
     }
 
@@ -114,7 +114,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
 
         vm.startPrank(unauthorizedUser);
         token.approve(address(proofOfCapital), 1000e18);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.depositTokens(1000e18);
         vm.stopPrank();
     }

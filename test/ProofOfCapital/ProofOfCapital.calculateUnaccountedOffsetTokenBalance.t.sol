@@ -219,7 +219,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
         vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
 
-        vm.expectRevert(ProofOfCapital.InsufficientUnaccountedOffsetTokenBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientUnaccountedOffsetTokenBalance.selector);
         vm.prank(owner);
         proofOfCapital.calculateUnaccountedOffsetTokenBalance(excessiveAmount);
     }
@@ -367,7 +367,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
 
         // Try to process - should revert
-        vm.expectRevert(ProofOfCapital.InsufficientUnaccountedOffsetTokenBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientUnaccountedOffsetTokenBalance.selector);
         vm.prank(owner);
         proofOfCapital.calculateUnaccountedOffsetTokenBalance(1);
     }

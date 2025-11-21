@@ -202,7 +202,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      */
     function testCalculateUnaccountedOffsetBalance_Reverts_ContractAlreadyInitialized() public {
         // Create a new contract with zero offsetLaunch to get zero unaccountedOffset
-        ProofOfCapital.InitParams memory params = getValidParams();
+        IProofOfCapital.InitParams memory params = getValidParams();
         params.offsetLaunch = 0; // No offset tokens
 
         vm.startPrank(owner);
@@ -218,7 +218,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         vm.store(address(newContract), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
 
         // Try to process - should revert with UnaccountedOffsetBalanceNotSet
-        vm.expectRevert(ProofOfCapital.ContractAlreadyInitialized.selector);
+        vm.expectRevert(IProofOfCapital.ContractAlreadyInitialized.selector);
         vm.prank(owner);
         newContract.calculateUnaccountedOffsetBalance(1000e18);
     }
@@ -234,7 +234,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
         vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
 
-        vm.expectRevert(ProofOfCapital.InsufficientUnaccountedOffsetBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientUnaccountedOffsetBalance.selector);
         vm.prank(owner);
         proofOfCapital.calculateUnaccountedOffsetBalance(excessiveAmount);
     }

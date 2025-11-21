@@ -70,7 +70,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
     function testExtendLockExceedsFiveYears() public {
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
+        vm.expectRevert(IProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(block.timestamp + Constants.FIVE_YEARS + 1);
     }
 
@@ -79,7 +79,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
         uint256 pastTime = block.timestamp - 1; // Time in the past
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidTimePeriod.selector);
+        vm.expectRevert(IProofOfCapital.InvalidTimePeriod.selector);
         proofOfCapital.extendLock(pastTime);
     }
 
@@ -133,7 +133,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // But HALF_YEAR should fail now
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
+        vm.expectRevert(IProofOfCapital.LockCannotExceedFiveYears.selector);
         proofOfCapital.extendLock(Constants.HALF_YEAR);
     }
     */
@@ -179,7 +179,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Try to unblock when more than 60 days remain - should fail
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
+        vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
     }
 
@@ -195,7 +195,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // At exactly 60 days, should NOT be able to unblock (require < 60 days)
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
+        vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
         proofOfCapital.blockDeferredWithdrawal();
     }
 
@@ -250,7 +250,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testChangeReturnWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.changeReturnWallet(address(0));
 
         // Verify state wasn't changed
@@ -344,7 +344,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testChangeRoyaltyWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.changeRoyaltyWallet(address(0));
 
         // Verify state wasn't changed
@@ -356,19 +356,19 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Non-royalty wallet tries to change royalty wallet
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         vm.prank(address(0x123));
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         // Verify state wasn't changed
@@ -436,7 +436,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Verify old royalty wallet can't change anymore
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(address(0x111));
 
         // Verify new royalty wallet can change
@@ -451,7 +451,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
         address newRoyaltyWallet = address(0x999);
 
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
+        vm.expectRevert(IProofOfCapital.OnlyRoyaltyWalletCanChange.selector);
         proofOfCapital.changeRoyaltyWallet(newRoyaltyWallet);
 
         // Verify state wasn't changed
@@ -462,7 +462,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testSetMarketMakerInvalidAddress() public {
         // Try to set market maker with zero address
         vm.prank(owner);
-        vm.expectRevert(ProofOfCapital.InvalidAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.setMarketMaker(address(0), true);
     }
 
@@ -562,26 +562,26 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Non-DAO address tries to set DAO
         vm.prank(royalty);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setDao(newDaoAddress);
 
         vm.prank(returnWallet);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setDao(newDaoAddress);
 
         vm.prank(marketMaker);
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setDao(newDaoAddress);
 
         vm.prank(address(0x123));
-        vm.expectRevert(ProofOfCapital.AccessDenied.selector);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setDao(newDaoAddress);
     }
 
     function testSetDAOInvalidDAOAddress() public {
         // Try to set zero address as new DAO
         vm.prank(owner); // owner is the default daoAddress
-        vm.expectRevert(ProofOfCapital.InvalidDAOAddress.selector);
+        vm.expectRevert(IProofOfCapital.InvalidDAOAddress.selector);
         proofOfCapital.setDao(address(0));
     }
 }

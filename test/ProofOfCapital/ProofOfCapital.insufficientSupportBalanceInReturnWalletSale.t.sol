@@ -112,7 +112,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
 
         // This should revert because contractCollateralBalance < collateralAmountToPay
         // This call goes to _handleReturnWalletSale since msg.sender == returnWalletAddress
-        vm.expectRevert(ProofOfCapital.InsufficientCollateralBalance.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientCollateralBalance.selector);
         proofOfCapital.sellTokens(1000e18);
 
         vm.stopPrank();

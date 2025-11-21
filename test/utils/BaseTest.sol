@@ -59,7 +59,7 @@ contract BaseTest is Test {
         weth = new MockERC20("WETH", "WETH");
 
         // Prepare initialization parameters
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -89,8 +89,8 @@ contract BaseTest is Test {
     }
 
     // Helper function to get valid initialization parameters
-    function getValidParams() internal view returns (ProofOfCapital.InitParams memory) {
-        return ProofOfCapital.InitParams({
+    function getValidParams() internal view returns (IProofOfCapital.InitParams memory) {
+        return IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -115,7 +115,7 @@ contract BaseTest is Test {
     }
 
     // Helper function to deploy contract with custom parameters
-    function deployWithParams(ProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
+    function deployWithParams(IProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
         return new ProofOfCapital(params);
     }
 
@@ -132,8 +132,8 @@ contract BaseTest is Test {
     }
 
     // Helper function to get initialization parameters without offset
-    function getParamsWithoutOffset() internal view returns (ProofOfCapital.InitParams memory) {
-        return ProofOfCapital.InitParams({
+    function getParamsWithoutOffset() internal view returns (IProofOfCapital.InitParams memory) {
+        return IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,

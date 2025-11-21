@@ -58,7 +58,7 @@ contract BaseTestWithoutOffset is Test {
         weth = new MockERC20("WETH", "WETH");
 
         // Prepare initialization parameters WITHOUT offset
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,
@@ -88,7 +88,7 @@ contract BaseTestWithoutOffset is Test {
     }
 
     // Helper function to deploy contract with custom parameters
-    function deployWithParams(ProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
+    function deployWithParams(IProofOfCapital.InitParams memory params) internal returns (ProofOfCapital) {
         return new ProofOfCapital(params);
     }
 }

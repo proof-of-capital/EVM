@@ -47,97 +47,6 @@ import "./utils/Constant.sol";
 contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     using SafeERC20 for IERC20;
 
-    // Custom errors
-    error AccessDenied();
-    error NotMarketMaker();
-    error ContractNotActive();
-    error OnlyReserveOwner();
-    error InitialPriceMustBePositive();
-    error MultiplierTooHigh();
-    error MultiplierTooLow();
-    error PriceIncrementTooLow();
-    error InvalidRoyaltyProfitPercentage();
-    error ETHTransferFailed();
-    error LockCannotExceedFiveYears();
-    error InvalidTimePeriod();
-    error CannotActivateWithdrawalTooCloseToLockEnd();
-    error InvalidRecipientOrAmount();
-    error DeferredWithdrawalBlocked();
-    error LaunchDeferredWithdrawalAlreadyScheduled();
-    error NoDeferredWithdrawalScheduled();
-    error WithdrawalDateNotReached();
-    error CollateralTokenWithdrawalWindowExpired();
-    error InsufficientTokenBalance();
-    error InsufficientAmount();
-    error InvalidRecipient();
-    error CollateralDeferredWithdrawalAlreadyScheduled();
-    error InvalidNewOwner();
-    error InvalidReserveOwner();
-    error SameModeAlreadyActive();
-    error InvalidAddress();
-    error OnlyRoyaltyWalletCanChange();
-    error InvalidPercentage();
-    error CannotDecreaseRoyalty();
-    error CannotIncreaseRoyalty();
-    error CannotBeSelf();
-    error InvalidAmount();
-    error UseDepositFunctionForOwners();
-    error LockPeriodNotEnded();
-    error NoTokensToWithdraw();
-    error NoCollateralTokensToWithdraw();
-    error ProfitModeNotActive();
-    error NoProfitAvailable();
-    error TradingNotAllowedOnlyMarketMakers();
-    error InsufficientCollateralBalance();
-    error NoTokensAvailableForBuyback();
-    error InsufficientTokensForBuyback();
-    error InsufficientSoldTokens();
-    error LockIsActive();
-    error OldContractAddressZero();
-    error OldContractAddressConflict();
-    error NoReturnWalletChangeProposed();
-    error ReturnWalletChangeDelayNotPassed();
-    error InvalidDAOAddress();
-    error InsufficientUnaccountedCollateralBalance();
-    error InsufficientUnaccountedOffsetBalance();
-    error InsufficientUnaccountedOffsetTokenBalance();
-    error UnaccountedOffsetBalanceNotSet();
-    error ContractAlreadyInitialized();
-    error ProfitBeforeTrendChangeMustBePositive();
-
-    // Events
-    event OldContractRegistered(address indexed oldContractAddress);
-    event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
-    event UnaccountedOffsetBalanceProcessed(uint256 amount);
-    event UnaccountedOffsetTokenBalanceProcessed(uint256 amount);
-    event ReturnWalletChangeProposed(address indexed newReturnWalletAddress, uint256 proposalTime);
-    event ReturnWalletChangeConfirmed(address indexed newReturnWalletAddress);
-    event DAOAddressChanged(address indexed newDaoAddress);
-
-    // Struct for initialization parameters to avoid "Stack too deep" error
-    struct InitParams {
-        address initialOwner; // Initial owner address
-        address launchToken;
-        address marketMakerAddress;
-        address returnWalletAddress;
-        address royaltyWalletAddress;
-        uint256 lockEndTime;
-        uint256 initialPricePerToken;
-        uint256 firstLevelTokenQuantity;
-        uint256 priceIncrementMultiplier;
-        int256 levelIncreaseMultiplier;
-        uint256 trendChangeStep;
-        int256 levelDecreaseMultiplierafterTrend;
-        uint256 profitPercentage;
-        uint256 offsetLaunch;
-        uint256 controlPeriod;
-        address collateralAddress;
-        uint256 royaltyProfitPercent;
-        address[] oldContractAddresses; // Array of old contract addresses
-        uint256 profitBeforeTrendChange; // Profit percentage before trend change
-        address daoAddress; // DAO address for governance
-    }
-
     // Contract state
     bool public isActive;
     mapping(address => bool) public oldContractAddress;
@@ -262,7 +171,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(msg.sender == daoAddress, AccessDenied());
     }
 
-    constructor(InitParams memory params) Ownable(params.initialOwner) {
+    constructor(IProofOfCapital.InitParams memory params) Ownable(params.initialOwner) {
         require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
         require(
             params.levelDecreaseMultiplierafterTrend < int256(Constants.PERCENTAGE_DIVISOR)

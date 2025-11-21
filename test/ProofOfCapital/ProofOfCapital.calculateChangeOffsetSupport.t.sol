@@ -47,7 +47,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
 
         // Create special parameters to hit the specific branch in _calculateChangeOffsetCollateral
         // We need to ensure localCurrentStep > currentStepEarned and localCurrentStep <= trendChangeStep
-        ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(token),
             marketMakerAddress: marketMaker,

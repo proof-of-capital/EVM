@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 import "../src/ProofOfCapital.sol";
+import "../src/interfaces/IProofOfCapital.sol";
 
 /**
  * @title DeployProofOfCapital
@@ -132,7 +133,7 @@ contract DeployProofOfCapital is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Prepare initialization parameters
-        ProofOfCapital.InitParams memory initParams = _prepareInitParams();
+        IProofOfCapital.InitParams memory initParams = _prepareInitParams();
 
         // Deploy contract directly
         console.log("\nDeploying ProofOfCapital contract...");
@@ -145,9 +146,9 @@ contract DeployProofOfCapital is Script {
     /**
      * @dev Prepare initialization parameters struct
      */
-    function _prepareInitParams() internal view returns (ProofOfCapital.InitParams memory) {
+    function _prepareInitParams() internal view returns (IProofOfCapital.InitParams memory) {
         address deployer = vm.addr(deployerPrivateKey);
-        return ProofOfCapital.InitParams({
+        return IProofOfCapital.InitParams({
             initialOwner: deployer,
             launchToken: launchToken,
             marketMakerAddress: marketMakerAddress,

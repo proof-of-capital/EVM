@@ -341,7 +341,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(params.returnWalletAddress != params.royaltyWalletAddress, CannotBeSelf());
     }
 
-
     /**
      * @dev Extend lock period
      */

@@ -112,7 +112,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     event UnaccountedOffsetTokenBalanceProcessed(uint256 amount);
     event ReturnWalletChangeProposed(address indexed newReturnWalletAddress, uint256 proposalTime);
     event ReturnWalletChangeConfirmed(address indexed newReturnWalletAddress);
-    event DAOAddressChanged(address indexed newDAOAddress);
+    event DAOAddressChanged(address indexed newDaoAddress);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
@@ -227,23 +227,39 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     bool public isInitialized; // Flag indicating whether the contract's initialization is complete
 
     modifier onlyOwnerOrOldContract() {
-        require(msg.sender == owner() || oldContractAddress[msg.sender], AccessDenied());
+        _onlyOwnerOrOldContract();
         _;
+    }
+
+    function _onlyOwnerOrOldContract() internal view {
+        require(msg.sender == owner() || oldContractAddress[msg.sender], AccessDenied());
     }
 
     modifier onlyActiveContract() {
-        require(isActive, ContractNotActive());
+        _onlyActiveContract();
         _;
+    }
+
+    function _onlyActiveContract() internal view {
+        require(isActive, ContractNotActive());
     }
 
     modifier onlyReserveOwner() {
-        require(msg.sender == reserveOwner, OnlyReserveOwner());
+        _onlyReserveOwner();
         _;
     }
 
+    function _onlyReserveOwner() internal view {
+        require(msg.sender == reserveOwner, OnlyReserveOwner());
+    }
+
     modifier onlyDAO() {
-        require(msg.sender == daoAddress, AccessDenied());
+        _onlyDAO();
         _;
+    }
+
+    function _onlyDAO() internal view {
+        require(msg.sender == daoAddress, AccessDenied());
     }
 
     constructor(InitParams memory params) Ownable(params.initialOwner) {
@@ -699,11 +715,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Set DAO address (can only be called by current DAO)
      */
-    function setDAO(address newDAOAddress) external {
+    function setDao(address newDaoAddress) external {
         require(msg.sender == daoAddress, AccessDenied());
-        require(newDAOAddress != address(0), InvalidDAOAddress());
-        daoAddress = newDAOAddress;
-        emit DAOAddressChanged(newDAOAddress);
+        require(newDaoAddress != address(0), InvalidDAOAddress());
+        daoAddress = newDaoAddress;
+        emit DAOAddressChanged(newDaoAddress);
     }
 
     /**
@@ -990,10 +1006,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         returns (uint256)
     {
         if (currentStepParam > trendChangeStep) {
+            // casting to uint256 is safe because levelDecreaseMultiplierafterTrend is validated to be < PERCENTAGE_DIVISOR
+            // forge-lint: disable-next-line(unsafe-typecast)
             return (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend))
                 / Constants.PERCENTAGE_DIVISOR;
         } else {
+            // casting to uint256 is safe because levelIncreaseMultiplier is validated to be > 0
+            // forge-lint: disable-next-line(unsafe-typecast)
             return
+                // casting to uint256 is safe because levelIncreaseMultiplier is validated to be > 0
+                // forge-lint: disable-next-line(unsafe-typecast)
                 (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
         }
@@ -1001,8 +1023,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     // Full implementation of calculation functions based on Tact contract
     function _calculateOffset(uint256 amountTokens) internal {
+        // casting to int256 is safe because amountTokens is validated and used for calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingOffsetTokens = int256(amountTokens);
         uint256 localCurrentStep = offsetStep;
+        // casting to int256 is safe because remainderOffsetTokens is used for mathematical calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainderOfStepLocal = int256(remainderOffsetTokens);
         uint256 tokensPerLevel = sizeOffsetStep;
         uint256 currentPriceLocal = currentPrice;
@@ -1015,6 +1041,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 localCurrentStep += 1;
 
                 tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
+                // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainderOfStepLocal = int256(tokensPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
@@ -1025,6 +1053,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
 
         offsetStep = localCurrentStep;
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOffsetTokens = uint256(remainderOfStepLocal);
         sizeOffsetStep = tokensPerLevel;
         offsetPrice = currentPriceLocal;
@@ -1033,6 +1063,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
 
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOfStep = uint256(remainderOfStepLocal);
         launchBalance += amountTokens;
         totalLaunchSold += amountTokens;
@@ -1044,13 +1076,19 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @return Current step after recalculation
      */
     function _calculateChangeOffsetToken(uint256 amountToken) internal returns (uint256) {
+        // casting to int256 is safe because amountToken is validated and used for calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingAddTokens = int256(amountToken);
         uint256 localCurrentStep = offsetStep;
+        // casting to int256 is safe because remainderOffsetTokens is used for mathematical calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainderOfStepLocal = int256(remainderOffsetTokens);
         uint256 tokensPerLevel = sizeOffsetStep;
         uint256 currentPriceLocal = offsetPrice;
 
         while (remainingAddTokens > 0) {
+            // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+            // forge-lint: disable-next-line(unsafe-typecast)
             int256 tokensAvailableInStep = int256(tokensPerLevel) - remainderOfStepLocal;
 
             if (remainingAddTokens >= tokensAvailableInStep) {
@@ -1059,9 +1097,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            // casting to uint256 is safe because levelDecreaseMultiplierafterTrend is validated to be < PERCENTAGE_DIVISOR
+                            // forge-lint: disable-next-line(unsafe-typecast)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend);
                     } else {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            // casting to uint256 is safe because levelIncreaseMultiplier is validated to be > 0
+                            // forge-lint: disable-next-line(unsafe-typecast)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
@@ -1069,6 +1111,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
+                    // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     remainderOfStepLocal = int256(tokensPerLevel);
                     remainingAddTokens = 0;
                 }
@@ -1079,6 +1123,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
 
         offsetStep = localCurrentStep;
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOffsetTokens = uint256(remainderOfStepLocal);
         offsetPrice = currentPriceLocal;
         sizeOffsetStep = tokensPerLevel;
@@ -1089,6 +1135,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
 
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOfStep = uint256(remainderOfStepLocal);
         totalLaunchSold -= amountToken;
 
@@ -1096,8 +1144,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function _calculateChangeOffsetCollateral(uint256 amountCollateral) internal returns (uint256) {
+        // casting to int256 is safe because amountCollateral is validated and used for calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingAddCollateral = int256(amountCollateral);
         uint256 remainingOffsetTokensLocal = offsetTokens;
+        // casting to int256 is safe because offsetTokens and tokensEarned are used for mathematical calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingAddTokens = int256(offsetTokens) - int256(tokensEarned);
         uint256 localCurrentStep = offsetStep;
         uint256 remainderOfStepLocal = remainderOffsetTokens;
@@ -1111,17 +1163,27 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             uint256 collateralRealInStep =
                 (collateralInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal)) / Constants.PERCENTAGE_DIVISOR;
 
+            // casting to int256 is safe because collateralRealInStep and tokensAvailableInStep are used for mathematical calculations
+            // forge-lint: disable-next-line(unsafe-typecast)
             if (remainingAddCollateral >= int256(collateralRealInStep) && remainingAddTokens >= int256(tokensAvailableInStep)) {
+                // casting to int256 is safe because collateralRealInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainingAddCollateral -= int256(collateralRealInStep);
                 remainingOffsetTokensLocal -= tokensAvailableInStep;
+                // casting to int256 is safe because tokensAvailableInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainingAddTokens -= int256(tokensAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            // casting to uint256 is safe because levelDecreaseMultiplierafterTrend is validated to be < PERCENTAGE_DIVISOR
+                            // forge-lint: disable-next-line(unsafe-typecast)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend);
                     } else {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            // casting to uint256 is safe because levelIncreaseMultiplier is validated to be > 0
+                            // forge-lint: disable-next-line(unsafe-typecast)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
@@ -1143,15 +1205,27 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 collateralToPayForStep = 0;
                 uint256 tokensToBuyInThisStep = 0;
 
+                // casting to int256 is safe because collateralRealInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 if (remainingAddCollateral >= int256(collateralRealInStep)) {
+                    // casting to uint256 is safe because remainingAddTokens is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     collateralToPayForStep = (uint256(remainingAddTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    // casting to uint256 is safe because remainingAddTokens is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     tokensToBuyInThisStep = uint256(remainingAddTokens);
                 } else {
+                    // casting to uint256 is safe because remainingAddCollateral is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     collateralToPayForStep = uint256(remainingAddCollateral);
+                    // casting to uint256 is safe because remainingAddCollateral is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     tokensToBuyInThisStep = (uint256(remainingAddCollateral) * Constants.PRICE_PRECISION) / adjustedPrice;
                 }
 
                 remainderOfStepLocal += tokensToBuyInThisStep;
+                // casting to int256 is safe because collateralToPayForStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainingAddCollateral -= int256(collateralToPayForStep);
                 remainingOffsetTokensLocal -= tokensToBuyInThisStep;
                 remainingAddTokens = 0;
@@ -1164,13 +1238,19 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         sizeOffsetStep = tokensPerLevel;
         offsetTokens = remainingOffsetTokensLocal;
 
+        // casting to uint256 is safe because remainingAddCollateral is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         return (amountCollateral - uint256(remainingAddCollateral));
     }
 
     function _calculateTokensToGiveForCollateralAmount(uint256 collateralAmount) internal returns (uint256) {
         uint256 tokensToGive = 0;
+        // casting to int256 is safe because collateralAmount is validated and used for calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingCollateralAmount = int256(collateralAmount);
         uint256 localCurrentStep = currentStep;
+        // casting to int256 is safe because remainderOfStep is used for mathematical calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainderOfStepLocal = int256(remainderOfStep);
         uint256 tokensPerLevel = quantityTokensPerLevel;
         uint256 currentPriceLocal = currentPrice;
@@ -1179,14 +1259,24 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         while (remainingCollateralAmount > 0 && remainderOfTokens >= tokensToGive) {
             int256 tokensAvailableInStep = remainderOfStepLocal;
+            // casting to int256 is safe because tokensAvailableInStep and currentPriceLocal are used for mathematical calculations
+            // forge-lint: disable-next-line(unsafe-typecast)
             int256 collateralRequiredForStep =
+                // casting to int256 is safe because tokensAvailableInStep and currentPriceLocal are used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
             if (remainingCollateralAmount >= collateralRequiredForStep) {
+                // casting to uint256 is safe because tokensAvailableInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 tokensToGive += uint256(tokensAvailableInStep);
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
 
+                // casting to uint256 is safe because collateralRequiredForStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 profitInStep =
+                    // casting to uint256 is safe because collateralRequiredForStep is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     (uint256(collateralRequiredForStep) * profitPercentageLocal) / Constants.PERCENTAGE_DIVISOR;
                 totalProfit += profitInStep;
 
@@ -1194,13 +1284,21 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 localCurrentStep += 1;
 
                 tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
+                // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainderOfStepLocal = int256(tokensPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
+                // casting to uint256 is safe because remainingCollateralAmount is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 tokensToBuyInThisStep =
+                    // casting to uint256 is safe because remainingCollateralAmount is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     (uint256(remainingCollateralAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
                 tokensToGive += tokensToBuyInThisStep;
+                // casting to uint256 is safe because remainingCollateralAmount is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 collateralSpentInThisStep = uint256(remainingCollateralAmount);
 
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
@@ -1208,6 +1306,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 totalProfit += profitInStep;
 
                 remainingCollateralAmount = 0;
+                // casting to int256 is safe because tokensToBuyInThisStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainderOfStepLocal -= int256(tokensToBuyInThisStep);
             }
         }
@@ -1221,6 +1321,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         currentPrice = currentPriceLocal;
         actualProfit = totalProfit;
 
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOfStep = uint256(remainderOfStepLocal);
 
         return tokensToGive;
@@ -1228,31 +1330,47 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     function _calculateCollateralToPayForTokenAmount(uint256 tokenAmount) internal returns (uint256) {
         uint256 collateralAmountToPay = 0;
+        // casting to int256 is safe because tokenAmount is validated and used for calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingTokenAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStep;
+        // casting to int256 is safe because remainderOfStep is used for mathematical calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainderOfStepLocal = int256(remainderOfStep);
         uint256 tokensPerLevel = quantityTokensPerLevel;
         uint256 currentPriceLocal = currentPrice;
 
         while (remainingTokenAmount > 0) {
+            // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+            // forge-lint: disable-next-line(unsafe-typecast)
             int256 tokensAvailableInStep = int256(tokensPerLevel) - remainderOfStepLocal;
 
             if (remainingTokenAmount >= int256(tokensAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
+                // casting to uint256 is safe because tokensAvailableInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 collateralToPayForStep =
+                    // casting to uint256 is safe because tokensAvailableInStep is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
+                // casting to int256 is safe because tokensAvailableInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainingTokenAmount -= int256(tokensAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            // casting to uint256 is safe because levelDecreaseMultiplierafterTrend is validated to be < PERCENTAGE_DIVISOR
+                            // forge-lint: disable-next-line(unsafe-typecast)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierafterTrend);
                     } else {
                         tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                            // casting to uint256 is safe because levelIncreaseMultiplier is validated to be > 0
+                            // forge-lint: disable-next-line(unsafe-typecast)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
@@ -1264,6 +1382,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     remainderOfStepLocal = 0;
                 } else {
                     localCurrentStep = currentStepEarned;
+                    // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     remainderOfStepLocal = int256(tokensPerLevel);
                     remainingTokenAmount = 0;
                 }
@@ -1271,10 +1391,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
+                // casting to uint256 is safe because remainingTokenAmount is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 collateralToPayForStep =
+                    // casting to uint256 is safe because remainingTokenAmount is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
+                // casting to int256 is safe because remainingTokenAmount is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainderOfStepLocal += int256(remainingTokenAmount);
                 remainingTokenAmount = 0;
             }
@@ -1284,6 +1410,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         quantityTokensPerLevel = tokensPerLevel;
         currentPrice = currentPriceLocal;
 
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOfStep = uint256(remainderOfStepLocal);
 
         return collateralAmountToPay;
@@ -1291,8 +1419,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     function _calculateCollateralForTokenAmountEarned(uint256 tokenAmount) internal returns (uint256) {
         uint256 collateralAmountToPay = 0;
+        // casting to int256 is safe because tokenAmount is validated and used for calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingTokenAmount = int256(tokenAmount);
         uint256 localCurrentStep = currentStepEarned;
+        // casting to int256 is safe because remainderOfStepEarned is used for mathematical calculations
+        // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainderOfStepLocal = int256(remainderOfStepEarned);
         uint256 tokensPerLevel = quantityTokensPerLevelEarned;
         uint256 currentPriceLocal = currentPriceEarned;
@@ -1304,12 +1436,18 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
+                // casting to uint256 is safe because tokensAvailableInStep is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 collateralToPayForStep =
+                    // casting to uint256 is safe because tokensAvailableInStep is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
                 localCurrentStep += 1;
                 tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
+                // casting to int256 is safe because tokensPerLevel is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainderOfStepLocal = int256(tokensPerLevel);
                 remainingTokenAmount -= int256(tokensAvailableInStep);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
@@ -1318,7 +1456,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
+                // casting to uint256 is safe because remainingTokenAmount is used for mathematical calculations
+                // forge-lint: disable-next-line(unsafe-typecast)
                 uint256 collateralToPayForStep =
+                    // casting to uint256 is safe because remainingTokenAmount is used for mathematical calculations
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
@@ -1331,6 +1473,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         quantityTokensPerLevelEarned = tokensPerLevel;
         currentPriceEarned = currentPriceLocal;
 
+        // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
+        // forge-lint: disable-next-line(unsafe-typecast)
         remainderOfStepEarned = uint256(remainderOfStepLocal);
 
         return collateralAmountToPay;

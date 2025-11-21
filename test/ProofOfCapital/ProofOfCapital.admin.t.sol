@@ -561,33 +561,33 @@ contract ProofOfCapitalAdminTest is BaseTest {
         proofOfCapital.switchProfitMode(false);
     }
 
-    // Tests for setDAO function
+    // Tests for setDao function
     function testSetDAOAccessDenied() public {
         // By default, daoAddress is set to owner (from BaseTest)
-        address newDAOAddress = address(0x999);
+        address newDaoAddress = address(0x999);
 
         // Non-DAO address tries to set DAO
         vm.prank(royalty);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.setDAO(newDAOAddress);
+        proofOfCapital.setDao(newDaoAddress);
 
         vm.prank(returnWallet);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.setDAO(newDAOAddress);
+        proofOfCapital.setDao(newDaoAddress);
 
         vm.prank(marketMaker);
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.setDAO(newDAOAddress);
+        proofOfCapital.setDao(newDaoAddress);
 
         vm.prank(address(0x123));
         vm.expectRevert(ProofOfCapital.AccessDenied.selector);
-        proofOfCapital.setDAO(newDAOAddress);
+        proofOfCapital.setDao(newDaoAddress);
     }
 
     function testSetDAOInvalidDAOAddress() public {
         // Try to set zero address as new DAO
         vm.prank(owner); // owner is the default daoAddress
         vm.expectRevert(ProofOfCapital.InvalidDAOAddress.selector);
-        proofOfCapital.setDAO(address(0));
+        proofOfCapital.setDao(address(0));
     }
 }

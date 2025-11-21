@@ -28,6 +28,8 @@
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
+
+/// forge-lint: disable-next-item(erc20-unchecked-transfer)
 pragma solidity 0.8.29;
 
 import "forge-std/Test.sol";
@@ -681,6 +683,7 @@ contract ProofOfCapitalTest is Test {
         vm.startPrank(owner);
 
         // First, give some tokens to returnWallet to sell back
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         token.transfer(returnWallet, 50000e18);
 
         vm.stopPrank();
@@ -945,7 +948,7 @@ contract ProofOfCapitalTest is Test {
         // Set daoAddress to a specific address
         address daoAddr = address(0x777);
         vm.prank(owner); // owner is also daoAddress initially
-        proofOfCapital.setDAO(daoAddr);
+        proofOfCapital.setDao(daoAddr);
 
         // Verify initial state
         assertEq(proofOfCapital.owner(), owner);
@@ -967,7 +970,7 @@ contract ProofOfCapitalTest is Test {
         // First, set daoAddress to a different address
         address differentDao = address(0x777);
         vm.prank(owner); // owner is also daoAddress initially
-        proofOfCapital.setDAO(differentDao);
+        proofOfCapital.setDao(differentDao);
 
         // Verify owner != daoAddress
         assertEq(proofOfCapital.owner(), owner);

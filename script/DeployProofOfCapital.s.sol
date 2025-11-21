@@ -157,8 +157,12 @@ contract DeployProofOfCapital is Script {
             initialPricePerToken: initialPricePerToken,
             firstLevelTokenQuantity: firstLevelTokenQuantity,
             priceIncrementMultiplier: priceIncrementMultiplier,
+            // casting to int256 is safe because levelIncreaseMultiplier is validated to be > 0
+            // forge-lint: disable-next-line(unsafe-typecast)
             levelIncreaseMultiplier: int256(levelIncreaseMultiplier),
             trendChangeStep: trendChangeStep,
+            // casting to int256 is safe because levelDecreaseMultiplierafterTrend is validated to be < PERCENTAGE_DIVISOR
+            // forge-lint: disable-next-line(unsafe-typecast)
             levelDecreaseMultiplierafterTrend: int256(levelDecreaseMultiplierafterTrend),
             profitPercentage: profitPercentage,
             offsetTokens: offsetTokens,

@@ -28,6 +28,7 @@
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
+/// forge-lint: disable-next-item(erc20-unchecked-transfer)
 pragma solidity 0.8.29;
 
 import "forge-std/Test.sol";

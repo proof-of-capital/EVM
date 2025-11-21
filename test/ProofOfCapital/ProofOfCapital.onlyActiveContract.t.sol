@@ -84,7 +84,8 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         vm.startPrank(owner);
         weth.transfer(address(proofOfCapital), 10000e18);
         // Set contractCollateralBalance using storage manipulation
-        uint256 slotCollateralBalance = _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
+        uint256 slotCollateralBalance =
+            _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
         vm.store(address(proofOfCapital), bytes32(slotCollateralBalance), bytes32(uint256(10000e18)));
         vm.stopPrank();
 
@@ -125,7 +126,8 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         vm.startPrank(owner);
         weth.transfer(address(proofOfCapital), 10000e18);
         // Set contractCollateralBalance using storage manipulation
-        uint256 slotCollateralBalance = _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
+        uint256 slotCollateralBalance =
+            _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
         vm.store(address(proofOfCapital), bytes32(slotCollateralBalance), bytes32(uint256(10000e18)));
         vm.stopPrank();
 

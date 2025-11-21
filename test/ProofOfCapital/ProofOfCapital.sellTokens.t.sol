@@ -144,16 +144,14 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         proofOfCapital.sellTokens(500e18);
     }
 
-
-
     function testSellTokensHitsConsoleLogBranch() public {
         // Test to hit the console.log branch in _calculateCollateralToPayForTokenAmount
         // This branch executes when localCurrentStep > currentStepEarned && localCurrentStep <= trendChangeStep
 
-    // Create a custom contract with high trendChangeStep and some offset to trigger offset logic
-    ProofOfCapital.InitParams memory customParams = getValidParams();
-    customParams.trendChangeStep = 50; // Set very high trendChangeStep so currentStep stays within range
-    customParams.offsetLaunch = 10000e18; // Add offset to trigger offset-related code with console.log to make buyback easier
+        // Create a custom contract with high trendChangeStep and some offset to trigger offset logic
+        ProofOfCapital.InitParams memory customParams = getValidParams();
+        customParams.trendChangeStep = 50; // Set very high trendChangeStep so currentStep stays within range
+        customParams.offsetLaunch = 10000e18; // Add offset to trigger offset-related code with console.log to make buyback easier
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -178,9 +176,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(marketMaker);
         token.approve(address(customContract), type(uint256).max);
 
-    // Buy enough tokens to exceed offsetLaunch for buyback availability
-    vm.prank(marketMaker);
-    customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetLaunch
+        // Buy enough tokens to exceed offsetLaunch for buyback availability
+        vm.prank(marketMaker);
+        customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetLaunch
 
         // Create unaccountedOffset to trigger offset processing
         // First, approve tokens for owner and deposit to create offset balance
@@ -217,10 +215,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         console.log("totalLaunchSold:", totalLaunchSold);
         console.log("offsetLaunch:", offsetLaunch);
 
-    // Ensure we have currentStep > currentStepEarned and currentStep <= trendChangeStep for sell logic
-    assertGt(currentStep, currentStepEarned, "currentStep should be greater than currentStepEarned");
-    assertLe(currentStep, trendChangeStep, "currentStep should be <= trendChangeStep to hit the branch");
-    assertGt(totalLaunchSold, offsetLaunch, "totalLaunchSold should be > offsetLaunch for buyback");
+        // Ensure we have currentStep > currentStepEarned and currentStep <= trendChangeStep for sell logic
+        assertGt(currentStep, currentStepEarned, "currentStep should be greater than currentStepEarned");
+        assertLe(currentStep, trendChangeStep, "currentStep should be <= trendChangeStep to hit the branch");
+        assertGt(totalLaunchSold, offsetLaunch, "totalLaunchSold should be > offsetLaunch for buyback");
 
         // Now sell tokens - this should hit the console.log branch in _calculateCollateralToPayForTokenAmount
         uint256 sellAmount = 1000e18;
@@ -463,7 +461,6 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.calculateUnaccountedCollateralBalance(1000e18);
     }
-
 
     function testBuyTokensHitsConsoleLogBranches() public {
         // Test to hit both console.log branches in _calculateTokensToGiveForCollateralAmount

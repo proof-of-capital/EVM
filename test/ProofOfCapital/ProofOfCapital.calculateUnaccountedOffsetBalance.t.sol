@@ -194,9 +194,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         proofOfCapital.calculateUnaccountedOffsetBalance(remainingBalance);
 
         assertEq(proofOfCapital.unaccountedOffset(), 0, "unaccountedOffset should be zero");
-        assertTrue(
-            proofOfCapital.isInitialized(), "Contract should be initialized when unaccountedOffset becomes zero"
-        );
+        assertTrue(proofOfCapital.isInitialized(), "Contract should be initialized when unaccountedOffset becomes zero");
     }
 
     /**

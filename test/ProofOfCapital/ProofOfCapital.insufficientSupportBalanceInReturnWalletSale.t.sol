@@ -89,7 +89,10 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
         // Verify we have the right conditions for the test
         uint256 currentTokensEarned = proofOfCapital.tokensEarned();
         uint256 currentOffsetTokens = proofOfCapital.offsetLaunch();
-        assertTrue(currentTokensEarned > currentOffsetTokens, "tokensEarned should be > offsetLaunch for collateralAmountToPay > 0");
+        assertTrue(
+            currentTokensEarned > currentOffsetTokens,
+            "tokensEarned should be > offsetLaunch for collateralAmountToPay > 0"
+        );
 
         // Step 7: Use stdstore to set contractCollateralBalance to 0
         // This simulates a scenario where collateral balance was withdrawn or insufficient

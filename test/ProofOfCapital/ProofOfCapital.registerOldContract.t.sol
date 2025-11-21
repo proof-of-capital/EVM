@@ -234,5 +234,4 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
 
         vm.stopPrank();
     }
-
 }

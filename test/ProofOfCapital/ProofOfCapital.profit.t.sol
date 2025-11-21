@@ -174,7 +174,9 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Verify profit was accumulated
         uint256 ownerCollateralBalanceAfterPurchase = testContract.ownerCollateralBalance();
-        assertGt(ownerCollateralBalanceAfterPurchase, 0, "Owner collateral balance should be greater than 0 after purchase");
+        assertGt(
+            ownerCollateralBalanceAfterPurchase, 0, "Owner collateral balance should be greater than 0 after purchase"
+        );
 
         // Owner requests profit withdrawal
         vm.expectEmit(false, false, false, true);
@@ -245,7 +247,9 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Verify profit was accumulated
         uint256 royaltyCollateralBalanceAfterPurchase = testContract.royaltyCollateralBalance();
         assertGt(
-            royaltyCollateralBalanceAfterPurchase, 0, "Royalty collateral balance should be greater than 0 after purchase"
+            royaltyCollateralBalanceAfterPurchase,
+            0,
+            "Royalty collateral balance should be greater than 0 after purchase"
         );
 
         // Royalty wallet requests profit withdrawal

@@ -198,7 +198,6 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
     }
 
-
     // Tests for blockDeferredWithdrawal function
     function testBlockDeferredWithdrawalFromTrueToFalse() public {
         // Initially canWithdrawal should be true (default)
@@ -295,8 +294,6 @@ contract ProofOfCapitalTest is Test {
         vm.expectRevert();
         proofOfCapital.blockDeferredWithdrawal();
     }
-
-
 
     // Tests for tokenDeferredWithdrawal function
     function testTokenDeferredWithdrawalSuccess() public {
@@ -424,7 +421,6 @@ contract ProofOfCapitalTest is Test {
             assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), amounts[i]);
         }
     }
-
 
     // function testTokenDeferredWithdrawalDateCalculation() public {
     //     address recipient = address(0x123);
@@ -621,9 +617,7 @@ contract ProofOfCapitalTest is Test {
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
         // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetLaunch)
-        assertTrue(
-            contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold"
-        );
+        assertTrue(contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold");
 
         // Schedule withdrawal
         vm.prank(owner);
@@ -652,9 +646,7 @@ contract ProofOfCapitalTest is Test {
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
         // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetLaunch)
-        assertTrue(
-            contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold"
-        );
+        assertTrue(contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold");
 
         // Schedule withdrawal
         vm.prank(owner);
@@ -1193,7 +1185,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.collateralDeferredWithdrawal(recipient);
     }
 
-
     // function testCollateralDeferredWithdrawalDateCalculation() public {
     //     address recipient = address(0x123);
 
@@ -1363,7 +1354,9 @@ contract ProofOfCapitalTest is Test {
 
         // Verify values actually changed
         assertTrue(scheduledDate > 0 && proofOfCapital.collateralTokenDeferredWithdrawalDate() == 0);
-        assertTrue(scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalCollateralToken() == owner);
+        assertTrue(
+            scheduledRecipient == recipient && proofOfCapital.recipientDeferredWithdrawalCollateralToken() == owner
+        );
     }
 
     function testStopCollateralDeferredWithdrawalMultipleTimes() public {
@@ -1690,11 +1683,6 @@ contract ProofOfCapitalTest is Test {
         vm.expectRevert(ProofOfCapital.CollateralTokenWithdrawalWindowExpired.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
-
-
-
-
-
 
     // Tests for changeReturnWallet function
     function testChangeReturnWalletSuccess() public {
@@ -2360,7 +2348,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllTokens();
     }
 
-
     function testWithdrawAllTokensStateResetComplete() public {
         // Setup tokens in contract using returnWallet selling tokens back
         vm.startPrank(owner);
@@ -2511,7 +2498,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.withdrawAllCollateralTokens();
     }
 
-
     function testWithdrawAllCollateralTokensWithZeroBalance() public {
         // Move time past lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
@@ -2523,7 +2509,6 @@ contract ProofOfCapitalTest is Test {
         vm.expectRevert(ProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
-
 
     function testWithdrawBothTypesOfTokens() public {
         // Test withdrawing both main tokens and collateral tokens separately
@@ -2677,16 +2662,12 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.buyTokens(1000e18);
     }
 
-
-
     function testDepositInvalidAmountZero() public {
         // Try to deposit zero amount
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InvalidAmount.selector);
         proofOfCapital.deposit(0);
     }
-
-
 
     function testSellTokensInvalidAmountZero() public {
         // Try to sell zero tokens
@@ -2798,13 +2779,6 @@ contract ProofOfCapitalTest is Test {
         uint256 expectedAvailable = totalSold - tokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
     }
-
-
-
-
-
-
-
 }
 
 contract ProofOfCapitalProfitTest is Test {

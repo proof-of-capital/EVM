@@ -85,14 +85,18 @@ contract ProofOfCapitalWithdrawAllCollateralTokensTest is BaseTest {
 
         // Step 5: Verify state changes
         // Verify contractCollateralBalance is set to 0 (line 755)
-        assertEq(proofOfCapital.contractCollateralBalance(), 0, "contractCollateralBalance should be zero after withdrawal");
+        assertEq(
+            proofOfCapital.contractCollateralBalance(), 0, "contractCollateralBalance should be zero after withdrawal"
+        );
 
         // Verify isActive is set to false (line 756)
         assertFalse(proofOfCapital.isActive(), "isActive should be false after withdrawal");
 
         // Verify tokens were transferred to daoAddress (line 757)
         uint256 daoBalanceAfter = weth.balanceOf(dao);
-        assertEq(daoBalanceAfter, daoBalanceBefore + initialCollateralBalance, "DAO should receive all collateral tokens");
+        assertEq(
+            daoBalanceAfter, daoBalanceBefore + initialCollateralBalance, "DAO should receive all collateral tokens"
+        );
 
         // Verify withdrawnAmount equals initial collateral balance (line 754)
         // This is implicit in the transfer check above

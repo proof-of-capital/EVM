@@ -186,8 +186,6 @@ contract ProofOfCapitalReturnWalletChangeTest is BaseTest {
         assertEq(proofOfCapital.proposedReturnWalletAddress(), address(0));
     }
 
-
-
     function testProposeReturnWalletChangeWithCurrentReturnWalletAddress() public {
         ensureLockIsActive();
 

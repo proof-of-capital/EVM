@@ -3001,7 +3001,7 @@ contract ProofOfCapitalInitializationTest is Test {
     // Test MultiplierTooLow error for levelIncreaseMultiplier
     function testInitializeLevelIncreaseMultiplierTooLow() public {
         ProofOfCapital.InitParams memory params = getValidParams();
-        params.levelIncreaseMultiplier = 0; // Invalid: zero multiplier
+        params.levelIncreaseMultiplier = -int256(Constants.PERCENTAGE_DIVISOR); // Invalid: below minimum range
 
         vm.expectRevert(ProofOfCapital.MultiplierTooLow.selector);
         new ProofOfCapital(params);
@@ -3016,6 +3016,15 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Verify multiplier was set
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
+    }
+
+    // Test MultiplierTooLow error for levelIncreaseMultiplier above range
+    function testInitializeLevelIncreaseMultiplierTooHigh() public {
+        ProofOfCapital.InitParams memory params = getValidParams();
+        params.levelIncreaseMultiplier = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: above maximum range
+
+        vm.expectRevert(ProofOfCapital.MultiplierTooLow.selector);
+        new ProofOfCapital(params);
     }
 
     // Test PriceIncrementTooLow error for priceIncrementMultiplier
@@ -3129,7 +3138,7 @@ contract ProofOfCapitalInitializationTest is Test {
         // Set to reasonable maximum values to avoid overflow
         params.initialPricePerToken = 1000e18; // Large but reasonable price
         params.levelDecreaseMultiplierafterTrend = 999; // Just below PERCENTAGE_DIVISOR
-        params.levelIncreaseMultiplier = 10000; // Large but reasonable multiplier
+        params.levelIncreaseMultiplier = 999; // Just below PERCENTAGE_DIVISOR
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Maximum royalty
         params.offsetLaunch = 1000e18; // Smaller offset to avoid calculations overflow
@@ -3140,7 +3149,7 @@ contract ProofOfCapitalInitializationTest is Test {
         // Verify values were set
         assertEq(proofOfCapital.initialPricePerToken(), 1000e18);
         assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), 999);
-        assertEq(proofOfCapital.levelIncreaseMultiplier(), 10000);
+        assertEq(proofOfCapital.levelIncreaseMultiplier(), 999);
         assertEq(proofOfCapital.priceIncrementMultiplier(), 10000);
         assertEq(proofOfCapital.royaltyProfitPercent(), Constants.MAX_ROYALTY_PERCENT);
     }

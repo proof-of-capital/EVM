@@ -264,8 +264,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     constructor(InitParams memory params) Ownable(params.initialOwner) {
         require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
-        require(params.levelDecreaseMultiplierafterTrend < int256(Constants.PERCENTAGE_DIVISOR), MultiplierTooHigh());
-        require(params.levelIncreaseMultiplier > 0, MultiplierTooLow());
+        require(
+            params.levelDecreaseMultiplierafterTrend < int256(Constants.PERCENTAGE_DIVISOR)
+                && params.levelDecreaseMultiplierafterTrend > -int256(Constants.PERCENTAGE_DIVISOR),
+            MultiplierTooHigh()
+        );
+        require(
+            params.levelIncreaseMultiplier > -int256(Constants.PERCENTAGE_DIVISOR)
+                && params.levelIncreaseMultiplier < int256(Constants.PERCENTAGE_DIVISOR),
+            MultiplierTooLow()
+        );
         require(params.priceIncrementMultiplier > 0, PriceIncrementTooLow());
         require(
             params.royaltyProfitPercent > 1 && params.royaltyProfitPercent <= Constants.MAX_ROYALTY_PERCENT,

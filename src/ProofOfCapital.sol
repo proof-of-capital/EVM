@@ -341,21 +341,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(params.returnWalletAddress != params.royaltyWalletAddress, CannotBeSelf());
     }
 
-    receive() external payable {}
 
     /**
      * @dev Extend lock period
      */
-    function extendLock(uint256 additionalTime) external override onlyOwner {
-        require((lockEndTime + additionalTime) - block.timestamp < Constants.FIVE_YEARS, LockCannotExceedFiveYears());
-        require(
-            additionalTime == Constants.HALF_YEAR || additionalTime == Constants.TEN_MINUTES
-                || additionalTime == Constants.THREE_MONTHS,
-            InvalidTimePeriod()
-        );
+    function extendLock(uint256 lockTimestamp) external override onlyOwner {
+        require(lockTimestamp > block.timestamp, InvalidTimePeriod());
+        require(lockTimestamp <= block.timestamp + Constants.FIVE_YEARS, LockCannotExceedFiveYears());
 
-        lockEndTime += additionalTime;
-        emit LockExtended(additionalTime);
+        lockEndTime = lockTimestamp;
+        emit LockExtended(lockTimestamp);
     }
 
     /**

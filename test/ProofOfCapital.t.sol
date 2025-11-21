@@ -121,7 +121,7 @@ contract ProofOfCapitalTest is Test {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        proofOfCapital.extendLock(initialLockEndTime + Constants.HALF_YEAR);
 
         assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.HALF_YEAR);
     }
@@ -130,7 +130,7 @@ contract ProofOfCapitalTest is Test {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(initialLockEndTime + Constants.THREE_MONTHS);
 
         assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.THREE_MONTHS);
     }
@@ -139,7 +139,7 @@ contract ProofOfCapitalTest is Test {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(initialLockEndTime + Constants.TEN_MINUTES);
 
         assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.TEN_MINUTES);
     }
@@ -148,37 +148,32 @@ contract ProofOfCapitalTest is Test {
         // Non-owner tries to extend lock
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        proofOfCapital.extendLock(block.timestamp + Constants.HALF_YEAR);
     }
 
     function testExtendLockExceedsFiveYears() public {
-        for (uint256 i = 0; i < 7; i++) {
-            vm.prank(owner);
-            proofOfCapital.extendLock(Constants.HALF_YEAR);
-        }
-
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.LockCannotExceedFiveYears.selector);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        proofOfCapital.extendLock(block.timestamp + Constants.FIVE_YEARS + 1);
     }
 
     function testExtendLockWithInvalidTimePeriod() public {
-        // Try to extend with invalid time period (not one of the allowed constants)
-        uint256 invalidTime = 100 days; // Not a valid period
+        // Try to extend with time in the past
+        uint256 pastTime = block.timestamp - 1; // Time in the past
 
         vm.prank(owner);
         vm.expectRevert(ProofOfCapital.InvalidTimePeriod.selector);
-        proofOfCapital.extendLock(invalidTime);
+        proofOfCapital.extendLock(pastTime);
     }
 
     function testExtendLockEvent() public {
-        uint256 extensionTime = Constants.THREE_MONTHS;
+        uint256 newLockEndTime = block.timestamp + Constants.THREE_MONTHS;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
-        // Expecting LockExtended event with extensionTime parameter
-        emit IProofOfCapital.LockExtended(extensionTime);
-        proofOfCapital.extendLock(extensionTime);
+        // Expecting LockExtended event with newLockEndTime parameter
+        emit IProofOfCapital.LockExtended(newLockEndTime);
+        proofOfCapital.extendLock(newLockEndTime);
     }
 
     function testExtendLockMultipleTimes() public {
@@ -186,14 +181,14 @@ contract ProofOfCapitalTest is Test {
 
         // First extension
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(initialLockEndTime + Constants.THREE_MONTHS);
 
         uint256 afterFirstExtension = proofOfCapital.lockEndTime();
         assertEq(afterFirstExtension, initialLockEndTime + Constants.THREE_MONTHS);
 
-        // Second extension
+        // Second extension (extending further)
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(afterFirstExtension + Constants.TEN_MINUTES);
 
         assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
     }
@@ -2177,9 +2172,9 @@ contract ProofOfCapitalTest is Test {
         // Verify we're in trading period
         assertTrue(proofOfCapital.tradingOpportunity());
 
-        // Extend lock by 3 months
+        // Extend lock to current lockEndTime + 3 months
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(lockEndTime + Constants.THREE_MONTHS);
 
         // After extension, we should no longer be in trading period
         assertFalse(proofOfCapital.tradingOpportunity());

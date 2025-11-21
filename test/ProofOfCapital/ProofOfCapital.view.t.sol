@@ -90,13 +90,13 @@ contract ProofOfCapitalViewTest is BaseTest {
     }
 
     function testTokenAvailableInitialState() public {
-        // Initially: offsetTokens go to unaccountedOffset, not totalLaunchSold
+        // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
         // So totalLaunchSold = 0, tokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
 
         // Verify initial state
-        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffset, not totalLaunchSold
+        assertEq(totalSold, 0); // offsetLaunch are in unaccountedOffset, not totalLaunchSold
         assertEq(tokensEarned, 0);
 
         // tokenAvailable should be totalLaunchSold - tokensEarned

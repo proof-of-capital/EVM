@@ -44,21 +44,21 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
-        // Setup: Create unaccountedOffsetLaunchBalance by depositing tokens when totalLaunchSold == offsetTokens
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        // Setup: Create unaccountedOffsetLaunchBalance by depositing tokens when totalLaunchSold == offsetLaunch
+        uint256 offsetLaunch = proofOfCapital.offsetLaunch();
 
-        // Set totalLaunchSold to equal offsetTokens
+        // Set totalLaunchSold to equal offsetLaunch
         uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
-        vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
+        vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetLaunch));
 
-        // Set tokensEarned to a value less than offsetTokens to allow deposit
-        uint256 tokensEarned = offsetTokens / 2;
+        // Set tokensEarned to a value less than offsetLaunch to allow deposit
+        uint256 tokensEarned = offsetLaunch / 2;
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
         // Deposit tokens to create unaccountedOffsetLaunchBalance
         uint256 depositAmount = 5000e18;
-        require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
+        require((offsetLaunch - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
         vm.startPrank(owner);
         token.transfer(address(proofOfCapital), depositAmount);
@@ -76,7 +76,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
      */
     function testCalculateUnaccountedOffsetTokenBalance_Success_WithTradingAccess() public {
         uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
-        uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
+        uint256 initialOffsetTokens = proofOfCapital.offsetLaunch();
         uint256 initialTotalTokensSold = proofOfCapital.totalLaunchSold();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 amount = 1000e18;
@@ -99,7 +99,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
             initialUnaccountedBalance - amount,
             "unaccountedOffsetLaunchBalance should decrease by amount"
         );
-        assertEq(proofOfCapital.offsetTokens(), initialOffsetTokens - amount, "offsetTokens should decrease by amount");
+        assertEq(proofOfCapital.offsetLaunch(), initialOffsetTokens - amount, "offsetLaunch should decrease by amount");
         assertEq(
             proofOfCapital.totalLaunchSold(),
             initialTotalTokensSold - amount,
@@ -289,7 +289,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
     function testCalculateUnaccountedOffsetTokenBalance_UpdatesOffsetState() public {
         uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
-        uint256 initialOffsetTokens = proofOfCapital.offsetTokens();
+        uint256 initialOffsetTokens = proofOfCapital.offsetLaunch();
         uint256 initialTotalTokensSold = proofOfCapital.totalLaunchSold();
 
         uint256 amount = 1000e18;
@@ -306,8 +306,8 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         // offsetStep should decrease or stay the same (going backwards)
         assertLe(proofOfCapital.offsetStep(), initialOffsetStep, "offsetStep should decrease or stay the same");
 
-        // offsetTokens should decrease
-        assertEq(proofOfCapital.offsetTokens(), initialOffsetTokens - amount, "offsetTokens should decrease by amount");
+        // offsetLaunch should decrease
+        assertEq(proofOfCapital.offsetLaunch(), initialOffsetTokens - amount, "offsetLaunch should decrease by amount");
 
         // totalLaunchSold should decrease
         assertEq(
@@ -321,13 +321,13 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         assertEq(proofOfCapital.currentPrice(), proofOfCapital.offsetPrice(), "currentPrice should match offsetPrice");
         assertEq(
             proofOfCapital.quantityTokensPerLevel(),
-            proofOfCapital.sizeOffsetStep(),
-            "quantityTokensPerLevel should match sizeOffsetStep"
+            proofOfCapital.quantityTokensPerLevelOffset(),
+            "quantityTokensPerLevel should match quantityTokensPerLevelOffset"
         );
         assertEq(
             proofOfCapital.remainderOfStep(),
-            proofOfCapital.remainderOffsetTokens(),
-            "remainderOfStep should match remainderOffsetTokens"
+            proofOfCapital.remainderOfStepOffset(),
+            "remainderOfStep should match remainderOfStepOffset"
         );
     }
 
@@ -396,19 +396,19 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         assertLe(currentOffsetStep, trendChangeStep, "offsetStep should be <= trendChangeStep for normal branch");
 
         // Now create unaccountedOffsetLaunchBalance by depositing tokens
-        // First set totalLaunchSold to equal offsetTokens
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        // First set totalLaunchSold to equal offsetLaunch
+        uint256 offsetLaunch = proofOfCapital.offsetLaunch();
         uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
-        vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
+        vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetLaunch));
 
-        // Set tokensEarned to a value less than offsetTokens to allow deposit
-        uint256 tokensEarned = offsetTokens / 2;
+        // Set tokensEarned to a value less than offsetLaunch to allow deposit
+        uint256 tokensEarned = offsetLaunch / 2;
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
         // Deposit tokens to create unaccountedOffsetLaunchBalance
         uint256 depositAmount = 1000e18; // Amount for the token balance reduction
-        require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
+        require((offsetLaunch - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
         vm.startPrank(owner);
         token.transfer(address(proofOfCapital), depositAmount);
@@ -464,19 +464,19 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         assertGt(currentOffsetStep, trendChangeStep, "offsetStep should be > trendChangeStep after large offset creation");
 
         // Now create unaccountedOffsetLaunchBalance by depositing tokens
-        // First set totalLaunchSold to equal offsetTokens
-        uint256 offsetTokens = proofOfCapital.offsetTokens();
+        // First set totalLaunchSold to equal offsetLaunch
+        uint256 offsetLaunch = proofOfCapital.offsetLaunch();
         uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
-        vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetTokens));
+        vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetLaunch));
 
-        // Set tokensEarned to a value less than offsetTokens to allow deposit
-        uint256 tokensEarned = offsetTokens / 2;
+        // Set tokensEarned to a value less than offsetLaunch to allow deposit
+        uint256 tokensEarned = offsetLaunch / 2;
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("tokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(tokensEarned));
 
         // Deposit tokens to create unaccountedOffsetLaunchBalance
         uint256 depositAmount = 2000e18; // Smaller amount for the token balance reduction
-        require((offsetTokens - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
+        require((offsetLaunch - tokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
 
         vm.startPrank(owner);
         token.transfer(address(proofOfCapital), depositAmount);

@@ -88,7 +88,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeMultiplierValidAtBoundary() public {
         ProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
-        params.offsetTokens = 100e18; // Smaller offset to avoid overflow in calculations
+        params.offsetLaunch = 100e18; // Smaller offset to avoid overflow in calculations
 
         // Should not revert
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
@@ -189,13 +189,13 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     function testInitializeBoundaryValues() public {
         ProofOfCapital.InitParams memory params = getValidParams();
 
-        // Set all parameters to their boundary values with smaller offsetTokens
+        // Set all parameters to their boundary values with smaller offsetLaunch
         params.initialPricePerToken = 1; // Minimum valid
         params.levelDecreaseMultiplierafterTrend = 500; // Safe value below divisor
         params.levelIncreaseMultiplier = 1; // Minimum valid
         params.priceIncrementMultiplier = 1; // Minimum valid
         params.royaltyProfitPercent = 2; // Minimum valid
-        params.offsetTokens = 100e18; // Smaller offset to avoid overflow
+        params.offsetLaunch = 100e18; // Smaller offset to avoid overflow
 
         // Should not revert with all boundary values
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
@@ -231,7 +231,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.levelIncreaseMultiplier = 10000; // Large but reasonable multiplier
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Maximum royalty
-        params.offsetTokens = 1000e18; // Smaller offset to avoid calculations overflow
+        params.offsetLaunch = 1000e18; // Smaller offset to avoid calculations overflow
 
         // Should not revert with maximum values
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
@@ -262,7 +262,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 1000e18,
+            offsetLaunch: 1000e18,
             controlPeriod: 1, // Way below minimum
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,
@@ -296,7 +296,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 1000e18,
+            offsetLaunch: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,
@@ -333,7 +333,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 1000e18,
+            offsetLaunch: 1000e18,
             controlPeriod: validPeriod, // Within valid range
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,
@@ -369,7 +369,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetTokens: 1000e18,
+                offsetLaunch: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
                 collateralAddress: address(weth),
                 royaltyProfitPercent: 500,
@@ -399,7 +399,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetTokens: 1000e18,
+                offsetLaunch: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
                 collateralAddress: address(weth),
                 royaltyProfitPercent: 500,

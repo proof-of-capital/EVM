@@ -73,7 +73,7 @@ contract BaseTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 10000e18, // Add offset to enable trading
+            offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
@@ -104,7 +104,7 @@ contract BaseTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 10000e18,
+            offsetLaunch: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
@@ -147,7 +147,7 @@ contract BaseTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 0, // No offset
+            offsetLaunch: 0, // No offset
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%

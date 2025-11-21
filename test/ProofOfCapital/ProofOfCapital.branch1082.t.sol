@@ -20,7 +20,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
     address public retWallet;
 
     function setUp() public override {
-        // overwrite default setup: deploy fresh contract with offsetTokens = 0
+        // overwrite default setup: deploy fresh contract with offsetLaunch = 0
         vm.warp(1672531200);
 
         address _owner = owner;
@@ -36,7 +36,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
         // Fund buyer with WETH for purchases
         wethLocal.transfer(buyer, 2000e18);
 
-        // prepare params with offsetTokens = 0
+        // prepare params with offsetLaunch = 0
         ProofOfCapital.InitParams memory params = ProofOfCapital.InitParams({
             initialOwner: owner,
             launchToken: address(tokenLocal),
@@ -51,7 +51,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 0,
+            offsetLaunch: 0,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(wethLocal),
             royaltyProfitPercent: 500,

@@ -129,7 +129,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 trendChangeStep;
         int256 levelDecreaseMultiplierafterTrend;
         uint256 profitPercentage;
-        uint256 offsetTokens;
+        uint256 offsetLaunch;
         uint256 controlPeriod;
         address collateralAddress;
         uint256 royaltyProfitPercent;
@@ -186,11 +186,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public currentPriceEarned;
 
     // Offset variables
-    uint256 public offsetTokens;
+    uint256 public offsetLaunch;
     uint256 public offsetStep;
     uint256 public offsetPrice;
-    uint256 public remainderOffsetTokens;
-    uint256 public sizeOffsetStep;
+    uint256 public remainderOfStepOffset;
+    uint256 public quantityTokensPerLevelOffset;
 
     // Collateral token variables
     address public collateralAddress;
@@ -286,7 +286,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         trendChangeStep = params.trendChangeStep;
         levelDecreaseMultiplierafterTrend = params.levelDecreaseMultiplierafterTrend;
         profitPercentage = params.profitPercentage;
-        offsetTokens = params.offsetTokens;
+        offsetLaunch = params.offsetLaunch;
         controlPeriod = _getPeriod(params.controlPeriod);
         collateralAddress = params.collateralAddress;
         royaltyProfitPercent = params.royaltyProfitPercent;
@@ -308,8 +308,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // Initialize offset variables
         offsetStep = 0;
         offsetPrice = params.initialPricePerToken;
-        remainderOffsetTokens = params.firstLevelTokenQuantity;
-        sizeOffsetStep = params.firstLevelTokenQuantity;
+        remainderOfStepOffset = params.firstLevelTokenQuantity;
+        quantityTokensPerLevelOffset = params.firstLevelTokenQuantity;
 
         // Initialize earned tracking
         currentStepEarned = 0;
@@ -323,8 +323,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         profitInTime = true;
         canWithdrawal = true;
 
-        if (params.offsetTokens > 0) {
-            unaccountedOffset = params.offsetTokens;
+        if (params.offsetLaunch > 0) {
+            unaccountedOffset = params.offsetLaunch;
             isInitialized = false; // Will be set to true after processing offset
         } else {
             isInitialized = true; // No offset to process
@@ -645,7 +645,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
         // Check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
-        if (totalLaunchSold == offsetTokens && (offsetTokens - tokensEarned) >= amount) {
+        if (totalLaunchSold == offsetLaunch && (offsetLaunch - tokensEarned) >= amount) {
             unaccountedOffsetLaunchBalance += amount;
         } else {
             launchBalance += amount;
@@ -849,7 +849,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
 
     function _handleOwnerDeposit(uint256 value) internal {
-        if (offsetTokens > tokensEarned) {
+        if (offsetLaunch > tokensEarned) {
             // Accumulate in unaccounted balance for gradual processing
             unaccountedCollateralBalance += value;
         }
@@ -911,8 +911,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 remainingAmount = totalAmount - effectiveAmount;
         unaccountedReturnBuybackBalance = remainingAmount;
 
-        if (offsetTokens > tokensEarned) {
-            uint256 offsetAmount = offsetTokens - tokensEarned;
+        if (offsetLaunch > tokensEarned) {
+            uint256 offsetAmount = offsetLaunch - tokensEarned;
 
             if (effectiveAmount > offsetAmount) {
                 _calculateCollateralForTokenAmountEarned(offsetAmount);
@@ -943,7 +943,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             }
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
-        uint256 maxEarnedOrOffset = offsetTokens > tokensEarned ? offsetTokens : tokensEarned;
+        uint256 maxEarnedOrOffset = offsetLaunch > tokensEarned ? offsetLaunch : tokensEarned;
 
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
         require(totalLaunchSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
@@ -1027,10 +1027,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingOffsetTokens = int256(amountTokens);
         uint256 localCurrentStep = offsetStep;
-        // casting to int256 is safe because remainderOffsetTokens is used for mathematical calculations
+        // casting to int256 is safe because remainderOfStepOffset is used for mathematical calculations
         // forge-lint: disable-next-line(unsafe-typecast)
-        int256 remainderOfStepLocal = int256(remainderOffsetTokens);
-        uint256 tokensPerLevel = sizeOffsetStep;
+        int256 remainderOfStepLocal = int256(remainderOfStepOffset);
+        uint256 tokensPerLevel = quantityTokensPerLevelOffset;
         uint256 currentPriceLocal = currentPrice;
 
         while (remainingOffsetTokens > 0) {
@@ -1055,8 +1055,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         offsetStep = localCurrentStep;
         // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
         // forge-lint: disable-next-line(unsafe-typecast)
-        remainderOffsetTokens = uint256(remainderOfStepLocal);
-        sizeOffsetStep = tokensPerLevel;
+        remainderOfStepOffset = uint256(remainderOfStepLocal);
+        quantityTokensPerLevelOffset = tokensPerLevel;
         offsetPrice = currentPriceLocal;
 
         currentStep = localCurrentStep;
@@ -1080,10 +1080,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingAddTokens = int256(amountToken);
         uint256 localCurrentStep = offsetStep;
-        // casting to int256 is safe because remainderOffsetTokens is used for mathematical calculations
+        // casting to int256 is safe because remainderOfStepOffset is used for mathematical calculations
         // forge-lint: disable-next-line(unsafe-typecast)
-        int256 remainderOfStepLocal = int256(remainderOffsetTokens);
-        uint256 tokensPerLevel = sizeOffsetStep;
+        int256 remainderOfStepLocal = int256(remainderOfStepOffset);
+        uint256 tokensPerLevel = quantityTokensPerLevelOffset;
         uint256 currentPriceLocal = offsetPrice;
 
         while (remainingAddTokens > 0) {
@@ -1125,11 +1125,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         offsetStep = localCurrentStep;
         // casting to uint256 is safe because remainderOfStepLocal is validated through mathematical operations
         // forge-lint: disable-next-line(unsafe-typecast)
-        remainderOffsetTokens = uint256(remainderOfStepLocal);
+        remainderOfStepOffset = uint256(remainderOfStepLocal);
         offsetPrice = currentPriceLocal;
-        sizeOffsetStep = tokensPerLevel;
+        quantityTokensPerLevelOffset = tokensPerLevel;
 
-        offsetTokens -= amountToken;
+        offsetLaunch -= amountToken;
 
         currentStep = localCurrentStep;
         quantityTokensPerLevel = tokensPerLevel;
@@ -1147,13 +1147,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // casting to int256 is safe because amountCollateral is validated and used for calculations
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 remainingAddCollateral = int256(amountCollateral);
-        uint256 remainingOffsetTokensLocal = offsetTokens;
-        // casting to int256 is safe because offsetTokens and tokensEarned are used for mathematical calculations
+        uint256 remainingOffsetTokensLocal = offsetLaunch;
+        // casting to int256 is safe because offsetLaunch and tokensEarned are used for mathematical calculations
         // forge-lint: disable-next-line(unsafe-typecast)
-        int256 remainingAddTokens = int256(offsetTokens) - int256(tokensEarned);
+        int256 remainingAddTokens = int256(offsetLaunch) - int256(tokensEarned);
         uint256 localCurrentStep = offsetStep;
-        uint256 remainderOfStepLocal = remainderOffsetTokens;
-        uint256 tokensPerLevel = sizeOffsetStep;
+        uint256 remainderOfStepLocal = remainderOfStepOffset;
+        uint256 tokensPerLevel = quantityTokensPerLevelOffset;
         uint256 currentPriceLocal = offsetPrice;
 
         while (remainingAddCollateral > 0 && remainingAddTokens > 0) {
@@ -1233,10 +1233,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
 
         offsetStep = localCurrentStep;
-        remainderOffsetTokens = remainderOfStepLocal;
+        remainderOfStepOffset = remainderOfStepLocal;
         offsetPrice = currentPriceLocal;
-        sizeOffsetStep = tokensPerLevel;
-        offsetTokens = remainingOffsetTokensLocal;
+        quantityTokensPerLevelOffset = tokensPerLevel;
+        offsetLaunch = remainingOffsetTokensLocal;
 
         // casting to uint256 is safe because remainingAddCollateral is validated through mathematical operations
         // forge-lint: disable-next-line(unsafe-typecast)

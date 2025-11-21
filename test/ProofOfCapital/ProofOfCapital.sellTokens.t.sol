@@ -153,7 +153,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     // Create a custom contract with high trendChangeStep and some offset to trigger offset logic
     ProofOfCapital.InitParams memory customParams = getValidParams();
     customParams.trendChangeStep = 50; // Set very high trendChangeStep so currentStep stays within range
-    customParams.offsetTokens = 10000e18; // Add offset to trigger offset-related code with console.log to make buyback easier
+    customParams.offsetLaunch = 10000e18; // Add offset to trigger offset-related code with console.log to make buyback easier
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -178,9 +178,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(marketMaker);
         token.approve(address(customContract), type(uint256).max);
 
-    // Buy enough tokens to exceed offsetTokens for buyback availability
+    // Buy enough tokens to exceed offsetLaunch for buyback availability
     vm.prank(marketMaker);
-    customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetTokens
+    customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetLaunch
 
         // Create unaccountedOffset to trigger offset processing
         // First, approve tokens for owner and deposit to create offset balance
@@ -208,19 +208,19 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 currentStepEarned = customContract.currentStepEarned();
         uint256 trendChangeStep = customContract.trendChangeStep();
         uint256 totalLaunchSold = customContract.totalLaunchSold();
-        uint256 offsetTokens = customContract.offsetTokens();
+        uint256 offsetLaunch = customContract.offsetLaunch();
 
         // Debug: print values
         console.log("currentStep:", currentStep);
         console.log("currentStepEarned:", currentStepEarned);
         console.log("trendChangeStep:", trendChangeStep);
         console.log("totalLaunchSold:", totalLaunchSold);
-        console.log("offsetTokens:", offsetTokens);
+        console.log("offsetLaunch:", offsetLaunch);
 
     // Ensure we have currentStep > currentStepEarned and currentStep <= trendChangeStep for sell logic
     assertGt(currentStep, currentStepEarned, "currentStep should be greater than currentStepEarned");
     assertLe(currentStep, trendChangeStep, "currentStep should be <= trendChangeStep to hit the branch");
-    assertGt(totalLaunchSold, offsetTokens, "totalLaunchSold should be > offsetTokens for buyback");
+    assertGt(totalLaunchSold, offsetLaunch, "totalLaunchSold should be > offsetLaunch for buyback");
 
         // Now sell tokens - this should hit the console.log branch in _calculateCollateralToPayForTokenAmount
         uint256 sellAmount = 1000e18;
@@ -240,7 +240,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create a custom contract with low trendChangeStep to trigger "trend change branch"
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Set low trendChangeStep so localCurrentStep > trendChangeStep
-        customParams.offsetTokens = 10000e18; // Add offset to trigger offset-related code
+        customParams.offsetLaunch = 10000e18; // Add offset to trigger offset-related code
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -261,9 +261,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(marketMaker);
         weth.approve(address(customContract), type(uint256).max);
 
-        // Buy enough tokens to exceed offsetTokens for buyback availability
+        // Buy enough tokens to exceed offsetLaunch for buyback availability
         vm.prank(marketMaker);
-        customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetTokens
+        customContract.buyTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetLaunch
 
         // Create unaccountedOffset to trigger offset processing
         vm.prank(owner);
@@ -293,7 +293,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create a custom contract with high trendChangeStep
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 10; // High trendChangeStep so localCurrentStep <= trendChangeStep
-        customParams.offsetTokens = 10000e18;
+        customParams.offsetLaunch = 10000e18;
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -328,7 +328,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create a custom contract with low trendChangeStep
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Low trendChangeStep so localCurrentStep > trendChangeStep
-        customParams.offsetTokens = 10000e18;
+        customParams.offsetLaunch = 10000e18;
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -364,7 +364,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create contract with trendChangeStep = 0 to force localCurrentStep > trendChangeStep
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Any localCurrentStep > 0 will trigger trend change
-        customParams.offsetTokens = 10000e18;
+        customParams.offsetLaunch = 10000e18;
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -401,7 +401,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create contract with high trendChangeStep
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 10; // High trendChangeStep so localCurrentStep <= trendChangeStep
-        customParams.offsetTokens = 10000e18;
+        customParams.offsetLaunch = 10000e18;
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -436,7 +436,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create contract with low trendChangeStep
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 0; // Low trendChangeStep so localCurrentStep > trendChangeStep
-        customParams.offsetTokens = 10000e18;
+        customParams.offsetLaunch = 10000e18;
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
@@ -473,7 +473,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Create a custom contract with low trendChangeStep
         ProofOfCapital.InitParams memory customParams = getValidParams();
         customParams.trendChangeStep = 3; // Low trendChangeStep to test both branches
-        customParams.offsetTokens = 0; // No offset
+        customParams.offsetLaunch = 0; // No offset
 
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);

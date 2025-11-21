@@ -27,7 +27,7 @@ contract DeployProofOfCapital is Script {
     uint256 public trendChangeStep;
     uint256 public levelDecreaseMultiplierafterTrend;
     uint256 public profitPercentage;
-    uint256 public offsetTokens;
+    uint256 public offsetLaunch;
     uint256 public controlPeriod;
     address public collateralAddress;
     uint256 public royaltyProfitPercent;
@@ -68,7 +68,7 @@ contract DeployProofOfCapital is Script {
         trendChangeStep = vm.envUint("TREND_CHANGE_STEP");
         levelDecreaseMultiplierafterTrend = vm.envUint("LEVEL_DECREASE_MULTIPLIER_AFTER_TREND");
         profitPercentage = vm.envUint("PROFIT_PERCENTAGE");
-        offsetTokens = vm.envUint("OFFSET_TOKENS");
+        offsetLaunch = vm.envUint("OFFSET_TOKENS");
         controlPeriod = vm.envUint("CONTROL_PERIOD");
         royaltyProfitPercent = vm.envUint("ROYALTY_PROFIT_PERCENT");
 
@@ -165,7 +165,7 @@ contract DeployProofOfCapital is Script {
             // forge-lint: disable-next-line(unsafe-typecast)
             levelDecreaseMultiplierafterTrend: int256(levelDecreaseMultiplierafterTrend),
             profitPercentage: profitPercentage,
-            offsetTokens: offsetTokens,
+            offsetLaunch: offsetLaunch,
             controlPeriod: controlPeriod,
             collateralAddress: collateralAddress,
             royaltyProfitPercent: royaltyProfitPercent,

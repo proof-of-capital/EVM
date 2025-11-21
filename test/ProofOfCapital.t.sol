@@ -101,7 +101,7 @@ contract ProofOfCapitalTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 10000e18, // Add offset to enable trading
+            offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
@@ -620,7 +620,7 @@ contract ProofOfCapitalTest is Test {
         uint256 contractBalance = proofOfCapital.launchBalance();
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetTokens)
+        // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetLaunch)
         assertTrue(
             contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold"
         );
@@ -651,7 +651,7 @@ contract ProofOfCapitalTest is Test {
         uint256 contractBalance = proofOfCapital.launchBalance();
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetTokens)
+        // In our setup: launchBalance = 0, totalLaunchSold = 10000e18 (offsetLaunch)
         assertTrue(
             contractBalance <= totalSold, "Setup verification: launchBalance should be <= totalLaunchSold"
         );
@@ -2198,13 +2198,13 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testTokenAvailableInitialState() public {
-        // Initially: offsetTokens go to unaccountedOffset, not totalLaunchSold
+        // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
         // So totalLaunchSold = 0, tokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 tokensEarned = proofOfCapital.tokensEarned();
 
         // Verify initial state
-        assertEq(totalSold, 0); // offsetTokens are in unaccountedOffset, not totalLaunchSold
+        assertEq(totalSold, 0); // offsetLaunch are in unaccountedOffset, not totalLaunchSold
         assertEq(tokensEarned, 0);
 
         // tokenAvailable should be totalLaunchSold - tokensEarned
@@ -2844,7 +2844,7 @@ contract ProofOfCapitalProfitTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 10000e18, // Add offset to enable trading
+            offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
@@ -2970,7 +2970,7 @@ contract ProofOfCapitalInitializationTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 10000e18,
+            offsetLaunch: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500, // 50%
@@ -3020,7 +3020,7 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeMultiplierValidAtBoundary() public {
         ProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
-        params.offsetTokens = 100e18; // Smaller offset to avoid overflow in calculations
+        params.offsetLaunch = 100e18; // Smaller offset to avoid overflow in calculations
 
         // Should not revert
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
@@ -3121,13 +3121,13 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeBoundaryValues() public {
         ProofOfCapital.InitParams memory params = getValidParams();
 
-        // Set all parameters to their boundary values with smaller offsetTokens
+        // Set all parameters to their boundary values with smaller offsetLaunch
         params.initialPricePerToken = 1; // Minimum valid
         params.levelDecreaseMultiplierafterTrend = 500; // Safe value below divisor
         params.levelIncreaseMultiplier = 1; // Minimum valid
         params.priceIncrementMultiplier = 1; // Minimum valid
         params.royaltyProfitPercent = 2; // Minimum valid
-        params.offsetTokens = 100e18; // Smaller offset to avoid overflow
+        params.offsetLaunch = 100e18; // Smaller offset to avoid overflow
 
         // Should not revert with all boundary values
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
@@ -3163,7 +3163,7 @@ contract ProofOfCapitalInitializationTest is Test {
         params.levelIncreaseMultiplier = 10000; // Large but reasonable multiplier
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Maximum royalty
-        params.offsetTokens = 1000e18; // Smaller offset to avoid calculations overflow
+        params.offsetLaunch = 1000e18; // Smaller offset to avoid calculations overflow
 
         // Should not revert with maximum values
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
@@ -3194,7 +3194,7 @@ contract ProofOfCapitalInitializationTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 1000e18,
+            offsetLaunch: 1000e18,
             controlPeriod: 1, // Way below minimum
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,
@@ -3228,7 +3228,7 @@ contract ProofOfCapitalInitializationTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 1000e18,
+            offsetLaunch: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,
@@ -3265,7 +3265,7 @@ contract ProofOfCapitalInitializationTest is Test {
             trendChangeStep: 5,
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 1000e18,
+            offsetLaunch: 1000e18,
             controlPeriod: validPeriod, // Within valid range
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,
@@ -3301,7 +3301,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetTokens: 1000e18,
+                offsetLaunch: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
                 collateralAddress: address(weth),
                 royaltyProfitPercent: 500,
@@ -3331,7 +3331,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 trendChangeStep: 5,
                 levelDecreaseMultiplierafterTrend: 50,
                 profitPercentage: 100,
-                offsetTokens: 1000e18,
+                offsetLaunch: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
                 collateralAddress: address(weth),
                 royaltyProfitPercent: 500,

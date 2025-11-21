@@ -40,7 +40,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
     address public user = address(0x5);
 
     function testHandleReturnWalletSaleConsoleLog() public {
-        // when offsetTokens > tokensEarned and effectiveAmount > offsetAmount
+        // when offsetLaunch > tokensEarned and effectiveAmount > offsetAmount
 
         // Step 1: Owner deposits tokens to create launchBalance
         vm.startPrank(owner);
@@ -76,7 +76,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         uint256 tokensEarnedAfterSale = proofOfCapital.tokensEarned();
         assertTrue(tokensEarnedAfterSale > 0, "Should have tokens earned after return wallet sale");
 
-        // Step 4: Set offsetTokens to be larger than tokensEarned and ensure tokensAvailableForReturnBuyback > 0
+        // Step 4: Set offsetLaunch to be larger than tokensEarned and ensure tokensAvailableForReturnBuyback > 0
         uint256 currentTokensEarned = proofOfCapital.tokensEarned();
         uint256 currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
@@ -88,16 +88,16 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
             currentTotalTokensSold = currentTokensEarned + 2000e18;
         }
 
-        uint256 offsetSlot = _stdstore.target(address(proofOfCapital)).sig("offsetTokens()").find();
-        vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(currentTokensEarned + 5000e18)); // Set offsetTokens > tokensEarned
+        uint256 offsetSlot = _stdstore.target(address(proofOfCapital)).sig("offsetLaunch()").find();
+        vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(currentTokensEarned + 5000e18)); // Set offsetLaunch > tokensEarned
 
         // Re-read values after modification
         currentTokensEarned = proofOfCapital.tokensEarned();
-        uint256 currentOffsetTokens = proofOfCapital.offsetTokens();
+        uint256 currentOffsetTokens = proofOfCapital.offsetLaunch();
         currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
         // Verify we have the right conditions for the test
-        assertTrue(currentOffsetTokens > currentTokensEarned, "offsetTokens should be > tokensEarned");
+        assertTrue(currentOffsetTokens > currentTokensEarned, "offsetLaunch should be > tokensEarned");
         assertTrue(currentTotalTokensSold > currentTokensEarned, "totalLaunchSold should be > tokensEarned");
 
         // Step 5: Create collateral balance to ensure contractCollateralBalance > 0
@@ -121,7 +121,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 2000e18);
 
-        // when offsetTokens > tokensEarned and effectiveAmount > offsetAmount
+        // when offsetLaunch > tokensEarned and effectiveAmount > offsetAmount
         proofOfCapital.sellTokens(1500e18); // Sell amount that triggers the log
 
         vm.stopPrank();

@@ -81,15 +81,15 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
         // Step 4: Now we have totalLaunchSold = 5000e18, tokensEarned = 1000e18
         // So tokensAvailableForReturnBuyback = 5000e18 - 1000e18 = 4000e18
 
-        // Step 5: Use stdstore to reduce offsetTokens so that collateralAmountToPay > 0
+        // Step 5: Use stdstore to reduce offsetLaunch so that collateralAmountToPay > 0
         // This will make offsetAmount smaller, so effectiveAmount can exceed it
-        uint256 offsetSlot = _stdstore.target(address(proofOfCapital)).sig("offsetTokens()").find();
-        vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(uint256(500e18))); // Set offsetTokens to 500e18
+        uint256 offsetSlot = _stdstore.target(address(proofOfCapital)).sig("offsetLaunch()").find();
+        vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(uint256(500e18))); // Set offsetLaunch to 500e18
 
         // Verify we have the right conditions for the test
         uint256 currentTokensEarned = proofOfCapital.tokensEarned();
-        uint256 currentOffsetTokens = proofOfCapital.offsetTokens();
-        assertTrue(currentTokensEarned > currentOffsetTokens, "tokensEarned should be > offsetTokens for collateralAmountToPay > 0");
+        uint256 currentOffsetTokens = proofOfCapital.offsetLaunch();
+        assertTrue(currentTokensEarned > currentOffsetTokens, "tokensEarned should be > offsetLaunch for collateralAmountToPay > 0");
 
         // Step 7: Use stdstore to set contractCollateralBalance to 0
         // This simulates a scenario where collateral balance was withdrawn or insufficient

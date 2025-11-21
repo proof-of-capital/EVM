@@ -44,7 +44,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
-        // Ensure contract has unaccountedOffset set (from initialization with offsetTokens > 0)
+        // Ensure contract has unaccountedOffset set (from initialization with offsetLaunch > 0)
         assertGt(proofOfCapital.unaccountedOffset(), 0, "unaccountedOffset should be set");
         assertFalse(proofOfCapital.isInitialized(), "Contract should not be initialized initially");
     }
@@ -203,16 +203,16 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
      * @dev Test error: UnaccountedOffsetBalanceNotSet when unaccountedOffset is zero
      */
     function testCalculateUnaccountedOffsetBalance_Reverts_ContractAlreadyInitialized() public {
-        // Create a new contract with zero offsetTokens to get zero unaccountedOffset
+        // Create a new contract with zero offsetLaunch to get zero unaccountedOffset
         ProofOfCapital.InitParams memory params = getValidParams();
-        params.offsetTokens = 0; // No offset tokens
+        params.offsetLaunch = 0; // No offset tokens
 
         vm.startPrank(owner);
         ProofOfCapital newContract = new ProofOfCapital(params);
         vm.stopPrank();
 
         // New contract should have isInitialized = true and unaccountedOffset = 0
-        assertTrue(newContract.isInitialized(), "Contract should be initialized when offsetTokens is 0");
+        assertTrue(newContract.isInitialized(), "Contract should be initialized when offsetLaunch is 0");
         assertEq(newContract.unaccountedOffset(), 0, "Balance should be zero");
 
         // Setup trading access
@@ -269,8 +269,8 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffset();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 initialOffsetPrice = proofOfCapital.offsetPrice();
-        uint256 initialRemainderOffsetTokens = proofOfCapital.remainderOffsetTokens();
-        uint256 initialSizeOffsetStep = proofOfCapital.sizeOffsetStep();
+        uint256 initialRemainderOffsetTokens = proofOfCapital.remainderOfStepOffset();
+        uint256 initialSizeOffsetStep = proofOfCapital.quantityTokensPerLevelOffset();
         uint256 initialCurrentStep = proofOfCapital.currentStep();
         uint256 initialCurrentPrice = proofOfCapital.currentPrice();
         uint256 initialQuantityTokensPerLevel = proofOfCapital.quantityTokensPerLevel();
@@ -298,13 +298,13 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         assertEq(proofOfCapital.currentPrice(), proofOfCapital.offsetPrice(), "currentPrice should match offsetPrice");
         assertEq(
             proofOfCapital.quantityTokensPerLevel(),
-            proofOfCapital.sizeOffsetStep(),
-            "quantityTokensPerLevel should match sizeOffsetStep"
+            proofOfCapital.quantityTokensPerLevelOffset(),
+            "quantityTokensPerLevel should match quantityTokensPerLevelOffset"
         );
         assertEq(
             proofOfCapital.remainderOfStep(),
-            proofOfCapital.remainderOffsetTokens(),
-            "remainderOfStep should match remainderOffsetTokens"
+            proofOfCapital.remainderOfStepOffset(),
+            "remainderOfStep should match remainderOfStepOffset"
         );
     }
 

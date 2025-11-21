@@ -61,7 +61,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
             trendChangeStep: 5, // Critical: lines 939-940 execute when localCurrentStep <= 5
             levelDecreaseMultiplierafterTrend: 50,
             profitPercentage: 100,
-            offsetTokens: 2000e18, // Medium offset - should create offsetStep around 3-4
+            offsetLaunch: 2000e18, // Medium offset - should create offsetStep around 3-4
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
             collateralAddress: address(weth),
             royaltyProfitPercent: 500,

@@ -31,7 +31,6 @@
 pragma solidity 0.8.29;
 
 import {BaseTest} from "../utils/BaseTest.sol";
-import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 

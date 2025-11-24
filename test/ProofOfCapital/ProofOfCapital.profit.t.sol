@@ -30,9 +30,7 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import {BaseTest} from "../utils/BaseTest.sol";
 import {BaseTestWithoutOffset} from "../utils/BaseTestWithoutOffset.sol";
-import {MockWETH} from "../mocks/MockWETH.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ProofOfCapital} from "../../src/ProofOfCapital.sol";

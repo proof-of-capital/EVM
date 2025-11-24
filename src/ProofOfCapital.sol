@@ -32,12 +32,12 @@
 
 pragma solidity 0.8.29;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IProofOfCapital.sol";
-import "./utils/Constant.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IProofOfCapital} from "./interfaces/IProofOfCapital.sol";
+import {Constants} from "./utils/Constant.sol";
 
 /**
  * @title ProofOfCapital
@@ -162,12 +162,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(msg.sender == reserveOwner, OnlyReserveOwner());
     }
 
-    modifier onlyDAO() {
-        _onlyDAO();
+    modifier onlyDao() {
+        _onlyDao();
         _;
     }
 
-    function _onlyDAO() internal view {
+    function _onlyDao() internal view {
         require(msg.sender == daoAddress, AccessDenied());
     }
 
@@ -581,7 +581,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Withdraw all tokens after lock period
      * @notice Only DAO can withdraw all tokens after lock period ends
      */
-    function withdrawAllTokens() external override onlyDAO nonReentrant {
+    function withdrawAllTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
 
         uint256 availableTokens = launchBalance - totalLaunchSold;
@@ -610,7 +610,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Withdraw all collateral tokens after lock period
      * @notice Only DAO can withdraw all collateral tokens after lock period ends
      */
-    function withdrawAllCollateralTokens() external override onlyDAO nonReentrant {
+    function withdrawAllCollateralTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
         require(contractCollateralBalance > 0, NoCollateralTokensToWithdraw());
 
@@ -1073,9 +1073,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 / Constants.PERCENTAGE_DIVISOR;
 
             // casting to int256 is safe because collateralRealInStep and tokensAvailableInStep are used for mathematical calculations
-            // forge-lint: disable-next-line(unsafe-typecast)
             if (
+                // forge-lint: disable-next-line(unsafe-typecast)
                 remainingAddCollateral >= int256(collateralRealInStep)
+                    // forge-lint: disable-next-line(unsafe-typecast)
                     && remainingAddTokens >= int256(tokensAvailableInStep)
             ) {
                 // casting to int256 is safe because collateralRealInStep is used for mathematical calculations
@@ -1131,8 +1132,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     // forge-lint: disable-next-line(unsafe-typecast)
                     collateralToPayForStep = uint256(remainingAddCollateral);
                     // casting to uint256 is safe because remainingAddCollateral is used for mathematical calculations
-                    // forge-lint: disable-next-line(unsafe-typecast)
                     tokensToBuyInThisStep =
+                    // forge-lint: disable-next-line(unsafe-typecast)
                         (uint256(remainingAddCollateral) * Constants.PRICE_PRECISION) / adjustedPrice;
                 }
 

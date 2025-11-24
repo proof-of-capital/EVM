@@ -35,13 +35,12 @@ import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockWETH} from "../mocks/MockWETH.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BaseTest is Test {
     using SafeERC20 for IERC20;
-    
+
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;

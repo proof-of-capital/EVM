@@ -6,7 +6,6 @@ pragma solidity 0.8.29;
 import {BaseTest} from "../utils/BaseTest.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract ProofOfCapitalRegisterOldContractTest is BaseTest {
     address public constant MOCK_OLD_CONTRACT = address(0x1234567890123456789012345678901234567890);

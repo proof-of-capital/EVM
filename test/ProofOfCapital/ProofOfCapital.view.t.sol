@@ -37,7 +37,8 @@ import {Constants} from "../../src/utils/Constant.sol";
 
 contract ProofOfCapitalViewTest is BaseTest {
     using SafeERC20 for IERC20;
-    function testTradingOpportunityWhenNotInTradingPeriod() public {
+
+    function testTradingOpportunityWhenNotInTradingPeriod() public view {
         // Initially, lock ends in 365 days, so we're not in trading period (>60 days remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         uint256 currentTime = block.timestamp;
@@ -93,7 +94,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertFalse(proofOfCapital.tradingOpportunity());
     }
 
-    function testTokenAvailableInitialState() public {
+    function testTokenAvailableInitialState() public view {
         // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
         // So totalLaunchSold = 0, tokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
@@ -141,7 +142,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         }
     }
 
-    function testTokenAvailableStateConsistency() public {
+    function testTokenAvailableStateConsistency() public view {
         // Test that tokenAvailable always equals totalLaunchSold - tokensEarned
 
         // Record initial state
@@ -196,7 +197,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertEq(proofOfCapital.remainingSeconds(), 0);
     }
 
-    function testRemainingSecondsBeforeLockEnd() public {
+    function testRemainingSecondsBeforeLockEnd() public view {
         // Should return actual remaining time
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         uint256 currentTime = block.timestamp;

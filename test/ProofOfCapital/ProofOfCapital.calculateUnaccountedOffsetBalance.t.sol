@@ -270,12 +270,6 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         uint256 initialUnaccountedBalance = proofOfCapital.unaccountedOffset();
         uint256 initialOffsetStep = proofOfCapital.offsetStep();
         uint256 initialOffsetPrice = proofOfCapital.offsetPrice();
-        uint256 initialRemainderOffsetTokens = proofOfCapital.remainderOfStepOffset();
-        uint256 initialSizeOffsetStep = proofOfCapital.quantityTokensPerLevelOffset();
-        uint256 initialCurrentStep = proofOfCapital.currentStep();
-        uint256 initialCurrentPrice = proofOfCapital.currentPrice();
-        uint256 initialQuantityTokensPerLevel = proofOfCapital.quantityTokensPerLevel();
-        uint256 initialRemainderOfStep = proofOfCapital.remainderOfStep();
 
         uint256 amount = 1000e18;
         require(initialUnaccountedBalance >= amount, "Test setup: insufficient balance");

@@ -35,7 +35,6 @@ import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockWETH} from "../mocks/MockWETH.sol";
 
 contract BaseTestWithoutOffset is Test {
     ProofOfCapital public proofOfCapital;

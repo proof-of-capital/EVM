@@ -2125,7 +2125,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.royaltyProfitPercent(), newPercentage);
     }
 
-    function testTradingOpportunityWhenNotInTradingPeriod() public {
+    function testTradingOpportunityWhenNotInTradingPeriod() public view {
         // Initially, lock ends in 365 days, so we're not in trading period (>60 days remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         uint256 currentTime = block.timestamp;
@@ -2181,7 +2181,7 @@ contract ProofOfCapitalTest is Test {
         assertFalse(proofOfCapital.tradingOpportunity());
     }
 
-    function testTokenAvailableInitialState() public {
+    function testTokenAvailableInitialState() public view {
         // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
         // So totalLaunchSold = 0, tokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
@@ -2229,7 +2229,7 @@ contract ProofOfCapitalTest is Test {
         }
     }
 
-    function testTokenAvailableStateConsistency() public {
+    function testTokenAvailableStateConsistency() public view {
         // Test that tokenAvailable always equals totalLaunchSold - tokensEarned
 
         // Record initial state
@@ -2722,9 +2722,6 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testOnlyOwnerOrOldContractModifier() public {
-        // Add an old contract address for testing
-        address oldContract = address(0x888);
-
         // We can't directly test this modifier easily without modifying the contract
         // But we can test that non-authorized addresses fail
 
@@ -2751,7 +2748,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.remainingSeconds(), 0);
     }
 
-    function testRemainingSecondsBeforeLockEnd() public {
+    function testRemainingSecondsBeforeLockEnd() public view {
         // Should return actual remaining time
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         uint256 currentTime = block.timestamp;

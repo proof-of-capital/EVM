@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.29;
 
-import "forge-std/Script.sol";
-import "forge-std/console.sol";
-import "../src/ProofOfCapital.sol";
-import "../src/interfaces/IProofOfCapital.sol";
+import {Script} from "forge-std/Script.sol";
+import {console} from "forge-std/console.sol";
+import {ProofOfCapital} from "../src/ProofOfCapital.sol";
+import {IProofOfCapital} from "../src/interfaces/IProofOfCapital.sol";
 
 /**
  * @title DeployProofOfCapital
@@ -272,6 +272,7 @@ contract DeployProofOfCapital is Script {
 
         string memory filename = string(abi.encodePacked("deployment-", vm.toString(block.chainid), ".txt"));
 
+        // forge-lint: disable-next-line(unsafe-cheatcode)
         vm.writeFile(filename, deploymentInfo);
         console.log("Deployment info saved to:", filename);
     }

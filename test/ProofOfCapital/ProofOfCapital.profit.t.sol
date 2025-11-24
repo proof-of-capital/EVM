@@ -30,11 +30,18 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
-import "../utils/BaseTestWithoutOffset.sol";
-import "../mocks/MockWETH.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {BaseTestWithoutOffset} from "../utils/BaseTestWithoutOffset.sol";
+import {MockWETH} from "../mocks/MockWETH.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {Constants} from "../../src/utils/Constant.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 
 contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
+    using SafeERC20 for IERC20;
     address public user = address(0x5);
 
     function setUp() public override {
@@ -43,11 +50,11 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         vm.startPrank(owner);
 
         // Setup tokens for users and add market maker permissions
-        token.transfer(address(proofOfCapital), 500000e18);
-        token.transfer(returnWallet, 50000e18);
-        weth.transfer(owner, 200000e18); // Give owner WETH for deposits
-        weth.transfer(user, 100000e18);
-        weth.transfer(marketMaker, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), 500000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), owner, 200000e18); // Give owner WETH for deposits
+        SafeERC20.safeTransfer(IERC20(address(weth)), user, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 100000e18);
 
         // Enable market maker for user to allow trading
         proofOfCapital.setMarketMaker(user, true);
@@ -105,7 +112,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Manually set owner profit balance for testing
         // We'll use the deposit function to simulate profit accumulation
         vm.prank(owner);
-        weth.transfer(address(proofOfCapital), 1000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), 1000e18);
 
         // Manually set profit balance using internal state
         // Since we can't directly modify internal balance, we'll test error case
@@ -138,7 +145,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Transfer launch tokens from owner to contract and deposit them
         uint256 tokensToDeposit = 100000e18; // Use smaller amount
-        testToken.transfer(address(testContract), tokensToDeposit);
+        SafeERC20.safeTransfer(IERC20(address(testToken)), address(testContract), tokensToDeposit);
         testToken.approve(address(testContract), tokensToDeposit);
         testContract.depositTokens(tokensToDeposit); // This increases launchBalance
 
@@ -148,7 +155,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         testContract.deposit(depositAmount);
 
         // Transfer WETH to market maker for purchases
-        testWeth.transfer(testMarketMaker, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(testWeth)), testMarketMaker, 100000e18);
         vm.stopPrank();
 
         // Approve WETH for market maker
@@ -210,7 +217,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Transfer launch tokens from owner to contract and deposit them
         uint256 tokensToDeposit = 100000e18; // Use smaller amount
-        testToken.transfer(address(testContract), tokensToDeposit);
+        SafeERC20.safeTransfer(IERC20(address(testToken)), address(testContract), tokensToDeposit);
         testToken.approve(address(testContract), tokensToDeposit);
         testContract.depositTokens(tokensToDeposit); // This increases launchBalance
 
@@ -220,7 +227,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         testContract.deposit(depositAmount);
 
         // Transfer WETH to market maker for purchases
-        testWeth.transfer(testMarketMaker, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(testWeth)), testMarketMaker, 100000e18);
         vm.stopPrank();
 
         // Approve WETH for market maker
@@ -494,7 +501,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Give WETH tokens to regular user
         vm.prank(owner);
-        weth.transfer(regularUser, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), regularUser, 10000e18);
 
         vm.prank(regularUser);
         weth.approve(address(proofOfCapital), type(uint256).max);
@@ -527,7 +534,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Give WETH tokens to regular user
         vm.prank(owner);
-        weth.transfer(regularUser, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), regularUser, 10000e18);
 
         vm.prank(regularUser);
         weth.approve(address(proofOfCapital), type(uint256).max);

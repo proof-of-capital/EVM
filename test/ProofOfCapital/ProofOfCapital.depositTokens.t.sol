@@ -30,11 +30,16 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
 
 contract ProofOfCapitalDepositTokensTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     StdStorage private _stdStore;
     address public oldContract = address(0x123);
@@ -45,8 +50,8 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
 
         // Setup: Give tokens to owner and old contract for testing
         vm.startPrank(owner);
-        token.transfer(owner, 100000e18);
-        token.transfer(oldContract, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), owner, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), oldContract, 100000e18);
         vm.stopPrank();
 
         // Register old contract
@@ -109,7 +114,7 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
     function testDepositTokensUnauthorized() public {
         // Give tokens to unauthorized user
         vm.startPrank(owner);
-        token.transfer(unauthorizedUser, 1000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), unauthorizedUser, 1000e18);
         vm.stopPrank();
 
         vm.startPrank(unauthorizedUser);

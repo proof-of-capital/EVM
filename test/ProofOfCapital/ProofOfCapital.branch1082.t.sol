@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
-import {console} from "forge-std/console.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
 
 /**
  * Branch test to reach lines 1082-1084 of ProofOfCapital by minimal mathematical scenario.
  */
 contract ProofOfCapitalBranch1082Test is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     StdStorage private _stdStore;
     address public buyer = address(0x10);
@@ -34,7 +40,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
         wethLocal = new MockERC20("WETH", "WETH");
 
         // Fund buyer with WETH for purchases
-        wethLocal.transfer(buyer, 2000e18);
+        SafeERC20.safeTransfer(IERC20(address(wethLocal)), buyer, 2000e18);
 
         // prepare params with offsetLaunch = 0
         IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
@@ -63,7 +69,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
         poc = new ProofOfCapital(params);
 
         // Provide actual launch tokens to the contract and adjust internal counter
-        tokenLocal.transfer(address(poc), 1000e18);
+        SafeERC20.safeTransfer(IERC20(address(tokenLocal)), address(poc), 1000e18);
 
         // Override storage variable `launchBalance` to reflect the same amount using stdstore helper
         uint256 slot = _stdStore.target(address(poc)).sig("launchBalance()").find();

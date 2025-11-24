@@ -30,8 +30,11 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
+import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 
 contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
     using stdStorage for StdStorage;

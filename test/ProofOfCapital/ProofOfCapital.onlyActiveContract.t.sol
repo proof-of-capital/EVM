@@ -30,11 +30,15 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 
 contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     StdStorage private _stdStore;
     address public user = address(0x5);
@@ -44,12 +48,12 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
 
         // Setup tokens for users
         vm.startPrank(owner);
-        token.transfer(address(proofOfCapital), 500000e18);
-        token.transfer(returnWallet, 50000e18);
-        token.transfer(user, 50000e18);
-        token.transfer(marketMaker, 50000e18);
-        weth.transfer(user, 50000e18);
-        weth.transfer(marketMaker, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), 500000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), user, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), marketMaker, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), user, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 50000e18);
 
         // Enable market maker for user to allow trading
         proofOfCapital.setMarketMaker(user, true);
@@ -82,7 +86,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
 
         // Setup: Create collateral balance and move time to after lock end
         vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), 10000e18);
         // Set contractCollateralBalance using storage manipulation
         uint256 slotCollateralBalance =
             _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
@@ -103,7 +107,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Test that buyTokens reverts when contract is not active
         // Setup: Give user WETH and approve
         vm.startPrank(owner);
-        weth.transfer(user, 1000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), user, 1000e18);
         vm.stopPrank();
 
         vm.prank(user);
@@ -124,7 +128,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
 
         // Setup: Create collateral balance and move time to after lock end
         vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), 10000e18);
         // Set contractCollateralBalance using storage manipulation
         uint256 slotCollateralBalance =
             _stdStore.target(address(proofOfCapital)).sig("contractCollateralBalance()").find();
@@ -144,7 +148,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
 
         // Setup: Give owner tokens and approve
         vm.startPrank(owner);
-        token.transfer(owner, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), owner, 10000e18);
         token.approve(address(proofOfCapital), 1000e18);
         vm.stopPrank();
 

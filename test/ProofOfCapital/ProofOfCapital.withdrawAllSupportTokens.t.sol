@@ -30,12 +30,15 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
-import "../../src/interfaces/IProofOfCapital.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ProofOfCapitalWithdrawAllCollateralTokensTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     StdStorage private _stdStore;
 
@@ -58,7 +61,7 @@ contract ProofOfCapitalWithdrawAllCollateralTokensTest is BaseTest {
 
         // Also transfer WETH to contract so it has tokens to transfer
         vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), collateralBalanceAmount);
+        SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), collateralBalanceAmount);
         vm.stopPrank();
 
         // Step 2: Move time past lock end time

@@ -30,11 +30,14 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
-import "forge-std/StdStorage.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ProofOfCapitalConsoleLogTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
     StdStorage private _stdstore;
 
     address public user = address(0x5);
@@ -50,7 +53,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         // Now market maker can buy many tokens to create large totalLaunchSold
         vm.startPrank(owner);
-        weth.transfer(marketMaker, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(marketMaker);
@@ -64,7 +67,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         // Step 2: Now returnWallet can sell tokens back, which will increase tokensEarned
         vm.startPrank(owner);
-        token.transfer(returnWallet, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -105,7 +108,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         // Step 6: Give returnWallet more tokens and try to sell again
         vm.startPrank(owner);
-        token.transfer(returnWallet, 2000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 2000e18);
         vm.stopPrank();
 
         // Step 7: Ensure we have enough tokensAvailableForReturnBuyback before calling sellTokens

@@ -31,11 +31,15 @@
 
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
-import "forge-std/StdStorage.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 
 contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
     StdStorage private _stdstore;
 
     address public user = address(0x5);
@@ -52,7 +56,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
 
         // Now market maker can buy many tokens to create large totalLaunchSold
         vm.startPrank(owner);
-        weth.transfer(marketMaker, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(marketMaker);
@@ -66,7 +70,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
 
         // Step 2: Now returnWallet can sell tokens back, which will increase tokensEarned
         vm.startPrank(owner);
-        token.transfer(returnWallet, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -104,7 +108,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
 
         // Step 8: Give returnWallet more tokens and try to sell again
         vm.startPrank(owner);
-        token.transfer(returnWallet, 2000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 2000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);

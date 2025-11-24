@@ -28,17 +28,20 @@
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
-/// forge-lint: disable-next-item(erc20-unchecked-transfer)
 pragma solidity 0.8.29;
 
-import "forge-std/Test.sol";
-import "../../src/ProofOfCapital.sol";
-import "../../src/interfaces/IProofOfCapital.sol";
-import "../../src/utils/Constant.sol";
-import "../mocks/MockERC20.sol";
-import "../mocks/MockWETH.sol";
+import {Test} from "forge-std/Test.sol";
+import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockWETH} from "../mocks/MockWETH.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BaseTest is Test {
+    using SafeERC20 for IERC20;
+    
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
@@ -122,7 +125,7 @@ contract BaseTest is Test {
     // Helper function to create collateral balance in contract
     function createCollateralBalance(uint256 amount) internal {
         vm.startPrank(owner);
-        token.transfer(returnWallet, amount * 2); // Give enough for selling back
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, amount * 2); // Give enough for selling back
         vm.stopPrank();
 
         vm.startPrank(returnWallet);

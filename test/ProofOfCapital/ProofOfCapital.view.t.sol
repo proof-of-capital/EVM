@@ -30,9 +30,13 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Constants} from "../../src/utils/Constant.sol";
 
 contract ProofOfCapitalViewTest is BaseTest {
+    using SafeERC20 for IERC20;
     function testTradingOpportunityWhenNotInTradingPeriod() public {
         // Initially, lock ends in 365 days, so we're not in trading period (>60 days remaining)
         uint256 lockEndTime = proofOfCapital.lockEndTime();
@@ -114,7 +118,7 @@ contract ProofOfCapitalViewTest is BaseTest {
 
         // Give tokens to return wallet
         vm.startPrank(owner);
-        token.transfer(returnWallet, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         // Return wallet sells tokens back (this increases tokensEarned)

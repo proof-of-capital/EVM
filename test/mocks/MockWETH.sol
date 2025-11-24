@@ -9,7 +9,7 @@
 // https://github.com/proof-of-capital/EVM
 pragma solidity 0.8.29;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // Add proper WETH mock with deposit functionality
 contract MockWETH is ERC20 {

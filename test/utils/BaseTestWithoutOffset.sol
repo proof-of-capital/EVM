@@ -30,12 +30,12 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "forge-std/Test.sol";
-import "../../src/ProofOfCapital.sol";
-import "../../src/interfaces/IProofOfCapital.sol";
-import "../../src/utils/Constant.sol";
-import "../mocks/MockERC20.sol";
-import "../mocks/MockWETH.sol";
+import {Test} from "forge-std/Test.sol";
+import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockWETH} from "../mocks/MockWETH.sol";
 
 contract BaseTestWithoutOffset is Test {
     ProofOfCapital public proofOfCapital;

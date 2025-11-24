@@ -30,11 +30,16 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
 
 contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     StdStorage private _stdStore;
 
@@ -54,7 +59,7 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
         proofOfCapital = deployWithParams(params);
 
         // Give WETH to owner for deposits
-        weth.transfer(owner, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), owner, 100000e18);
         vm.stopPrank();
 
         // Approve WETH for owner

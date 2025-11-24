@@ -30,9 +30,16 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../../src/utils/Constant.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
+    using SafeERC20 for IERC20;
     address public user = address(0x5);
 
     function setUp() public override {
@@ -73,10 +80,10 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
         proofOfCapital = deployWithParams(params);
 
         // Give tokens to owner and user for testing
-        token.transfer(owner, 500000e18);
-        token.transfer(user, 100000e18);
-        weth.transfer(owner, 100000e18);
-        weth.transfer(user, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), owner, 500000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), user, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), owner, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), user, 100000e18);
 
         vm.stopPrank();
 
@@ -101,7 +108,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
 
         // Setup return wallet
         vm.startPrank(owner);
-        token.transfer(returnWallet, 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 100000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);

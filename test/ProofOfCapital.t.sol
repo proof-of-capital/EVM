@@ -29,15 +29,16 @@
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 
-/// forge-lint: disable-next-item(erc20-unchecked-transfer)
 pragma solidity 0.8.29;
 
-import "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
-import "../src/ProofOfCapital.sol";
-import "../src/interfaces/IProofOfCapital.sol";
-import "../src/utils/Constant.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ProofOfCapital} from "../src/ProofOfCapital.sol";
+import {IProofOfCapital} from "../src/interfaces/IProofOfCapital.sol";
+import {Constants} from "../src/utils/Constant.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -64,6 +65,7 @@ contract MockWETH is ERC20 {
 
 contract ProofOfCapitalTest is Test {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
@@ -569,7 +571,7 @@ contract ProofOfCapitalTest is Test {
         // Step 1: Create state where launchBalance > totalLaunchSold
         // Use returnWallet to sell tokens back to contract, increasing launchBalance
         vm.startPrank(owner);
-        token.transfer(returnWallet, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -670,8 +672,7 @@ contract ProofOfCapitalTest is Test {
         vm.startPrank(owner);
 
         // First, give some tokens to returnWallet to sell back
-        // forge-lint: disable-next-line(erc20-unchecked-transfer)
-        token.transfer(returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
 
         vm.stopPrank();
 
@@ -782,7 +783,7 @@ contract ProofOfCapitalTest is Test {
         // Step 1: Create state where launchBalance > totalLaunchSold
         // Use returnWallet to sell tokens back to contract, increasing launchBalance
         vm.startPrank(owner);
-        token.transfer(returnWallet, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -1658,7 +1659,7 @@ contract ProofOfCapitalTest is Test {
         vm.store(address(proofOfCapital), bytes32(slotContractCollateralBalance), bytes32(collateralBalanceAmount));
 
         vm.startPrank(owner);
-        weth.transfer(address(proofOfCapital), collateralBalanceAmount);
+        SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), collateralBalanceAmount);
         vm.stopPrank();
 
         uint256 collateralBalance = proofOfCapital.contractCollateralBalance();
@@ -2205,7 +2206,7 @@ contract ProofOfCapitalTest is Test {
 
         // Give tokens to return wallet
         vm.startPrank(owner);
-        token.transfer(returnWallet, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         // Return wallet sells tokens back (this increases tokensEarned)
@@ -2281,7 +2282,7 @@ contract ProofOfCapitalTest is Test {
 
         // Give tokens to return wallet
         vm.startPrank(owner);
-        token.transfer(returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
         vm.stopPrank();
 
         // Return wallet sells tokens back (this increases launchBalance)
@@ -2346,7 +2347,7 @@ contract ProofOfCapitalTest is Test {
     function testWithdrawAllTokensStateResetComplete() public {
         // Setup tokens in contract using returnWallet selling tokens back
         vm.startPrank(owner);
-        token.transfer(returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -2384,7 +2385,7 @@ contract ProofOfCapitalTest is Test {
     function testWithdrawAllTokensAtExactLockEnd() public {
         // Setup tokens in contract using returnWallet selling tokens back
         vm.startPrank(owner);
-        token.transfer(returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -2407,12 +2408,12 @@ contract ProofOfCapitalTest is Test {
     function testWithdrawAllTokensCalculatesAvailableCorrectly() public {
         // Add tokens and simulate some trading to test calculation
         vm.startPrank(owner);
-        token.transfer(address(proofOfCapital), 100000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), 100000e18);
         vm.stopPrank();
 
         // Create scenario where returnWallet sells tokens back
         vm.startPrank(owner);
-        token.transfer(returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -2511,7 +2512,7 @@ contract ProofOfCapitalTest is Test {
 
         // First test: withdraw main tokens
         vm.startPrank(owner);
-        token.transfer(returnWallet, 20000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 20000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
@@ -2826,9 +2827,9 @@ contract ProofOfCapitalProfitTest is Test {
         proofOfCapital = new ProofOfCapital(params);
 
         // Setup tokens for users and add market maker permissions
-        token.transfer(address(proofOfCapital), 1000000e18);
-        weth.transfer(user, 10000e18);
-        weth.transfer(marketMaker, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), 1000000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), user, 10000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 10000e18);
 
         // Enable market maker for user to allow trading
         proofOfCapital.setMarketMaker(user, true);
@@ -2883,7 +2884,7 @@ contract ProofOfCapitalProfitTest is Test {
         // Manually set owner profit balance for testing
         // We'll use the deposit function to simulate profit accumulation
         vm.prank(owner);
-        weth.transfer(address(proofOfCapital), 1000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), 1000e18);
 
         // Manually set profit balance using internal state
         // Since we can't directly modify internal balance, we'll test error case

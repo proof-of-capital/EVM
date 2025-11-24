@@ -28,16 +28,21 @@
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
-/// forge-lint: disable-next-item(erc20-unchecked-transfer)
-
 pragma solidity 0.8.29;
 
-import "../utils/BaseTest.sol";
-import "../mocks/MockRecipient.sol";
-import "forge-std/StdStorage.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
+import {MockRecipient} from "../mocks/MockRecipient.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
+import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
+import {console} from "forge-std/console.sol";
+import {Constants} from "../../src/utils/Constant.sol";
 
 contract ProofOfCapitalSellTokensTest is BaseTest {
     using stdStorage for StdStorage;
+    using SafeERC20 for IERC20;
 
     StdStorage private _stdstore;
     address public user = address(0x5);
@@ -48,12 +53,12 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.startPrank(owner);
 
         // Setup tokens for users
-        token.transfer(address(proofOfCapital), 500000e18);
-        token.transfer(returnWallet, 50000e18);
-        token.transfer(user, 50000e18);
-        token.transfer(marketMaker, 50000e18);
-        weth.transfer(user, 50000e18);
-        weth.transfer(marketMaker, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), 500000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), user, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), marketMaker, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), user, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 50000e18);
 
         // Enable market maker for user to allow trading
         proofOfCapital.setMarketMaker(user, true);
@@ -158,7 +163,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 30000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 30000e18);
 
         // Approve tokens for returnWallet
         vm.prank(returnWallet);
@@ -245,7 +250,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // Approve tokens for returnWallet
         vm.prank(returnWallet);
@@ -298,7 +303,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // Create unaccountedOffset
         vm.prank(owner);
@@ -333,7 +338,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // Create unaccountedOffset
         vm.prank(owner);
@@ -369,7 +374,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Setup tokens
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // Create offset balance
         vm.prank(owner);
@@ -406,7 +411,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Setup tokens
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // First, process offset to set offsetStep > 0
         vm.prank(owner);
@@ -441,7 +446,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Setup tokens
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // First, process offset to set offsetStep > 0
         vm.prank(owner);
@@ -477,7 +482,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
-        token.transfer(address(customContract), 40000e18);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
         // Approve tokens for returnWallet
         vm.prank(returnWallet);

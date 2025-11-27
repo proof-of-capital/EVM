@@ -41,8 +41,8 @@ interface IProofOfCapital {
     error ContractNotActive();
     error OnlyReserveOwner();
     error InitialPriceMustBePositive();
-    error MultiplierTooHigh();
-    error MultiplierTooLow();
+    error InvalidLevelDecreaseMultiplierAfterTrend();
+    error InvalidLevelIncreaseMultiplier();
     error PriceIncrementTooLow();
     error InvalidRoyaltyProfitPercentage();
     error ETHTransferFailed();

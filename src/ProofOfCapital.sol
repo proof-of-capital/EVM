@@ -176,12 +176,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(
             params.levelDecreaseMultiplierAfterTrend < int256(Constants.PERCENTAGE_DIVISOR)
                 && params.levelDecreaseMultiplierAfterTrend > -int256(Constants.PERCENTAGE_DIVISOR),
-            MultiplierTooHigh()
+            InvalidLevelDecreaseMultiplierAfterTrend()
         );
         require(
             params.levelIncreaseMultiplier > -int256(Constants.PERCENTAGE_DIVISOR)
                 && params.levelIncreaseMultiplier < int256(Constants.PERCENTAGE_DIVISOR),
-            MultiplierTooLow()
+            InvalidLevelIncreaseMultiplier()
         );
         require(params.priceIncrementMultiplier > 0, PriceIncrementTooLow());
         require(
@@ -908,8 +908,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             return (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierAfterTrend))
                 / Constants.PERCENTAGE_DIVISOR;
         } else {
-            return
-            (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier))
+            return (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier))
                 / Constants.PERCENTAGE_DIVISOR;
         }
     }
@@ -1281,7 +1280,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // Calculate how many 30-day periods fit between controlDay and current time
         uint256 timeSinceControlDay = block.timestamp - controlDay;
         uint256 periodsToAdd = (timeSinceControlDay / Constants.THIRTY_DAYS) + 1;
-        
+
         // Shift controlDay to the nearest future
         controlDay += periodsToAdd * Constants.THIRTY_DAYS;
     }

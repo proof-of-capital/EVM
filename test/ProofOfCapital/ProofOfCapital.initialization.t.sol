@@ -72,12 +72,12 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapital.initialPricePerToken(), 1);
     }
 
-    // Test MultiplierTooHigh error
+    // Test InvalidLevelDecreaseMultiplierAfterTrend error
     function testInitializeMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelDecreaseMultiplierAfterTrend.selector);
         new ProofOfCapital(params);
     }
 
@@ -85,7 +85,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelDecreaseMultiplierAfterTrend.selector);
         new ProofOfCapital(params);
     }
 
@@ -101,12 +101,12 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), int256(Constants.PERCENTAGE_DIVISOR - 1));
     }
 
-    // Test MultiplierTooLow error for levelIncreaseMultiplier
+    // Test InvalidLevelIncreaseMultiplier error for levelIncreaseMultiplier
     function testInitializeLevelIncreaseMultiplierTooLow() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = -int256(Constants.PERCENTAGE_DIVISOR); // Invalid: below minimum range
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelIncreaseMultiplier.selector);
         new ProofOfCapital(params);
     }
 
@@ -121,12 +121,12 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
     }
 
-    // Test MultiplierTooLow error for levelIncreaseMultiplier above range
+    // Test InvalidLevelIncreaseMultiplier error for levelIncreaseMultiplier above range
     function testInitializeLevelIncreaseMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: above maximum range
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelIncreaseMultiplier.selector);
         new ProofOfCapital(params);
     }
 

@@ -26,7 +26,7 @@ contract DeployProofOfCapital is Script {
     uint256 public priceIncrementMultiplier;
     uint256 public levelIncreaseMultiplier;
     uint256 public trendChangeStep;
-    uint256 public levelDecreaseMultiplierafterTrend;
+    uint256 public levelDecreaseMultiplierAfterTrend;
     uint256 public profitPercentage;
     uint256 public offsetLaunch;
     uint256 public controlPeriod;
@@ -67,7 +67,7 @@ contract DeployProofOfCapital is Script {
         priceIncrementMultiplier = vm.envUint("PRICE_INCREMENT_MULTIPLIER");
         levelIncreaseMultiplier = vm.envUint("LEVEL_INCREASE_MULTIPLIER");
         trendChangeStep = vm.envUint("TREND_CHANGE_STEP");
-        levelDecreaseMultiplierafterTrend = vm.envUint("LEVEL_DECREASE_MULTIPLIER_AFTER_TREND");
+        levelDecreaseMultiplierAfterTrend = vm.envUint("LEVEL_DECREASE_MULTIPLIER_AFTER_TREND");
         profitPercentage = vm.envUint("PROFIT_PERCENTAGE");
         offsetLaunch = vm.envUint("OFFSET_TOKENS");
         controlPeriod = vm.envUint("CONTROL_PERIOD");
@@ -162,9 +162,9 @@ contract DeployProofOfCapital is Script {
             // forge-lint: disable-next-line(unsafe-typecast)
             levelIncreaseMultiplier: int256(levelIncreaseMultiplier),
             trendChangeStep: trendChangeStep,
-            // casting to int256 is safe because levelDecreaseMultiplierafterTrend is validated to be < PERCENTAGE_DIVISOR
+            // casting to int256 is safe because levelDecreaseMultiplierAfterTrend is validated to be < PERCENTAGE_DIVISOR
             // forge-lint: disable-next-line(unsafe-typecast)
-            levelDecreaseMultiplierafterTrend: int256(levelDecreaseMultiplierafterTrend),
+            levelDecreaseMultiplierAfterTrend: int256(levelDecreaseMultiplierAfterTrend),
             profitPercentage: profitPercentage,
             offsetLaunch: offsetLaunch,
             controlPeriod: controlPeriod,

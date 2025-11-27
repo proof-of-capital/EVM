@@ -130,7 +130,7 @@ interface IProofOfCapital {
         uint256 priceIncrementMultiplier;
         int256 levelIncreaseMultiplier;
         uint256 trendChangeStep;
-        int256 levelDecreaseMultiplierafterTrend;
+        int256 levelDecreaseMultiplierAfterTrend;
         uint256 profitPercentage;
         uint256 offsetLaunch;
         uint256 controlPeriod;

@@ -55,7 +55,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 0,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,

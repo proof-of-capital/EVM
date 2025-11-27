@@ -101,7 +101,7 @@ contract ProofOfCapitalTest is Test {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
@@ -2809,7 +2809,7 @@ contract ProofOfCapitalProfitTest is Test {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
@@ -2935,7 +2935,7 @@ contract ProofOfCapitalInitializationTest is Test {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
@@ -2970,7 +2970,7 @@ contract ProofOfCapitalInitializationTest is Test {
     // Test MultiplierTooHigh error
     function testInitializeMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
-        params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
+        params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
         vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
@@ -2978,7 +2978,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
     function testInitializeMultiplierTooHighAboveDivisor() public {
         IProofOfCapital.InitParams memory params = getValidParams();
-        params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
+        params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
         vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
         new ProofOfCapital(params);
@@ -2986,14 +2986,14 @@ contract ProofOfCapitalInitializationTest is Test {
 
     function testInitializeMultiplierValidAtBoundary() public {
         IProofOfCapital.InitParams memory params = getValidParams();
-        params.levelDecreaseMultiplierafterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
+        params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR - 1); // Valid: just below divisor
         params.offsetLaunch = 100e18; // Smaller offset to avoid overflow in calculations
 
         // Should not revert
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify multiplier was set
-        assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), int256(Constants.PERCENTAGE_DIVISOR - 1));
+        assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), int256(Constants.PERCENTAGE_DIVISOR - 1));
     }
 
     // Test MultiplierTooLow error for levelIncreaseMultiplier
@@ -3099,7 +3099,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Set all parameters to their boundary values with smaller offsetLaunch
         params.initialPricePerToken = 1; // Minimum valid
-        params.levelDecreaseMultiplierafterTrend = 500; // Safe value below divisor
+        params.levelDecreaseMultiplierAfterTrend = 500; // Safe value below divisor
         params.levelIncreaseMultiplier = 1; // Minimum valid
         params.priceIncrementMultiplier = 1; // Minimum valid
         params.royaltyProfitPercent = 2; // Minimum valid
@@ -3110,7 +3110,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Verify all parameters were set correctly
         assertEq(proofOfCapital.initialPricePerToken(), 1);
-        assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), 500);
+        assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), 500);
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
         assertEq(proofOfCapital.priceIncrementMultiplier(), 1);
         assertEq(proofOfCapital.royaltyProfitPercent(), 2);
@@ -3135,7 +3135,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Set to reasonable maximum values to avoid overflow
         params.initialPricePerToken = 1000e18; // Large but reasonable price
-        params.levelDecreaseMultiplierafterTrend = 999; // Just below PERCENTAGE_DIVISOR
+        params.levelDecreaseMultiplierAfterTrend = 999; // Just below PERCENTAGE_DIVISOR
         params.levelIncreaseMultiplier = 999; // Just below PERCENTAGE_DIVISOR
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
         params.royaltyProfitPercent = Constants.MAX_ROYALTY_PERCENT; // Maximum royalty
@@ -3146,7 +3146,7 @@ contract ProofOfCapitalInitializationTest is Test {
 
         // Verify values were set
         assertEq(proofOfCapital.initialPricePerToken(), 1000e18);
-        assertEq(proofOfCapital.levelDecreaseMultiplierafterTrend(), 999);
+        assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), 999);
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 999);
         assertEq(proofOfCapital.priceIncrementMultiplier(), 10000);
         assertEq(proofOfCapital.royaltyProfitPercent(), Constants.MAX_ROYALTY_PERCENT);
@@ -3168,7 +3168,7 @@ contract ProofOfCapitalInitializationTest is Test {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: 1, // Way below minimum
@@ -3202,7 +3202,7 @@ contract ProofOfCapitalInitializationTest is Test {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
@@ -3239,7 +3239,7 @@ contract ProofOfCapitalInitializationTest is Test {
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
-            levelDecreaseMultiplierafterTrend: 50,
+            levelDecreaseMultiplierAfterTrend: 50,
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: validPeriod, // Within valid range
@@ -3275,7 +3275,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
-                levelDecreaseMultiplierafterTrend: 50,
+                levelDecreaseMultiplierAfterTrend: 50,
                 profitPercentage: 100,
                 offsetLaunch: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
@@ -3305,7 +3305,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
-                levelDecreaseMultiplierafterTrend: 50,
+                levelDecreaseMultiplierAfterTrend: 50,
                 profitPercentage: 100,
                 offsetLaunch: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum

@@ -271,11 +271,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Block or unblock deferred withdrawal
+     * @dev Toggle deferred withdrawal state
      * @notice If called when less than 60 days remain until the end of the lock (i.e., when users can already interact with the contract),
      * the owner can re-enable withdrawal—for example, to transfer tokens to another contract with a lock (for a safe migration).
      */
-    function blockDeferredWithdrawal() external override onlyOwner {
+    function toggleDeferredWithdrawal() external override onlyOwner {
         if (canWithdrawal) {
             canWithdrawal = false;
         } else {

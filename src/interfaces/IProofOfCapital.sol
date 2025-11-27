@@ -145,7 +145,7 @@ interface IProofOfCapital {
     // Management functions
 
     function extendLock(uint256 additionalTime) external;
-    function blockDeferredWithdrawal() external;
+    function toggleDeferredWithdrawal() external;
     function assignNewOwner(address newOwner) external;
     function assignNewReserveOwner(address newReserveOwner) external;
     function switchProfitMode(bool flag) external;

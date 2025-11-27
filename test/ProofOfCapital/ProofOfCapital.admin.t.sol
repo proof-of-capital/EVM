@@ -141,14 +141,14 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
     */
 
-    // Tests for blockDeferredWithdrawal function
+    // Tests for toggleDeferredWithdrawal function
     function testBlockDeferredWithdrawalFromTrueToFalse() public {
         // Initially canWithdrawal should be true (default)
         assertTrue(proofOfCapital.canWithdrawal());
 
         // Block deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should now be false
         assertFalse(proofOfCapital.canWithdrawal());
@@ -157,7 +157,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testBlockDeferredWithdrawalFromFalseToTrueWhenTimeAllows() public {
         // Block withdrawal first
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to less than 60 days before lock end (activation allowed when < 60 days)
@@ -166,7 +166,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Should be able to unblock when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
@@ -177,19 +177,19 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Block withdrawal first
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Try to unblock when more than 60 days remain - should fail
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalAtExactBoundary() public {
         // Block withdrawal first
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to exactly 60 days before lock end
@@ -199,13 +199,13 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // At exactly 60 days, should NOT be able to unblock (require < 60 days)
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalJustOverBoundary() public {
         // First, block withdrawal to set canWithdrawal to false
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to just under the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
@@ -214,7 +214,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Should be able to activate withdrawal when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
@@ -222,15 +222,15 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // Non-owner tries to block/unblock withdrawal
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     // Tests for setUnwrapMode function

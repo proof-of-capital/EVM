@@ -196,14 +196,14 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
     }
 
-    // Tests for blockDeferredWithdrawal function
+    // Tests for toggleDeferredWithdrawal function
     function testBlockDeferredWithdrawalFromTrueToFalse() public {
         // Initially canWithdrawal should be true (default)
         assertTrue(proofOfCapital.canWithdrawal());
 
         // Block deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should now be false
         assertFalse(proofOfCapital.canWithdrawal());
@@ -212,7 +212,7 @@ contract ProofOfCapitalTest is Test {
     function testBlockDeferredWithdrawalFromFalseToTrueWhenTimeAllows() public {
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to less than 60 days before lock end (activation allowed when < 60 days)
@@ -221,7 +221,7 @@ contract ProofOfCapitalTest is Test {
 
         // Now try to unblock when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should now be true again
         assertTrue(proofOfCapital.canWithdrawal());
@@ -230,7 +230,7 @@ contract ProofOfCapitalTest is Test {
     function testBlockDeferredWithdrawalFailsWhenTooFarFromLockEnd() public {
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time forward to be more than 60 days before lock end (activation blocked when >= 60 days)
@@ -240,7 +240,7 @@ contract ProofOfCapitalTest is Test {
         // Try to unblock - should fail
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should still be false
         assertFalse(proofOfCapital.canWithdrawal());
@@ -249,7 +249,7 @@ contract ProofOfCapitalTest is Test {
     function testBlockDeferredWithdrawalAtExactBoundary() public {
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time forward to be exactly 60 days before lock end
@@ -259,13 +259,13 @@ contract ProofOfCapitalTest is Test {
         // Try to unblock - should fail (condition is <, not <=)
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalJustOverBoundary() public {
         // First, block withdrawal to set canWithdrawal to false
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to just under the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
@@ -274,7 +274,7 @@ contract ProofOfCapitalTest is Test {
 
         // Should be able to activate withdrawal when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
@@ -282,15 +282,15 @@ contract ProofOfCapitalTest is Test {
         // Non-owner tries to block/unblock withdrawal
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     // Tests for tokenDeferredWithdrawal function
@@ -351,7 +351,7 @@ contract ProofOfCapitalTest is Test {
 
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Try to schedule deferred withdrawal when blocked
@@ -527,7 +527,7 @@ contract ProofOfCapitalTest is Test {
 
         // Block withdrawals
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Try to confirm when blocked
         vm.prank(owner);
@@ -760,7 +760,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 3: Block withdrawals and test blocked error
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
@@ -1131,7 +1131,7 @@ contract ProofOfCapitalTest is Test {
 
         // Block deferred withdrawals
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Try to schedule collateral withdrawal when blocked
@@ -1498,7 +1498,7 @@ contract ProofOfCapitalTest is Test {
 
         // Block withdrawals
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -1599,7 +1599,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 3: Block withdrawals and test blocked error
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 

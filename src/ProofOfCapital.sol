@@ -638,9 +638,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function calculateUnaccountedCollateralBalance(uint256 amount) external nonReentrant {
         if (!_checkTradingAccess()) {
-            if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS;
-            }
+            _updateUnlockWindow();
             _checkOwner();
         }
 
@@ -664,9 +662,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function calculateUnaccountedOffsetBalance(uint256 amount) external nonReentrant {
         if (!_checkTradingAccess()) {
-            if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS;
-            }
+            _updateUnlockWindow();
             _checkOwner();
         }
         require(!isInitialized, ContractAlreadyInitialized());
@@ -689,9 +685,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function calculateUnaccountedOffsetTokenBalance(uint256 amount) external nonReentrant {
         if (!_checkTradingAccess()) {
-            if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS;
-            }
+            _updateUnlockWindow();
             _checkOwner();
         }
 
@@ -770,9 +764,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function _handleTokenPurchaseCommon(uint256 collateralAmount) internal {
         if (!_checkTradingAccess()) {
-            if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS;
-            }
+            _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
@@ -847,9 +839,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     function _handleTokenSale(uint256 amount) internal {
         if (!_checkTradingAccess()) {
-            if (_checkUnlockWindow()) {
-                controlDay += Constants.THIRTY_DAYS;
-            }
+            _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
         uint256 maxEarnedOrOffset = offsetLaunch > tokensEarned ? offsetLaunch : tokensEarned;
@@ -1279,26 +1269,20 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Check if current time is within unlock window period after lock expires
-     * Accounts for the fact that we might be in one of the following windows, not the current one
-     * @return True if in unlock window, false otherwise
+     * @dev Update controlDay to the nearest future by adding whole number of 30-day periods
+     * Shifts controlDay forward so it's always in the future relative to current block
      */
-    function _checkUnlockWindow() internal view returns (bool) {
-        // Check for underflow
+    function _updateUnlockWindow() internal {
+        // If controlDay is already in the future, no update needed
         if (block.timestamp < controlDay) {
-            return false;
+            return;
         }
 
+        // Calculate how many 30-day periods fit between controlDay and current time
         uint256 timeSinceControlDay = block.timestamp - controlDay;
-
-        // If more than controlPeriod has passed since the last controlDay, we are not in the current window
-        if (timeSinceControlDay > controlPeriod) {
-            // Check if we are in one of the following windows (every 30 days)
-            uint256 periodsSinceControlDay = timeSinceControlDay / Constants.THIRTY_DAYS;
-            uint256 timeInCurrentPeriod = timeSinceControlDay - (periodsSinceControlDay * Constants.THIRTY_DAYS);
-            // If we are still not in a window, return true (need to add 30 days)
-            return timeInCurrentPeriod > controlPeriod;
-        }
-        return false;
+        uint256 periodsToAdd = (timeSinceControlDay / Constants.THIRTY_DAYS) + 1;
+        
+        // Shift controlDay to the nearest future
+        controlDay += periodsToAdd * Constants.THIRTY_DAYS;
     }
 }

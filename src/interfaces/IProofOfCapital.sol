@@ -48,6 +48,7 @@ interface IProofOfCapital {
     error ETHTransferFailed();
     error LockCannotExceedFiveYears();
     error InvalidTimePeriod();
+    error NewLockMustBeGreaterThanOld();
     error CannotActivateWithdrawalTooCloseToLockEnd();
     error InvalidRecipientOrAmount();
     error DeferredWithdrawalBlocked();

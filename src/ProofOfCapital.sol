@@ -263,6 +263,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function extendLock(uint256 lockTimestamp) external override onlyOwner {
         require(lockTimestamp > block.timestamp, InvalidTimePeriod());
+        require(lockTimestamp > lockEndTime, NewLockMustBeGreaterThanOld());
         require(lockTimestamp <= block.timestamp + Constants.FIVE_YEARS, LockCannotExceedFiveYears());
 
         lockEndTime = lockTimestamp;

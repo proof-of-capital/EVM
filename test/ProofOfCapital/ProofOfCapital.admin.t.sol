@@ -86,7 +86,8 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
 
     function testExtendLockEvent() public {
-        uint256 newLockEndTime = block.timestamp + Constants.THREE_MONTHS;
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        uint256 newLockEndTime = initialLockEndTime + Constants.THREE_MONTHS;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);

@@ -49,7 +49,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     // Contract state
     bool public override isActive;
-    mapping(address => bool) public  override oldContractAddress;
+    mapping(address => bool) public override oldContractAddress;
 
     // Core addresses
     address public override reserveOwner;
@@ -73,7 +73,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     // Multipliers and percentages
     uint256 public override priceIncrementMultiplier;
-    int256 public override      levelIncreaseMultiplier;
+    int256 public override levelIncreaseMultiplier;
     uint256 public override trendChangeStep;
     int256 public override levelDecreaseMultiplierAfterTrend;
     uint256 public override profitPercentage;
@@ -86,7 +86,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override contractCollateralBalance; // WETH balance for backing
     uint256 public override launchBalance; // Main token balance
     uint256 public override tokensEarned;
-    uint256 public override     actualProfit;
+    uint256 public override actualProfit;
 
     // Return tracking variables
     uint256 public override currentStepEarned;
@@ -336,7 +336,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Confirm and execute deferred withdrawal of main token
      */
-    function confirmTokenDeferredWithdrawal() external override onlyOwner nonReentrant {
+    function confirmTokenDeferredWithdrawal() external override onlyOwner {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(launchDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= launchDeferredWithdrawalDate, WithdrawalDateNotReached());
@@ -344,12 +344,15 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(launchBalance - totalLaunchSold >= launchDeferredWithdrawalAmount, InsufficientAmount());
         require(block.timestamp <= launchDeferredWithdrawalDate + Constants.SEVEN_DAYS, WithdrawalDateNotReached());
 
-        launchToken.safeTransfer(recipientDeferredWithdrawalLaunch, launchDeferredWithdrawalAmount);
-
-        launchBalance -= launchDeferredWithdrawalAmount;
+        uint256 withdrawalAmount = launchDeferredWithdrawalAmount;
+        address recipient = recipientDeferredWithdrawalLaunch;
+        launchBalance -= withdrawalAmount;
         launchDeferredWithdrawalDate = 0;
         launchDeferredWithdrawalAmount = 0;
         recipientDeferredWithdrawalLaunch = owner();
+
+        launchToken.safeIncreaseAllowance(recipient, withdrawalAmount);
+        IProofOfCapital(recipient).depositTokens(withdrawalAmount);
     }
 
     /**
@@ -382,7 +385,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Confirm and execute deferred withdrawal of collateral tokens
      */
-    function confirmCollateralDeferredWithdrawal() external override onlyOwner nonReentrant {
+    function confirmCollateralDeferredWithdrawal() external override onlyOwner {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(collateralTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= collateralTokenDeferredWithdrawalDate, WithdrawalDateNotReached());
@@ -392,15 +395,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         );
 
         uint256 collateralBalance = contractCollateralBalance;
+        address recipient = recipientDeferredWithdrawalCollateralToken;
         contractCollateralBalance = 0;
         collateralTokenDeferredWithdrawalDate = 0;
         recipientDeferredWithdrawalCollateralToken = owner();
         isActive = false;
 
-        emit CollateralDeferredWithdrawalConfirmed(recipientDeferredWithdrawalCollateralToken, collateralBalance);
+        emit CollateralDeferredWithdrawalConfirmed(recipient, collateralBalance);
 
-        IERC20(collateralAddress).safeIncreaseAllowance(recipientDeferredWithdrawalCollateralToken, collateralBalance);
-        IProofOfCapital(recipientDeferredWithdrawalCollateralToken).deposit(collateralBalance);
+        IERC20(collateralAddress).safeIncreaseAllowance(recipient, collateralBalance);
+        IProofOfCapital(recipient).deposit(collateralBalance);
     }
 
     /**

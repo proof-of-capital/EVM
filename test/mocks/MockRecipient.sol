@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.29;
 
-// Simple recipient contract that exposes a deposit function matching the
-// IProofOfCapital interface. The implementation intentionally does nothing –
-// it only needs to exist so that external calls in the main contract do not
-// revert during tests.
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 contract MockRecipient {
-    // Accepts an amount of collateral tokens from the caller. The body is empty
-    // because tests do not rely on any specific behaviour, only on the fact
-    // that the call does not revert.
+    using SafeERC20 for IERC20;
+
     function deposit(
         uint256 /*amount*/
     )
         external
         payable {}
+
+    function depositTokens(
+        uint256 /*amount*/
+    )
+        external {}
 }

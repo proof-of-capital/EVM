@@ -48,92 +48,92 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     using SafeERC20 for IERC20;
 
     // Contract state
-    bool public isActive;
-    mapping(address => bool) public oldContractAddress;
+    bool public override isActive;
+    mapping(address => bool) public  override oldContractAddress;
 
     // Core addresses
-    address public reserveOwner;
-    IERC20 public launchToken;
-    address public returnWalletAddress;
-    address public royaltyWalletAddress;
-    address public daoAddress; // DAO address for governance
+    address public override reserveOwner;
+    IERC20 public override launchToken;
+    address public override returnWalletAddress;
+    address public override royaltyWalletAddress;
+    address public override daoAddress; // DAO address for governance
 
     // Time and control variables
-    uint256 public lockEndTime;
-    uint256 public controlDay;
-    uint256 public controlPeriod;
+    uint256 public override lockEndTime;
+    uint256 public override controlDay;
+    uint256 public override controlPeriod;
 
     // Pricing and level variables
-    uint256 public initialPricePerToken;
-    uint256 public firstLevelTokenQuantity;
-    uint256 public currentPrice;
-    uint256 public quantityTokensPerLevel;
-    uint256 public remainderOfStep;
-    uint256 public currentStep;
+    uint256 public override initialPricePerToken;
+    uint256 public override firstLevelTokenQuantity;
+    uint256 public override currentPrice;
+    uint256 public override quantityTokensPerLevel;
+    uint256 public override remainderOfStep;
+    uint256 public override currentStep;
 
     // Multipliers and percentages
-    uint256 public priceIncrementMultiplier;
-    int256 public levelIncreaseMultiplier;
-    uint256 public trendChangeStep;
-    int256 public levelDecreaseMultiplierAfterTrend;
-    uint256 public profitPercentage;
-    uint256 public royaltyProfitPercent;
-    uint256 public creatorProfitPercent;
-    uint256 public profitBeforeTrendChange; // Profit percentage before trend change
+    uint256 public override priceIncrementMultiplier;
+    int256 public override      levelIncreaseMultiplier;
+    uint256 public override trendChangeStep;
+    int256 public override levelDecreaseMultiplierAfterTrend;
+    uint256 public override profitPercentage;
+    uint256 public override royaltyProfitPercent;
+    uint256 public override creatorProfitPercent;
+    uint256 public override profitBeforeTrendChange; // Profit percentage before trend change
 
     // Balances and counters
     uint256 public override totalLaunchSold;
     uint256 public override contractCollateralBalance; // WETH balance for backing
-    uint256 public launchBalance; // Main token balance
-    uint256 public tokensEarned;
-    uint256 public actualProfit;
+    uint256 public override launchBalance; // Main token balance
+    uint256 public override tokensEarned;
+    uint256 public override     actualProfit;
 
     // Return tracking variables
-    uint256 public currentStepEarned;
-    uint256 public remainderOfStepEarned;
-    uint256 public quantityTokensPerLevelEarned;
-    uint256 public currentPriceEarned;
+    uint256 public override currentStepEarned;
+    uint256 public override remainderOfStepEarned;
+    uint256 public override quantityTokensPerLevelEarned;
+    uint256 public override currentPriceEarned;
 
     // Offset variables
-    uint256 public offsetLaunch;
-    uint256 public offsetStep;
-    uint256 public offsetPrice;
-    uint256 public remainderOfStepOffset;
-    uint256 public quantityTokensPerLevelOffset;
+    uint256 public override offsetLaunch;
+    uint256 public override offsetStep;
+    uint256 public override offsetPrice;
+    uint256 public override remainderOfStepOffset;
+    uint256 public override quantityTokensPerLevelOffset;
 
     // Collateral token variables
-    address public collateralAddress;
+    address public override collateralAddress;
 
     // Market makers
-    mapping(address => bool) public marketMakerAddresses;
+    mapping(address => bool) public override marketMakerAddresses;
 
     // Profit tracking
-    uint256 public ownerCollateralBalance; // Owner's profit balance (universal for both ETH and collateral tokens)
-    uint256 public royaltyCollateralBalance; // Royalty profit balance (universal for both ETH and collateral tokens)
+    uint256 public override ownerCollateralBalance; // Owner's profit balance (universal for both ETH and collateral tokens)
+    uint256 public override royaltyCollateralBalance; // Royalty profit balance (universal for both ETH and collateral tokens)
     bool public override profitInTime; // true = immediate, false = on request
 
     // Deferred withdrawal
     bool public override canWithdrawal;
-    uint256 public launchDeferredWithdrawalDate;
-    uint256 public launchDeferredWithdrawalAmount;
-    address public recipientDeferredWithdrawalLaunch;
-    uint256 public collateralTokenDeferredWithdrawalDate;
-    address public recipientDeferredWithdrawalCollateralToken;
+    uint256 public override launchDeferredWithdrawalDate;
+    uint256 public override launchDeferredWithdrawalAmount;
+    address public override recipientDeferredWithdrawalLaunch;
+    uint256 public override collateralTokenDeferredWithdrawalDate;
+    address public override recipientDeferredWithdrawalCollateralToken;
 
     // Return wallet change proposal
-    address public proposedReturnWalletAddress; // Proposed return wallet address
-    uint256 public proposedReturnWalletChangeTime; // Time when return wallet change was proposed
+    address public override proposedReturnWalletAddress; // Proposed return wallet address
+    uint256 public override proposedReturnWalletChangeTime; // Time when return wallet change was proposed
 
     // Old contract address change control
 
     // Unaccounted balances for gradual processing
-    uint256 public unaccountedCollateralBalance; // Unaccounted collateral balance
-    uint256 public unaccountedOffset; // Unaccounted offset balance
-    uint256 public unaccountedOffsetLaunchBalance; // Unaccounted offset token balance for gradual processing
-    uint256 public unaccountedReturnBuybackBalance; // Unaccounted return buyback balance for gradual processing
+    uint256 public override unaccountedCollateralBalance; // Unaccounted collateral balance
+    uint256 public override unaccountedOffset; // Unaccounted offset balance
+    uint256 public override unaccountedOffsetLaunchBalance; // Unaccounted offset token balance for gradual processing
+    uint256 public override unaccountedReturnBuybackBalance; // Unaccounted return buyback balance for gradual processing
 
     // Initialization flag
-    bool public isInitialized; // Flag indicating whether the contract's initialization is complete
+    bool public override isInitialized; // Flag indicating whether the contract's initialization is complete
 
     modifier onlyOwnerOrOldContract() {
         _onlyOwnerOrOldContract();
@@ -290,7 +290,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * Can be changed no more than once every 40 days.
      * @param oldContractAddr Address of the old contract to register
      */
-    function registerOldContract(address oldContractAddr) external onlyOwner {
+    function registerOldContract(address oldContractAddr) external override onlyOwner {
         require(!_checkTradingAccess(), LockIsActive());
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
@@ -441,7 +441,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Propose return wallet address change (requires lock to be active)
      */
-    function proposeReturnWalletChange(address newReturnWalletAddress) external onlyOwner {
+    function proposeReturnWalletChange(address newReturnWalletAddress) external override onlyOwner {
         require(!_checkTradingAccess(), LockIsActive());
         require(newReturnWalletAddress != address(0), InvalidAddress());
         require(
@@ -462,7 +462,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Confirm proposed return wallet address change after 24 hours
      */
-    function confirmReturnWalletChange() external onlyOwner {
+    function confirmReturnWalletChange() external override onlyOwner {
         require(!_checkTradingAccess(), LockIsActive());
         require(proposedReturnWalletAddress != address(0), NoReturnWalletChangeProposed());
         require(
@@ -550,7 +550,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Deposit launch tokens back to contract (for owners and old contracts)
      * Used when owner needs to return tokens and potentially trigger offset reduction
      */
-    function depositTokens(uint256 amount) external nonReentrant onlyActiveContract onlyOwnerOrOldContract {
+    function depositTokens(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -626,7 +626,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Set DAO address (can only be called by current DAO)
      */
-    function setDao(address newDaoAddress) external {
+    function setDao(address newDaoAddress) external override {
         require(msg.sender == daoAddress, AccessDenied());
         require(newDaoAddress != address(0), InvalidDAOAddress());
         daoAddress = newDaoAddress;
@@ -637,7 +637,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted collateral balance gradually
      * @param amount Amount of collateral to process
      */
-    function calculateUnaccountedCollateralBalance(uint256 amount) external nonReentrant {
+    function calculateUnaccountedCollateralBalance(uint256 amount) external override nonReentrant {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();
@@ -661,7 +661,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted offset balance gradually
      * @param amount Amount of offset tokens to process
      */
-    function calculateUnaccountedOffsetBalance(uint256 amount) external nonReentrant {
+    function calculateUnaccountedOffsetBalance(uint256 amount) external override nonReentrant {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();
@@ -684,7 +684,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted offset token balance gradually (for reducing offset when tokens are returned)
      * @param amount Amount of tokens to process
      */
-    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external nonReentrant {
+    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external override nonReentrant {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();

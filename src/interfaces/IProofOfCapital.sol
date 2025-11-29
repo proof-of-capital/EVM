@@ -30,6 +30,8 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 /**
  * @title IProofOfCapital
  * @dev Interface for Proof of Capital contract
@@ -144,7 +146,7 @@ interface IProofOfCapital {
 
     // Management functions
 
-    function extendLock(uint256 additionalTime) external;
+    function extendLock(uint256 lockTimestamp) external;
     function toggleDeferredWithdrawal() external;
     function assignNewOwner(address newOwner) external;
     function assignNewReserveOwner(address newReserveOwner) external;
@@ -156,9 +158,17 @@ interface IProofOfCapital {
     // Market maker management
     function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external;
 
+    // Old contract management
+    function registerOldContract(address oldContractAddr) external;
+
+    // Return wallet change management
+    function proposeReturnWalletChange(address newReturnWalletAddress) external;
+    function confirmReturnWalletChange() external;
+
     // Trading functions
     function buyTokens(uint256 amount) external;
     function deposit(uint256 amount) external;
+    function depositTokens(uint256 amount) external;
     function sellTokens(uint256 amount) external;
 
     // Deferred withdrawals
@@ -174,6 +184,14 @@ interface IProofOfCapital {
     function withdrawAllCollateralTokens() external;
     function getProfitOnRequest() external;
 
+    // DAO management
+    function setDao(address newDaoAddress) external;
+
+    // Unaccounted balance calculations
+    function calculateUnaccountedCollateralBalance(uint256 amount) external;
+    function calculateUnaccountedOffsetBalance(uint256 amount) external;
+    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external;
+
     // View functions
     function remainingSeconds() external view returns (uint256);
     function tradingOpportunity() external view returns (bool);
@@ -181,10 +199,59 @@ interface IProofOfCapital {
 
     // State variables getters
     function isActive() external view returns (bool);
+    function oldContractAddress(address) external view returns (bool);
+    function reserveOwner() external view returns (address);
+    function launchToken() external view returns (IERC20);
+    function returnWalletAddress() external view returns (address);
+    function royaltyWalletAddress() external view returns (address);
+    function daoAddress() external view returns (address);
     function lockEndTime() external view returns (uint256);
+    function controlDay() external view returns (uint256);
+    function controlPeriod() external view returns (uint256);
+    function initialPricePerToken() external view returns (uint256);
+    function firstLevelTokenQuantity() external view returns (uint256);
     function currentPrice() external view returns (uint256);
+    function quantityTokensPerLevel() external view returns (uint256);
+    function remainderOfStep() external view returns (uint256);
+    function currentStep() external view returns (uint256);
+    function priceIncrementMultiplier() external view returns (uint256);
+    function levelIncreaseMultiplier() external view returns (int256);
+    function trendChangeStep() external view returns (uint256);
+    function levelDecreaseMultiplierAfterTrend() external view returns (int256);
+    function profitPercentage() external view returns (uint256);
+    function royaltyProfitPercent() external view returns (uint256);
+    function creatorProfitPercent() external view returns (uint256);
+    function profitBeforeTrendChange() external view returns (uint256);
     function totalLaunchSold() external view returns (uint256);
     function contractCollateralBalance() external view returns (uint256);
+    function launchBalance() external view returns (uint256);
+    function tokensEarned() external view returns (uint256);
+    function actualProfit() external view returns (uint256);
+    function currentStepEarned() external view returns (uint256);
+    function remainderOfStepEarned() external view returns (uint256);
+    function quantityTokensPerLevelEarned() external view returns (uint256);
+    function currentPriceEarned() external view returns (uint256);
+    function offsetLaunch() external view returns (uint256);
+    function offsetStep() external view returns (uint256);
+    function offsetPrice() external view returns (uint256);
+    function remainderOfStepOffset() external view returns (uint256);
+    function quantityTokensPerLevelOffset() external view returns (uint256);
+    function collateralAddress() external view returns (address);
+    function marketMakerAddresses(address) external view returns (bool);
+    function ownerCollateralBalance() external view returns (uint256);
+    function royaltyCollateralBalance() external view returns (uint256);
     function profitInTime() external view returns (bool);
     function canWithdrawal() external view returns (bool);
+    function launchDeferredWithdrawalDate() external view returns (uint256);
+    function launchDeferredWithdrawalAmount() external view returns (uint256);
+    function recipientDeferredWithdrawalLaunch() external view returns (address);
+    function collateralTokenDeferredWithdrawalDate() external view returns (uint256);
+    function recipientDeferredWithdrawalCollateralToken() external view returns (address);
+    function proposedReturnWalletAddress() external view returns (address);
+    function proposedReturnWalletChangeTime() external view returns (uint256);
+    function unaccountedCollateralBalance() external view returns (uint256);
+    function unaccountedOffset() external view returns (uint256);
+    function unaccountedOffsetLaunchBalance() external view returns (uint256);
+    function unaccountedReturnBuybackBalance() external view returns (uint256);
+    function isInitialized() external view returns (bool);
 }

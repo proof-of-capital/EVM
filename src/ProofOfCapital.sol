@@ -770,9 +770,18 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function _handleOwnerDeposit(uint256 value) internal {
+        uint256 neededAmount = 0;
         if (offsetLaunch > launchTokensEarned) {
-            // Accumulate in unaccounted balance for gradual processing
-            unaccountedCollateralBalance += value;
+            neededAmount = offsetLaunch - launchTokensEarned;
+            if (neededAmount > value) {
+                neededAmount = value;
+            }
+            unaccountedCollateralBalance += neededAmount;
+        }
+        
+        uint256 remainder = value - neededAmount;
+        if (remainder > 0) {
+            _transferCollateralTokens(daoAddress, remainder);
         }
     }
 

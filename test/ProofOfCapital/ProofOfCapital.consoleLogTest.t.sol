@@ -43,12 +43,12 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
     address public user = address(0x5);
 
     function testHandleReturnWalletSaleConsoleLog() public {
-        // when offsetLaunch > tokensEarned and effectiveAmount > offsetAmount
+        // when offsetLaunch > launchTokensEarned and effectiveAmount > offsetAmount
 
         // Step 1: Owner deposits tokens to create launchBalance
         vm.startPrank(owner);
         token.approve(address(proofOfCapital), 100000e18);
-        proofOfCapital.depositTokens(50000e18); // This increases launchBalance
+        proofOfCapital.depositLaunch(50000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Now market maker can buy many tokens to create large totalLaunchSold
@@ -58,32 +58,32 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyTokens(5000e18); // Buy many tokens to create large totalLaunchSold
+        proofOfCapital.buyLaunchTokens(5000e18); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
         // Verify totalLaunchSold increased
         uint256 totalTokensSoldAfterBuy = proofOfCapital.totalLaunchSold();
         assertTrue(totalTokensSoldAfterBuy > 0, "Should have tokens sold after market maker purchase");
 
-        // Step 2: Now returnWallet can sell tokens back, which will increase tokensEarned
+        // Step 2: Now returnWallet can sell tokens back, which will increase launchTokensEarned
         vm.startPrank(owner);
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(1000e18); // Return wallet sells tokens back
+        proofOfCapital.sellLaunchTokens(1000e18); // Return wallet sells tokens back
         vm.stopPrank();
 
-        // Step 3: Verify tokensEarned increased
-        uint256 tokensEarnedAfterSale = proofOfCapital.tokensEarned();
+        // Step 3: Verify launchTokensEarned increased
+        uint256 tokensEarnedAfterSale = proofOfCapital.launchTokensEarned();
         assertTrue(tokensEarnedAfterSale > 0, "Should have tokens earned after return wallet sale");
 
-        // Step 4: Set offsetLaunch to be larger than tokensEarned and ensure tokensAvailableForReturnBuyback > 0
-        uint256 currentTokensEarned = proofOfCapital.tokensEarned();
+        // Step 4: Set offsetLaunch to be larger than launchTokensEarned and ensure tokensAvailableForReturnBuyback > 0
+        uint256 currentTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
-        // Make sure totalLaunchSold > tokensEarned so that tokensAvailableForReturnBuyback > 0
+        // Make sure totalLaunchSold > launchTokensEarned so that tokensAvailableForReturnBuyback > 0
         if (currentTotalTokensSold <= currentTokensEarned) {
             // Increase totalLaunchSold to make tokensAvailableForReturnBuyback > 0
             uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
@@ -92,16 +92,16 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         }
 
         uint256 offsetSlot = _stdstore.target(address(proofOfCapital)).sig("offsetLaunch()").find();
-        vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(currentTokensEarned + 5000e18)); // Set offsetLaunch > tokensEarned
+        vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(currentTokensEarned + 5000e18)); // Set offsetLaunch > launchTokensEarned
 
         // Re-read values after modification
-        currentTokensEarned = proofOfCapital.tokensEarned();
+        currentTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 currentOffsetTokens = proofOfCapital.offsetLaunch();
         currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
         // Verify we have the right conditions for the test
-        assertTrue(currentOffsetTokens > currentTokensEarned, "offsetLaunch should be > tokensEarned");
-        assertTrue(currentTotalTokensSold > currentTokensEarned, "totalLaunchSold should be > tokensEarned");
+        assertTrue(currentOffsetTokens > currentTokensEarned, "offsetLaunch should be > launchTokensEarned");
+        assertTrue(currentTotalTokensSold > currentTokensEarned, "totalLaunchSold should be > launchTokensEarned");
 
         // Step 5: Create collateral balance to ensure contractCollateralBalance > 0
         createCollateralBalance(10000e18);
@@ -111,8 +111,8 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 2000e18);
         vm.stopPrank();
 
-        // Step 7: Ensure we have enough tokensAvailableForReturnBuyback before calling sellTokens
-        uint256 finalTokensEarned = proofOfCapital.tokensEarned();
+        // Step 7: Ensure we have enough tokensAvailableForReturnBuyback before calling sellLaunchTokens
+        uint256 finalTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 finalTotalTokensSold = proofOfCapital.totalLaunchSold();
 
         // If tokensAvailableForReturnBuyback is 0, we need to increase totalLaunchSold
@@ -124,8 +124,8 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 2000e18);
 
-        // when offsetLaunch > tokensEarned and effectiveAmount > offsetAmount
-        proofOfCapital.sellTokens(1500e18); // Sell amount that triggers the log
+        // when offsetLaunch > launchTokensEarned and effectiveAmount > offsetAmount
+        proofOfCapital.sellLaunchTokens(1500e18); // Sell amount that triggers the log
 
         vm.stopPrank();
     }

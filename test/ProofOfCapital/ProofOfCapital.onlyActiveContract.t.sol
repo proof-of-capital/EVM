@@ -104,7 +104,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Verify contract is now inactive
         assertFalse(proofOfCapital.isActive(), "Contract should be deactivated");
 
-        // Test that buyTokens reverts when contract is not active
+        // Test that buyLaunchTokens reverts when contract is not active
         // Setup: Give user WETH and approve
         vm.startPrank(owner);
         SafeERC20.safeTransfer(IERC20(address(weth)), user, 1000e18);
@@ -117,11 +117,11 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // This tests the require(isActive, ContractNotActive()) on line 251
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-        proofOfCapital.buyTokens(1000e18);
+        proofOfCapital.buyLaunchTokens(1000e18);
     }
 
-    // Test that depositTokens reverts when contract is not active
-    // This tests the onlyActiveContract modifier on depositTokens function
+    // Test that depositLaunch reverts when contract is not active
+    // This tests the onlyActiveContract modifier on depositLaunch function
     function testDepositTokensContractNotActive() public {
         // Ensure contract is active initially
         assertTrue(proofOfCapital.isActive(), "Contract should be active initially");
@@ -152,11 +152,11 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         token.approve(address(proofOfCapital), 1000e18);
         vm.stopPrank();
 
-        // Try to deposit tokens - should revert with ContractNotActive error
+        // Try to depositCollateral tokens - should revert with ContractNotActive error
         // This tests the require(isActive, ContractNotActive()) on line 251
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-        proofOfCapital.depositTokens(1000e18);
+        proofOfCapital.depositLaunch(1000e18);
     }
 }
 

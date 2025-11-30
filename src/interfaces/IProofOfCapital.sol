@@ -166,10 +166,10 @@ interface IProofOfCapital {
     function confirmReturnWalletChange() external;
 
     // Trading functions
-    function buyTokens(uint256 amount) external;
-    function deposit(uint256 amount) external;
-    function depositTokens(uint256 amount) external;
-    function sellTokens(uint256 amount) external;
+    function buyLaunchTokens(uint256 amount) external;
+    function depositCollateral(uint256 amount) external;
+    function depositLaunch(uint256 amount) external;
+    function sellLaunchTokens(uint256 amount) external;
 
     // Deferred withdrawals
     function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external;
@@ -180,7 +180,7 @@ interface IProofOfCapital {
     function confirmCollateralDeferredWithdrawal() external;
 
     // Withdrawal functions
-    function withdrawAllTokens() external;
+    function withdrawAllLaunchTokens() external;
     function withdrawAllCollateralTokens() external;
     function getProfitOnRequest() external;
 
@@ -190,7 +190,7 @@ interface IProofOfCapital {
     // Unaccounted balance calculations
     function calculateUnaccountedCollateralBalance(uint256 amount) external;
     function calculateUnaccountedOffsetBalance(uint256 amount) external;
-    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external;
+    function calculateUnaccountedOffsetLaunchBalance(uint256 amount) external;
 
     // View functions
     function remainingSeconds() external view returns (uint256);
@@ -225,7 +225,7 @@ interface IProofOfCapital {
     function totalLaunchSold() external view returns (uint256);
     function contractCollateralBalance() external view returns (uint256);
     function launchBalance() external view returns (uint256);
-    function tokensEarned() external view returns (uint256);
+    function launchTokensEarned() external view returns (uint256);
     function actualProfit() external view returns (uint256);
     function currentStepEarned() external view returns (uint256);
     function remainderOfStepEarned() external view returns (uint256);

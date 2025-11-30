@@ -85,7 +85,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override totalLaunchSold;
     uint256 public override contractCollateralBalance; // WETH balance for backing
     uint256 public override launchBalance; // Main token balance
-    uint256 public override tokensEarned;
+    uint256 public override launchTokensEarned;
     uint256 public override actualProfit;
 
     // Return tracking variables
@@ -352,7 +352,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         recipientDeferredWithdrawalLaunch = owner();
 
         launchToken.safeIncreaseAllowance(recipient, withdrawalAmount);
-        IProofOfCapital(recipient).depositTokens(withdrawalAmount);
+        IProofOfCapital(recipient).depositLaunch(withdrawalAmount);
     }
 
     /**
@@ -404,7 +404,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         emit CollateralDeferredWithdrawalConfirmed(recipient, collateralBalance);
 
         IERC20(collateralAddress).safeIncreaseAllowance(recipient, collateralBalance);
-        IProofOfCapital(recipient).deposit(collateralBalance);
+        IProofOfCapital(recipient).depositCollateral(collateralBalance);
     }
 
     /**
@@ -532,18 +532,24 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Buy tokens with collateral tokens
      */
-    function buyTokens(uint256 amount) external override nonReentrant onlyActiveContract {
+    function buyLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
         require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
         IERC20(collateralAddress).safeTransferFrom(msg.sender, address(this), amount);
-        _handleTokenPurchaseCommon(amount);
+        _handleLaunchTokenPurchaseCommon(amount);
     }
 
     /**
      * @dev Deposit collateral tokens (for owners and old contracts)
      */
-    function deposit(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
+    function depositCollateral(uint256 amount)
+        external
+        override
+        nonReentrant
+        onlyActiveContract
+        onlyOwnerOrOldContract
+    {
         require(amount > 0, InvalidAmount());
 
         IERC20(collateralAddress).safeTransferFrom(msg.sender, address(this), amount);
@@ -554,13 +560,13 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Deposit launch tokens back to contract (for owners and old contracts)
      * Used when owner needs to return tokens and potentially trigger offset reduction
      */
-    function depositTokens(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
+    function depositLaunch(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
         // Check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
-        if (totalLaunchSold == offsetLaunch && (offsetLaunch - tokensEarned) >= amount) {
+        if (totalLaunchSold == offsetLaunch && (offsetLaunch - launchTokensEarned) >= amount) {
             unaccountedOffsetLaunchBalance += amount;
         } else {
             launchBalance += amount;
@@ -570,7 +576,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Sell tokens back to contract
      */
-    function sellTokens(uint256 amount) external override nonReentrant onlyActiveContract {
+    function sellLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -578,7 +584,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         if (msg.sender == returnWalletAddress) {
             _handleReturnWalletSale(amount);
         } else {
-            _handleTokenSale(amount);
+            _handleLaucnhTokenSale(amount);
         }
     }
 
@@ -586,7 +592,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Withdraw all tokens after lock period
      * @notice Only DAO can withdraw all tokens after lock period ends
      */
-    function withdrawAllTokens() external override onlyDao nonReentrant {
+    function withdrawAllLaunchTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
 
         uint256 availableTokens = launchBalance - totalLaunchSold;
@@ -598,7 +604,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         currentStep = 0;
         launchBalance = 0;
         totalLaunchSold = 0;
-        tokensEarned = 0;
+        launchTokensEarned = 0;
         quantityTokensPerLevel = firstLevelTokenQuantity;
         currentPrice = initialPricePerToken;
         remainderOfStep = firstLevelTokenQuantity;
@@ -688,7 +694,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted offset token balance gradually (for reducing offset when tokens are returned)
      * @param amount Amount of tokens to process
      */
-    function calculateUnaccountedOffsetTokenBalance(uint256 amount) external override nonReentrant {
+    function calculateUnaccountedOffsetLaunchBalance(uint256 amount) external override nonReentrant {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();
@@ -696,7 +702,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         require(unaccountedOffsetLaunchBalance >= amount, InsufficientUnaccountedOffsetTokenBalance());
 
-        _calculateChangeOffsetToken(amount);
+        _calculateChangeOffsetLaunch(amount);
         unaccountedOffsetLaunchBalance -= amount;
 
         emit UnaccountedOffsetTokenBalanceProcessed(amount);
@@ -736,10 +742,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function tokenAvailable() external view override returns (uint256) {
-        if (totalLaunchSold < tokensEarned) {
+        if (totalLaunchSold < launchTokensEarned) {
             return 0;
         }
-        return totalLaunchSold - tokensEarned;
+        return totalLaunchSold - launchTokensEarned;
     }
 
     // Internal functions for handling different types of transactions
@@ -757,7 +763,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function _handleOwnerDeposit(uint256 value) internal {
-        if (offsetLaunch > tokensEarned) {
+        if (offsetLaunch > launchTokensEarned) {
             // Accumulate in unaccounted balance for gradual processing
             unaccountedCollateralBalance += value;
         }
@@ -767,7 +773,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Common logic for handling token purchases with any collateral currency
      * @param collateralAmount Amount of collateral currency (ETH or collateral token)
      */
-    function _handleTokenPurchaseCommon(uint256 collateralAmount) internal {
+    function _handleLaunchTokenPurchaseCommon(uint256 collateralAmount) internal {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
@@ -804,8 +810,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         // Check to prevent arithmetic underflow
         uint256 tokensAvailableForReturnBuyback = 0;
-        if (totalLaunchSold > tokensEarned) {
-            tokensAvailableForReturnBuyback = totalLaunchSold - tokensEarned;
+        if (totalLaunchSold > launchTokensEarned) {
+            tokensAvailableForReturnBuyback = totalLaunchSold - launchTokensEarned;
         }
 
         // Add unaccounted balance from previous calls
@@ -817,8 +823,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 remainingAmount = totalAmount - effectiveAmount;
         unaccountedReturnBuybackBalance = remainingAmount;
 
-        if (offsetLaunch > tokensEarned) {
-            uint256 offsetAmount = offsetLaunch - tokensEarned;
+        if (offsetLaunch > launchTokensEarned) {
+            uint256 offsetAmount = offsetLaunch - launchTokensEarned;
 
             if (effectiveAmount > offsetAmount) {
                 _calculateCollateralForTokenAmountEarned(offsetAmount);
@@ -832,7 +838,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             collateralAmountToPay = _calculateCollateralForTokenAmountEarned(effectiveAmount);
         }
 
-        tokensEarned += effectiveAmount;
+        launchTokensEarned += effectiveAmount;
         require(contractCollateralBalance >= collateralAmountToPay, InsufficientCollateralBalance());
         contractCollateralBalance -= collateralAmountToPay;
         launchBalance += amount;
@@ -842,12 +848,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
     }
 
-    function _handleTokenSale(uint256 amount) internal {
+    function _handleLaucnhTokenSale(uint256 amount) internal {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
         }
-        uint256 maxEarnedOrOffset = offsetLaunch > tokensEarned ? offsetLaunch : tokensEarned;
+        uint256 maxEarnedOrOffset = offsetLaunch > launchTokensEarned ? offsetLaunch : launchTokensEarned;
 
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
         require(totalLaunchSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
@@ -962,7 +968,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @param amountToken Amount of tokens being added
      * @return Current step after recalculation
      */
-    function _calculateChangeOffsetToken(uint256 amountToken) internal returns (uint256) {
+    function _calculateChangeOffsetLaunch(uint256 amountToken) internal returns (uint256) {
         int256 remainingAddTokens = int256(amountToken);
         uint256 localCurrentStep = offsetStep;
         int256 remainderOfStepLocal = int256(remainderOfStepOffset);
@@ -1017,7 +1023,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     function _calculateChangeOffsetCollateral(uint256 amountCollateral) internal returns (uint256) {
         int256 remainingAddCollateral = int256(amountCollateral);
         uint256 remainingOffsetTokensLocal = offsetLaunch;
-        int256 remainingAddTokens = int256(offsetLaunch) - int256(tokensEarned);
+        int256 remainingAddTokens = int256(offsetLaunch) - int256(launchTokensEarned);
         uint256 localCurrentStep = offsetStep;
         uint256 remainderOfStepLocal = remainderOfStepOffset;
         uint256 tokensPerLevel = quantityTokensPerLevelOffset;

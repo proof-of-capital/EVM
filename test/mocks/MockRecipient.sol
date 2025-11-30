@@ -7,13 +7,13 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract MockRecipient {
     using SafeERC20 for IERC20;
 
-    function deposit(
+    function depositCollateral(
         uint256 /*amount*/
     )
         external
         payable {}
 
-    function depositTokens(
+    function depositLaunch(
         uint256 /*amount*/
     )
         external {}

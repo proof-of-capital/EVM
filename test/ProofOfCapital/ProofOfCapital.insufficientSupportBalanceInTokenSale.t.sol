@@ -45,13 +45,13 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
     address public user = address(0x5);
 
     function testInsufficientCollateralBalanceInTokenSale() public {
-        // This test verifies that _handleTokenSale reverts with InsufficientCollateralBalance
+        // This test verifies that _handleLaucnhTokenSale reverts with InsufficientCollateralBalance
         // when contractCollateralBalance is less than collateralAmountToPay
 
         // Step 1: Owner deposits tokens to create launchBalance
         vm.startPrank(owner);
         token.approve(address(proofOfCapital), 100000e18);
-        proofOfCapital.depositTokens(50000e18); // This increases launchBalance
+        proofOfCapital.depositLaunch(50000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Now market maker can buy many tokens to create large totalLaunchSold
@@ -61,28 +61,28 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyTokens(5000e18); // Buy many tokens to create large totalLaunchSold
+        proofOfCapital.buyLaunchTokens(5000e18); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
         // Verify totalLaunchSold increased
         uint256 totalTokensSoldAfterBuy = proofOfCapital.totalLaunchSold();
         assertTrue(totalTokensSoldAfterBuy > 0, "Should have tokens sold after market maker purchase");
 
-        // Step 2: Now returnWallet can sell tokens back, which will increase tokensEarned
+        // Step 2: Now returnWallet can sell tokens back, which will increase launchTokensEarned
         vm.startPrank(owner);
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(1000e18); // Return wallet sells tokens back
+        proofOfCapital.sellLaunchTokens(1000e18); // Return wallet sells tokens back
         vm.stopPrank();
 
-        // Step 3: Verify tokensEarned increased
-        uint256 tokensEarnedAfterSale = proofOfCapital.tokensEarned();
+        // Step 3: Verify launchTokensEarned increased
+        uint256 tokensEarnedAfterSale = proofOfCapital.launchTokensEarned();
         assertTrue(tokensEarnedAfterSale > 0, "Should have tokens earned after return wallet sale");
 
-        // Step 4: Now we have totalLaunchSold = 5000e18, tokensEarned = 1000e18
+        // Step 4: Now we have totalLaunchSold = 5000e18, launchTokensEarned = 1000e18
         // So tokensAvailableForReturnBuyback = 5000e18 - 1000e18 = 4000e18
 
         // Step 5: Use stdstore to reduce offsetLaunch so that collateralAmountToPay > 0
@@ -91,11 +91,11 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
         vm.store(address(proofOfCapital), bytes32(offsetSlot), bytes32(uint256(500e18))); // Set offsetLaunch to 500e18
 
         // Verify we have the right conditions for the test
-        uint256 currentTokensEarned = proofOfCapital.tokensEarned();
+        uint256 currentTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 currentOffsetTokens = proofOfCapital.offsetLaunch();
         assertTrue(
             currentTokensEarned > currentOffsetTokens,
-            "tokensEarned should be > offsetLaunch for collateralAmountToPay > 0"
+            "launchTokensEarned should be > offsetLaunch for collateralAmountToPay > 0"
         );
 
         // Step 7: Use stdstore to set contractCollateralBalance to 0
@@ -118,9 +118,9 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
         token.approve(address(proofOfCapital), 2000e18);
 
         // This should revert because contractCollateralBalance < collateralAmountToPay
-        // This call goes to _handleTokenSale since msg.sender is a market maker (not returnWallet)
+        // This call goes to _handleLaucnhTokenSale since msg.sender is a market maker (not returnWallet)
         vm.expectRevert(IProofOfCapital.InsufficientCollateralBalance.selector);
-        proofOfCapital.sellTokens(1000e18);
+        proofOfCapital.sellLaunchTokens(1000e18);
 
         vm.stopPrank();
     }

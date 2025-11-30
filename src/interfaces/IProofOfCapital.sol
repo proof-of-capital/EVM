@@ -149,7 +149,7 @@ interface IProofOfCapital {
     function toggleDeferredWithdrawal() external;
     function assignNewReserveOwner(address newReserveOwner) external;
     function switchProfitMode(bool flag) external;
-    function changeReturnWallet(address newReturnWalletAddress) external;
+    function setReturnWallet(address returnWalletAddress, bool isReturnWallet) external;
     function changeRoyaltyWallet(address newRoyaltyWalletAddress) external;
     function changeProfitPercentage(uint256 newRoyaltyProfitPercentage) external;
 
@@ -197,7 +197,7 @@ interface IProofOfCapital {
     function oldContractAddress(address) external view returns (bool);
     function reserveOwner() external view returns (address);
     function launchToken() external view returns (IERC20);
-    function returnWalletAddress() external view returns (address);
+    function returnWalletAddresses(address) external view returns (bool);
     function royaltyWalletAddress() external view returns (address);
     function daoAddress() external view returns (address);
     function lockEndTime() external view returns (uint256);

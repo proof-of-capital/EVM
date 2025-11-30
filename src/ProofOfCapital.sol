@@ -55,7 +55,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     // Core addresses
     address public override reserveOwner;
     IERC20 public override launchToken;
-    address public override returnWalletAddress;
+    mapping(address => bool) public override returnWalletAddresses;
     address public override royaltyWalletAddress;
     address public override daoAddress; // DAO address for governance
 
@@ -179,7 +179,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         isActive = true;
         launchToken = IERC20(params.launchToken);
 
-        returnWalletAddress = params.returnWalletAddress;
+        returnWalletAddresses[params.returnWalletAddress] = true;
         royaltyWalletAddress = params.royaltyWalletAddress;
         lockEndTime = params.lockEndTime;
         initialPricePerToken = params.initialPricePerToken;
@@ -281,7 +281,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
             oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)
-                && oldContractAddr != collateralAddress && oldContractAddr != returnWalletAddress
+                && oldContractAddr != collateralAddress && !returnWalletAddresses[oldContractAddr]
                 && oldContractAddr != royaltyWalletAddress && oldContractAddr != recipientDeferredWithdrawalLaunch
                 && oldContractAddr != recipientDeferredWithdrawalCollateralToken
                 && !marketMakerAddresses[oldContractAddr],
@@ -437,12 +437,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Change return wallet address
+     * @dev Set return wallet status for an address
      */
-    function changeReturnWallet(address newReturnWalletAddress) external override onlyOwner {
-        require(newReturnWalletAddress != address(0), InvalidAddress());
-        returnWalletAddress = newReturnWalletAddress;
-        emit ReturnWalletChanged(newReturnWalletAddress);
+    function setReturnWallet(address returnWalletAddress, bool isReturnWallet) external override onlyOwner {
+        require(returnWalletAddress != address(0), InvalidAddress());
+        returnWalletAddresses[returnWalletAddress] = isReturnWallet;
+        emit ReturnWalletChanged(returnWalletAddress);
     }
 
     /**
@@ -535,7 +535,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function sellLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
-        require(msg.sender != returnWalletAddress, UseReturnWalletFunction());
+        require(!returnWalletAddresses[msg.sender], UseReturnWalletFunction());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleLaucnhTokenSale(amount);
@@ -546,7 +546,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function sellLaunchTokensReturnWallet(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
-        require(msg.sender == returnWalletAddress, OnlyReturnWallet());
+        require(returnWalletAddresses[msg.sender], OnlyReturnWallet());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleReturnWalletSale(amount);

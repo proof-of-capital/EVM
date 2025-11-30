@@ -1705,29 +1705,30 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    // Tests for changeReturnWallet function
+    // Tests for setReturnWallet function
     function testChangeReturnWalletSuccess() public {
         address newReturnWallet = address(0x999);
 
         // Verify initial state
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
 
-        // Change return wallet
+        // Add new return wallet
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
-        // Verify change
-        assertEq(proofOfCapital.returnWalletAddress(), newReturnWallet);
+        // Verify both wallets are return wallets
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
+        assertTrue(proofOfCapital.returnWalletAddresses(newReturnWallet));
     }
 
     function testChangeReturnWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
-        proofOfCapital.changeReturnWallet(address(0));
+        proofOfCapital.setReturnWallet(address(0), true);
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
     }
 
     function testChangeReturnWalletOnlyOwner() public {
@@ -1736,18 +1737,19 @@ contract ProofOfCapitalTest is Test {
         // Non-owner tries to change return wallet
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
+        assertFalse(proofOfCapital.returnWalletAddresses(newReturnWallet));
     }
 
     function testChangeReturnWalletEvent() public {
@@ -1757,31 +1759,35 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         vm.expectEmit(true, false, false, false);
         emit IProofOfCapital.ReturnWalletChanged(newReturnWallet);
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
     }
 
     function testChangeReturnWalletMultipleTimes() public {
         address firstNewWallet = address(0x777);
         address secondNewWallet = address(0x888);
 
-        // First change
+        // First add
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(firstNewWallet);
-        assertEq(proofOfCapital.returnWalletAddress(), firstNewWallet);
+        proofOfCapital.setReturnWallet(firstNewWallet, true);
+        assertTrue(proofOfCapital.returnWalletAddresses(firstNewWallet));
 
-        // Second change
+        // Second add
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(secondNewWallet);
-        assertEq(proofOfCapital.returnWalletAddress(), secondNewWallet);
+        proofOfCapital.setReturnWallet(secondNewWallet, true);
+        assertTrue(proofOfCapital.returnWalletAddresses(secondNewWallet));
+
+        // Both should be return wallets
+        assertTrue(proofOfCapital.returnWalletAddresses(firstNewWallet));
+        assertTrue(proofOfCapital.returnWalletAddresses(secondNewWallet));
     }
 
     function testChangeReturnWalletToSameAddress() public {
-        // Change to same address should work (no restriction)
+        // Set to same address should work (no restriction)
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(returnWallet);
+        proofOfCapital.setReturnWallet(returnWallet, true);
 
-        // Verify it's still the same
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        // Verify it's still a return wallet
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
     }
 
     function testChangeReturnWalletValidAddresses() public {
@@ -1794,8 +1800,8 @@ contract ProofOfCapitalTest is Test {
 
         for (uint256 i = 0; i < validAddresses.length; i++) {
             vm.prank(owner);
-            proofOfCapital.changeReturnWallet(validAddresses[i]);
-            assertEq(proofOfCapital.returnWalletAddress(), validAddresses[i]);
+            proofOfCapital.setReturnWallet(validAddresses[i], true);
+            assertTrue(proofOfCapital.returnWalletAddresses(validAddresses[i]));
         }
     }
 

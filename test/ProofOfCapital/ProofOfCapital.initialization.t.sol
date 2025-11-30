@@ -529,7 +529,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify addresses were set correctly
-        assertEq(proofOfCapital.returnWalletAddress(), uniqueReturnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(uniqueReturnWallet));
         assertEq(proofOfCapital.royaltyWalletAddress(), uniqueRoyaltyWallet);
     }
 
@@ -544,7 +544,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify addresses were set correctly
-        assertEq(proofOfCapital.returnWalletAddress(), params.returnWalletAddress);
+        assertTrue(proofOfCapital.returnWalletAddresses(params.returnWalletAddress));
         assertEq(proofOfCapital.royaltyWalletAddress(), params.royaltyWalletAddress);
     }
 
@@ -582,7 +582,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         // Should not revert
         ProofOfCapital proofOfCapitalValid = new ProofOfCapital(paramsValid);
 
-        assertEq(proofOfCapitalValid.returnWalletAddress(), address(0x777));
+        assertTrue(proofOfCapitalValid.returnWalletAddresses(address(0x777)));
         assertEq(proofOfCapitalValid.royaltyWalletAddress(), address(0x888));
     }
 

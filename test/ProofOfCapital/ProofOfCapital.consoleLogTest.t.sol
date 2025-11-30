@@ -72,7 +72,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(1000e18); // Return wallet sells tokens back
+        proofOfCapital.sellLaunchTokensReturnWallet(1000e18); // Return wallet sells tokens back
         vm.stopPrank();
 
         // Step 3: Verify launchTokensEarned increased
@@ -125,7 +125,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         token.approve(address(proofOfCapital), 2000e18);
 
         // when offsetLaunch > launchTokensEarned and effectiveAmount > offsetAmount
-        proofOfCapital.sellLaunchTokens(1500e18); // Sell amount that triggers the log
+        proofOfCapital.sellLaunchTokensReturnWallet(1500e18); // Sell amount that triggers the log
 
         vm.stopPrank();
     }

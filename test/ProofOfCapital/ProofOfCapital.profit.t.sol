@@ -509,7 +509,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Create collateral balance first to enable token purchases
         vm.prank(returnWallet);
-        proofOfCapital.sellLaunchTokens(15000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(15000e18);
 
         // Move time to be more than 60 days before lock end to remove time-based trading access
         uint256 mmLockEndTime = proofOfCapital.lockEndTime();
@@ -542,7 +542,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Create collateral balance first to enable token purchases
         vm.prank(returnWallet);
-        proofOfCapital.sellLaunchTokens(15000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(15000e18);
 
         // Activate trading access by scheduling deferred withdrawal
         vm.prank(owner);

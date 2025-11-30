@@ -95,6 +95,8 @@ interface IProofOfCapital {
     error UnaccountedOffsetBalanceNotSet();
     error ContractAlreadyInitialized();
     error ProfitBeforeTrendChangeMustBePositive();
+    error UseReturnWalletFunction();
+    error OnlyReturnWallet();
 
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
@@ -170,6 +172,7 @@ interface IProofOfCapital {
     function depositCollateral(uint256 amount) external;
     function depositLaunch(uint256 amount) external;
     function sellLaunchTokens(uint256 amount) external;
+    function sellLaunchTokensReturnWallet(uint256 amount) external;
 
     // Deferred withdrawals
     function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external;

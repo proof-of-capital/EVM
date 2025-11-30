@@ -117,7 +117,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
 
         // Create initial state with collateral balance
         vm.prank(returnWallet);
-        proofOfCapital.sellLaunchTokens(20000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(20000e18);
 
         uint256 initialOwnerWethBalance = weth.balanceOf(owner);
 
@@ -125,7 +125,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
         uint256 smallSellAmount = 100e18;
 
         vm.prank(returnWallet);
-        proofOfCapital.sellLaunchTokens(smallSellAmount);
+        proofOfCapital.sellLaunchTokensReturnWallet(smallSellAmount);
 
         uint256 finalOwnerWethBalance = weth.balanceOf(owner);
 

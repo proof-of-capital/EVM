@@ -129,7 +129,7 @@ contract BaseTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), amount * 2);
-        proofOfCapital.sellLaunchTokens(amount); // This increases launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(amount); // This increases launchBalance
         vm.stopPrank();
     }
 

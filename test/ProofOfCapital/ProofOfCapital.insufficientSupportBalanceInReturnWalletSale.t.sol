@@ -75,7 +75,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(1000e18); // Return wallet sells tokens back
+        proofOfCapital.sellLaunchTokensReturnWallet(1000e18); // Return wallet sells tokens back
         vm.stopPrank();
 
         // Step 3: Verify launchTokensEarned increased
@@ -117,7 +117,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
         // This should revert because contractCollateralBalance < collateralAmountToPay
         // This call goes to _handleReturnWalletSale since msg.sender == returnWalletAddress
         vm.expectRevert(IProofOfCapital.InsufficientCollateralBalance.selector);
-        proofOfCapital.sellLaunchTokens(1000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(1000e18);
 
         vm.stopPrank();
     }

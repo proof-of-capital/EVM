@@ -574,18 +574,25 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Sell tokens back to contract
+     * @dev Sell tokens back to contract (for regular users and market makers)
      */
     function sellLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract {
         require(amount > 0, InvalidAmount());
+        require(msg.sender != returnWalletAddress, UseReturnWalletFunction());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
+        _handleLaucnhTokenSale(amount);
+    }
 
-        if (msg.sender == returnWalletAddress) {
-            _handleReturnWalletSale(amount);
-        } else {
-            _handleLaucnhTokenSale(amount);
-        }
+    /**
+     * @dev Sell tokens back to contract (for return wallet only)
+     */
+    function sellLaunchTokensReturnWallet(uint256 amount) external override nonReentrant onlyActiveContract {
+        require(amount > 0, InvalidAmount());
+        require(msg.sender == returnWalletAddress, OnlyReturnWallet());
+
+        launchToken.safeTransferFrom(msg.sender, address(this), amount);
+        _handleReturnWalletSale(amount);
     }
 
     /**

@@ -125,7 +125,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         // Return wallet sells tokens back (this increases launchTokensEarned)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(10000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18);
         vm.stopPrank();
 
         // Check if launchTokensEarned increased

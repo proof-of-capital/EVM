@@ -170,7 +170,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // First, returnWallet sells tokens to increase launchBalance
         vm.prank(returnWallet);
-        customContract.sellLaunchTokens(20000e18);
+        customContract.sellLaunchTokensReturnWallet(20000e18);
 
         // Approve WETH for market maker (since buyLaunchTokens uses WETH as collateral)
         vm.prank(marketMaker);
@@ -257,7 +257,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // returnWallet sells tokens to add to contract balance
         vm.prank(returnWallet);
-        customContract.sellLaunchTokens(5000e18);
+        customContract.sellLaunchTokensReturnWallet(5000e18);
 
         // Approve WETH for market maker
         vm.prank(marketMaker);
@@ -489,7 +489,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // returnWallet sells tokens to add to contract balance
         vm.prank(returnWallet);
-        customContract.sellLaunchTokens(5000e18);
+        customContract.sellLaunchTokensReturnWallet(5000e18);
 
         // Approve WETH for market maker
         vm.prank(marketMaker);

@@ -75,7 +75,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(1000e18); // Return wallet sells tokens back
+        proofOfCapital.sellLaunchTokensReturnWallet(1000e18); // Return wallet sells tokens back
         vm.stopPrank();
 
         // Step 3: Verify launchTokensEarned increased

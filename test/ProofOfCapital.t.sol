@@ -578,7 +578,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(10000e18); // This increases launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Step 2: Schedule withdrawal
@@ -681,7 +681,7 @@ contract ProofOfCapitalTest is Test {
         // ReturnWallet sells tokens back, which increases launchBalance
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellLaunchTokens(50000e18); // This should increase launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18); // This should increase launchBalance
         vm.stopPrank();
 
         // Check the state - this should now have launchBalance > totalLaunchSold
@@ -791,7 +791,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(10000e18); // This increases launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Step 2: Schedule withdrawal with amount less than available
@@ -2231,7 +2231,7 @@ contract ProofOfCapitalTest is Test {
         // Return wallet sells tokens back (this increases launchTokensEarned)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellLaunchTokens(10000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18);
         vm.stopPrank();
 
         // Check if launchTokensEarned increased
@@ -2309,7 +2309,7 @@ contract ProofOfCapitalTest is Test {
         // Return wallet sells tokens back (this increases launchBalance)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellLaunchTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move time past lock end
@@ -2373,7 +2373,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellLaunchTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move time past lock end
@@ -2411,7 +2411,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellLaunchTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move time to exact lock end
@@ -2439,7 +2439,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellLaunchTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move past lock end
@@ -2538,7 +2538,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 20000e18);
-        proofOfCapital.sellLaunchTokens(20000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(20000e18);
         vm.stopPrank();
 
         // Move time past lock end

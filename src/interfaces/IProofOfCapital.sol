@@ -136,7 +136,7 @@ interface IProofOfCapital {
         uint256 profitPercentage;
         uint256 offsetLaunch;
         uint256 controlPeriod;
-        address collateralAddress;
+        address collateralToken;
         uint256 royaltyProfitPercent;
         address[] oldContractAddresses; // Array of old contract addresses
         uint256 profitBeforeTrendChange; // Profit percentage before trend change
@@ -231,7 +231,7 @@ interface IProofOfCapital {
     function offsetPrice() external view returns (uint256);
     function remainderOfStepOffset() external view returns (uint256);
     function quantityTokensPerLevelOffset() external view returns (uint256);
-    function collateralAddress() external view returns (address);
+    function collateralToken() external view returns (IERC20);
     function marketMakerAddresses(address) external view returns (bool);
     function ownerCollateralBalance() external view returns (uint256);
     function royaltyCollateralBalance() external view returns (uint256);

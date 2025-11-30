@@ -30,7 +30,7 @@ contract DeployProofOfCapital is Script {
     uint256 public profitPercentage;
     uint256 public offsetLaunch;
     uint256 public controlPeriod;
-    address public collateralAddress;
+    address public collateralToken;
     uint256 public royaltyProfitPercent;
     address[] public oldContractAddresses;
     uint256 public profitBeforeTrendChange;
@@ -59,7 +59,7 @@ contract DeployProofOfCapital is Script {
         royaltyWalletAddress = vm.envAddress("ROYALTY_WALLET_ADDRESS");
 
         // Token support address is set by Makefile based on network
-        collateralAddress = vm.envAddress("TOKEN_SUPPORT_ADDRESS");
+        collateralToken = vm.envAddress("TOKEN_SUPPORT_ADDRESS");
 
         lockEndTime = vm.envUint("LOCK_END_TIME");
         initialPricePerToken = vm.envUint("INITIAL_PRICE_PER_TOKEN");
@@ -104,7 +104,7 @@ contract DeployProofOfCapital is Script {
         require(marketMakerAddress != address(0), "Invalid market maker address");
         require(returnWalletAddress != address(0), "Invalid return wallet address");
         require(royaltyWalletAddress != address(0), "Invalid royalty wallet address");
-        require(collateralAddress != address(0), "Invalid token support address");
+        require(collateralToken != address(0), "Invalid token support address");
         require(lockEndTime > block.timestamp, "Lock end time must be in the future");
         require(lockEndTime - block.timestamp <= 365 days * 2, "Lock period cannot exceed 2 years");
         require(initialPricePerToken > 0, "Initial price must be positive");
@@ -123,7 +123,7 @@ contract DeployProofOfCapital is Script {
         console.log("Market Maker:", marketMakerAddress);
         console.log("Return Wallet:", returnWalletAddress);
         console.log("Royalty Wallet:", royaltyWalletAddress);
-        console.log("Token Support Address:", collateralAddress);
+        console.log("Token Support Address:", collateralToken);
     }
 
     /**
@@ -168,7 +168,7 @@ contract DeployProofOfCapital is Script {
             profitPercentage: profitPercentage,
             offsetLaunch: offsetLaunch,
             controlPeriod: controlPeriod,
-            collateralAddress: collateralAddress,
+            collateralToken: collateralToken,
             royaltyProfitPercent: royaltyProfitPercent,
             oldContractAddresses: oldContractAddresses,
             profitBeforeTrendChange: profitBeforeTrendChange,

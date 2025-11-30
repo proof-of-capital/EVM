@@ -59,7 +59,7 @@ contract ProofOfCapitalBranch1082Test is BaseTest {
             profitPercentage: 100,
             offsetLaunch: 0,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(wethLocal),
+            collateralToken: address(wethLocal),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

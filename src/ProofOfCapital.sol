@@ -103,7 +103,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override quantityTokensPerLevelOffset;
 
     // Collateral token variables
-    address public override collateralAddress;
+    IERC20 public override collateralToken;
 
     // Market makers
     mapping(address => bool) public override marketMakerAddresses;
@@ -191,7 +191,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         profitPercentage = params.profitPercentage;
         offsetLaunch = params.offsetLaunch;
         controlPeriod = _getPeriod(params.controlPeriod);
-        collateralAddress = params.collateralAddress;
+        collateralToken = IERC20(params.collateralToken);
         royaltyProfitPercent = params.royaltyProfitPercent;
         creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
         profitBeforeTrendChange = params.profitBeforeTrendChange;
@@ -281,7 +281,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
             oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)
-                && oldContractAddr != collateralAddress && !returnWalletAddresses[oldContractAddr]
+                && oldContractAddr != address(collateralToken) && !returnWalletAddresses[oldContractAddr]
                 && oldContractAddr != royaltyWalletAddress && oldContractAddr != recipientDeferredWithdrawalLaunch
                 && oldContractAddr != recipientDeferredWithdrawalCollateralToken
                 && !marketMakerAddresses[oldContractAddr],
@@ -389,7 +389,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         emit CollateralDeferredWithdrawalConfirmed(recipient, collateralBalance);
 
-        IERC20(collateralAddress).safeIncreaseAllowance(recipient, collateralBalance);
+        collateralToken.safeIncreaseAllowance(recipient, collateralBalance);
         IProofOfCapital(recipient).depositCollateral(collateralBalance);
     }
 
@@ -493,7 +493,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(amount > 0, InvalidAmount());
         require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
-        IERC20(collateralAddress).safeTransferFrom(msg.sender, address(this), amount);
+        collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleLaunchTokenPurchaseCommon(amount);
     }
 
@@ -509,7 +509,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     {
         require(amount > 0, InvalidAmount());
 
-        IERC20(collateralAddress).safeTransferFrom(msg.sender, address(this), amount);
+        collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleOwnerDeposit(amount);
     }
 
@@ -1248,7 +1248,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         if (amount == 0) return;
 
         // Transfer collateral tokens
-        IERC20(collateralAddress).safeTransfer(to, amount);
+        collateralToken.safeTransfer(to, amount);
     }
 
     /**

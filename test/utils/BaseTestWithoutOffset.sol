@@ -79,7 +79,7 @@ contract BaseTestWithoutOffset is Test {
             profitPercentage: 100,
             offsetLaunch: 0, // No offset
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

@@ -86,8 +86,6 @@ interface IProofOfCapital {
     error LockIsActive();
     error OldContractAddressZero();
     error OldContractAddressConflict();
-    error NoReturnWalletChangeProposed();
-    error ReturnWalletChangeDelayNotPassed();
     error InvalidDAOAddress();
     error InsufficientUnaccountedCollateralBalance();
     error InsufficientUnaccountedOffsetBalance();
@@ -103,8 +101,6 @@ interface IProofOfCapital {
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
     event UnaccountedOffsetBalanceProcessed(uint256 amount);
     event UnaccountedOffsetTokenBalanceProcessed(uint256 amount);
-    event ReturnWalletChangeProposed(address indexed newReturnWalletAddress, uint256 proposalTime);
-    event ReturnWalletChangeConfirmed(address indexed newReturnWalletAddress);
     event DAOAddressChanged(address indexed newDaoAddress);
     event LockExtended(uint256 additionalTime);
     event MarketMakerStatusChanged(address indexed marketMaker, bool isActive);
@@ -162,10 +158,6 @@ interface IProofOfCapital {
 
     // Old contract management
     function registerOldContract(address oldContractAddr) external;
-
-    // Return wallet change management
-    function proposeReturnWalletChange(address newReturnWalletAddress) external;
-    function confirmReturnWalletChange() external;
 
     // Trading functions
     function buyLaunchTokens(uint256 amount) external;
@@ -250,8 +242,6 @@ interface IProofOfCapital {
     function recipientDeferredWithdrawalLaunch() external view returns (address);
     function collateralTokenDeferredWithdrawalDate() external view returns (uint256);
     function recipientDeferredWithdrawalCollateralToken() external view returns (address);
-    function proposedReturnWalletAddress() external view returns (address);
-    function proposedReturnWalletChangeTime() external view returns (uint256);
     function unaccountedCollateralBalance() external view returns (uint256);
     function unaccountedOffset() external view returns (uint256);
     function unaccountedOffsetLaunchBalance() external view returns (uint256);

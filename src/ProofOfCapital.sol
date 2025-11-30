@@ -121,10 +121,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override collateralTokenDeferredWithdrawalDate;
     address public override recipientDeferredWithdrawalCollateralToken;
 
-    // Return wallet change proposal
-    address public override proposedReturnWalletAddress; // Proposed return wallet address
-    uint256 public override proposedReturnWalletChangeTime; // Time when return wallet change was proposed
-
     // Old contract address change control
 
     // Unaccounted balances for gradual processing
@@ -441,44 +437,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Propose return wallet address change (requires lock to be active)
-     */
-    function proposeReturnWalletChange(address newReturnWalletAddress) external override onlyOwner {
-        require(!_checkTradingAccess(), LockIsActive());
-        require(newReturnWalletAddress != address(0), InvalidAddress());
-        require(
-            newReturnWalletAddress != owner() && newReturnWalletAddress != reserveOwner
-                && newReturnWalletAddress != address(launchToken) && newReturnWalletAddress != collateralAddress
-                && newReturnWalletAddress != returnWalletAddress && newReturnWalletAddress != royaltyWalletAddress
-                && newReturnWalletAddress != recipientDeferredWithdrawalLaunch
-                && newReturnWalletAddress != recipientDeferredWithdrawalCollateralToken
-                && !marketMakerAddresses[newReturnWalletAddress] && !oldContractAddress[newReturnWalletAddress],
-            OldContractAddressConflict()
-        );
-
-        proposedReturnWalletAddress = newReturnWalletAddress;
-        proposedReturnWalletChangeTime = block.timestamp;
-        emit ReturnWalletChangeProposed(newReturnWalletAddress, block.timestamp);
-    }
-
-    /**
-     * @dev Confirm proposed return wallet address change after 24 hours
-     */
-    function confirmReturnWalletChange() external override onlyOwner {
-        require(!_checkTradingAccess(), LockIsActive());
-        require(proposedReturnWalletAddress != address(0), NoReturnWalletChangeProposed());
-        require(
-            block.timestamp >= proposedReturnWalletChangeTime + Constants.ONE_DAY, ReturnWalletChangeDelayNotPassed()
-        );
-
-        returnWalletAddress = proposedReturnWalletAddress;
-        proposedReturnWalletAddress = address(0);
-        proposedReturnWalletChangeTime = 0;
-        emit ReturnWalletChangeConfirmed(returnWalletAddress);
-    }
-
-    /**
-     * @dev Change return wallet address (legacy function for backwards compatibility)
+     * @dev Change return wallet address
      */
     function changeReturnWallet(address newReturnWalletAddress) external override onlyOwner {
         require(newReturnWalletAddress != address(0), InvalidAddress());

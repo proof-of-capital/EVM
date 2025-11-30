@@ -20,10 +20,10 @@ contract MockRoyalty is IRoyalty {
     // Track notifications received
     mapping(address => bool) public lastProfitModeReceived;
     mapping(address => uint256) public notificationCount;
-    
+
     // Option to simulate failure
     bool public shouldRevert;
-    
+
     /**
      * @dev Set whether the contract should revert on notification
      * @param _shouldRevert True to revert, false to succeed
@@ -31,7 +31,7 @@ contract MockRoyalty is IRoyalty {
     function setShouldRevert(bool _shouldRevert) external {
         shouldRevert = _shouldRevert;
     }
-    
+
     /**
      * @dev Notifies the royalty contract about profit mode change
      * @param pocContract Address of the ProofOfCapital contract
@@ -41,11 +41,11 @@ contract MockRoyalty is IRoyalty {
         if (shouldRevert) {
             revert("MockRoyalty: forced revert");
         }
-        
+
         lastProfitModeReceived[pocContract] = profitInTime;
         notificationCount[pocContract]++;
     }
-    
+
     /**
      * @dev Get the last profit mode received for a contract
      * @param pocContract Address of the ProofOfCapital contract
@@ -54,7 +54,7 @@ contract MockRoyalty is IRoyalty {
     function getLastProfitMode(address pocContract) external view returns (bool) {
         return lastProfitModeReceived[pocContract];
     }
-    
+
     /**
      * @dev Get the number of notifications received for a contract
      * @param pocContract Address of the ProofOfCapital contract

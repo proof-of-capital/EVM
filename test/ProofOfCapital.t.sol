@@ -90,7 +90,7 @@ contract ProofOfCapitalTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
-        
+
         // Deploy mock royalty contract
         mockRoyalty = new MockRoyalty();
         royalty = address(mockRoyalty);
@@ -2822,7 +2822,7 @@ contract ProofOfCapitalProfitTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
-        
+
         // Deploy mock royalty contract
         mockRoyalty = new MockRoyalty();
         royalty = address(mockRoyalty);
@@ -2951,7 +2951,7 @@ contract ProofOfCapitalInitializationTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
-        
+
         // Deploy mock royalty contract
         mockRoyalty = new MockRoyalty();
         royalty = address(mockRoyalty);

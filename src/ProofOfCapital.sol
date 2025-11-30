@@ -430,7 +430,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     function switchProfitMode(bool flag) external override onlyOwner {
         profitInTime = flag;
         emit ProfitModeChanged(flag);
-        
+
         // Notify royalty contract about profit mode change
         if (royaltyWalletAddress != address(0)) {
             try IRoyalty(royaltyWalletAddress).notifyProfitModeChanged(address(this), flag) {}

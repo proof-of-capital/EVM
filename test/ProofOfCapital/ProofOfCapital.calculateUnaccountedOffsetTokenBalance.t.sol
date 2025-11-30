@@ -56,18 +56,27 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetLaunch));
 
-        // Set launchTokensEarned to a value less than offsetLaunch to allow depositCollateral
-        uint256 launchTokensEarned = offsetLaunch / 2;
+        // Deposit amount calculation
+        uint256 depositAmount = 5000e18;
+
+        // Set launchTokensEarned to a value that leaves enough capacity for two deposits
+        uint256 launchTokensEarned =
+            offsetLaunch > (depositAmount * 2 + 1000e18) ? offsetLaunch - (depositAmount * 2 + 1000e18) : 0;
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("launchTokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(launchTokensEarned));
 
         // Deposit tokens to create unaccountedOffsetLaunchBalance
-        uint256 depositAmount = 5000e18;
-        require((offsetLaunch - launchTokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
+        // First deposit goes to launchBalance (first deposit flag), second goes to unaccountedOffsetLaunchBalance
+        require((offsetLaunch - launchTokensEarned) >= depositAmount * 2, "Test setup: insufficient offset capacity");
 
         vm.startPrank(owner);
-        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), depositAmount);
-        token.approve(address(proofOfCapital), depositAmount);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), depositAmount * 2);
+        token.approve(address(proofOfCapital), depositAmount * 2);
+
+        // First deposit - goes to launchBalance
+        proofOfCapital.depositLaunch(depositAmount);
+
+        // Second deposit - goes to unaccountedOffsetLaunchBalance
         proofOfCapital.depositLaunch(depositAmount);
         vm.stopPrank();
 
@@ -409,18 +418,27 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetLaunch));
 
-        // Set launchTokensEarned to a value less than offsetLaunch to allow depositCollateral
-        uint256 launchTokensEarned = offsetLaunch / 2;
+        // Deposit amount calculation
+        uint256 depositAmount = 1000e18; // Amount for the token balance reduction
+
+        // Set launchTokensEarned to a value that leaves enough capacity for two deposits
+        uint256 launchTokensEarned =
+            offsetLaunch > (depositAmount * 2 + 1000e18) ? offsetLaunch - (depositAmount * 2 + 1000e18) : 0;
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("launchTokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(launchTokensEarned));
 
         // Deposit tokens to create unaccountedOffsetLaunchBalance
-        uint256 depositAmount = 1000e18; // Amount for the token balance reduction
-        require((offsetLaunch - launchTokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
+        // First deposit goes to launchBalance (first deposit flag), second goes to unaccountedOffsetLaunchBalance
+        require((offsetLaunch - launchTokensEarned) >= depositAmount * 2, "Test setup: insufficient offset capacity");
 
         vm.startPrank(owner);
-        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), depositAmount);
-        token.approve(address(proofOfCapital), depositAmount);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), depositAmount * 2);
+        token.approve(address(proofOfCapital), depositAmount * 2);
+
+        // First deposit - goes to launchBalance
+        proofOfCapital.depositLaunch(depositAmount);
+
+        // Second deposit - goes to unaccountedOffsetLaunchBalance
         proofOfCapital.depositLaunch(depositAmount);
         vm.stopPrank();
 
@@ -491,18 +509,27 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         uint256 slotTotalSold = _stdStore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
         vm.store(address(proofOfCapital), bytes32(slotTotalSold), bytes32(offsetLaunch));
 
-        // Set launchTokensEarned to a value less than offsetLaunch to allow depositCollateral
-        uint256 launchTokensEarned = offsetLaunch / 2;
+        // Deposit amount calculation
+        uint256 depositAmount = 2000e18; // Smaller amount for the token balance reduction
+
+        // Set launchTokensEarned to a value that leaves enough capacity for two deposits
+        uint256 launchTokensEarned =
+            offsetLaunch > (depositAmount * 2 + 1000e18) ? offsetLaunch - (depositAmount * 2 + 1000e18) : 0;
         uint256 slotTokensEarned = _stdStore.target(address(proofOfCapital)).sig("launchTokensEarned()").find();
         vm.store(address(proofOfCapital), bytes32(slotTokensEarned), bytes32(launchTokensEarned));
 
         // Deposit tokens to create unaccountedOffsetLaunchBalance
-        uint256 depositAmount = 2000e18; // Smaller amount for the token balance reduction
-        require((offsetLaunch - launchTokensEarned) >= depositAmount, "Test setup: insufficient offset capacity");
+        // First deposit goes to launchBalance (first deposit flag), second goes to unaccountedOffsetLaunchBalance
+        require((offsetLaunch - launchTokensEarned) >= depositAmount * 2, "Test setup: insufficient offset capacity");
 
         vm.startPrank(owner);
-        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), depositAmount);
-        token.approve(address(proofOfCapital), depositAmount);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), depositAmount * 2);
+        token.approve(address(proofOfCapital), depositAmount * 2);
+
+        // First deposit - goes to launchBalance
+        proofOfCapital.depositLaunch(depositAmount);
+
+        // Second deposit - goes to unaccountedOffsetLaunchBalance
         proofOfCapital.depositLaunch(depositAmount);
         vm.stopPrank();
 

@@ -247,4 +247,5 @@ interface IProofOfCapital {
     function unaccountedOffsetLaunchBalance() external view returns (uint256);
     function unaccountedReturnBuybackBalance() external view returns (uint256);
     function isInitialized() external view returns (bool);
+    function isFirstLaunchDeposit() external view returns (bool);
 }

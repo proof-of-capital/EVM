@@ -132,6 +132,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     // Initialization flag
     bool public override isInitialized; // Flag indicating whether the contract's initialization is complete
 
+    // First deposit tracking
+    bool public isFirstLaunchDeposit; // Flag to track if this is the first launch deposit
+
     modifier onlyOwnerOrOldContract() {
         _onlyOwnerOrOldContract();
         _;
@@ -522,11 +525,17 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        // Check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
-        if (totalLaunchSold == offsetLaunch && (offsetLaunch - launchTokensEarned) >= amount) {
-            unaccountedOffsetLaunchBalance += amount;
-        } else {
+        // If this is the first deposit, add directly to balance
+        if (!isFirstLaunchDeposit) {
             launchBalance += amount;
+            isFirstLaunchDeposit = true;
+        } else {
+            // For subsequent deposits, check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
+            if (totalLaunchSold == offsetLaunch && (offsetLaunch - launchTokensEarned) >= amount) {
+                unaccountedOffsetLaunchBalance += amount;
+            } else {
+                launchBalance += amount;
+            }
         }
     }
 

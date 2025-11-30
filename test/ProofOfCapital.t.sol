@@ -848,7 +848,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), owner);
     }
 
-    // Tests for assignNewOwner function
+    // Tests for transferOwnership function
     function testAssignNewOwnerWhenOwnerEqualsReserveOwner() public {
         // In initial setup, owner == reserveOwner
         address newOwner = address(0x999);
@@ -860,7 +860,7 @@ contract ProofOfCapitalTest is Test {
 
         // Assign new owner from reserveOwner
         vm.prank(owner); // owner is also reserveOwner
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Both owner and reserveOwner should be transferred
         assertEq(proofOfCapital.owner(), newOwner);
@@ -883,7 +883,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 2: Assign new owner from reserveOwner
         vm.prank(intermediateReserveOwner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Only owner should be transferred, reserveOwner stays the same
         assertEq(proofOfCapital.owner(), newOwner);
@@ -894,7 +894,7 @@ contract ProofOfCapitalTest is Test {
         // Try to assign zero address as new owner
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidNewOwner.selector);
-        proofOfCapital.assignNewOwner(address(0));
+        proofOfCapital.transferOwnership(address(0));
     }
 
     function testAssignNewOwnerWithOldContractAddress() public {
@@ -919,7 +919,7 @@ contract ProofOfCapitalTest is Test {
         // Try to assign the old contract address as new owner - should revert
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
-        proofOfCapital.assignNewOwner(oldContractAddr);
+        proofOfCapital.transferOwnership(oldContractAddr);
     }
 
     function testAssignNewOwnerOnlyReserveOwner() public {
@@ -928,15 +928,15 @@ contract ProofOfCapitalTest is Test {
         // Non-reserveOwner tries to assign new owner
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(returnWallet);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
     }
 
     function testAssignNewOwnerEvents() public {
@@ -944,7 +944,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test functionality without checking internal OpenZeppelin events
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Verify the ownership change occurred
         assertEq(proofOfCapital.owner(), newOwner);
@@ -966,7 +966,7 @@ contract ProofOfCapitalTest is Test {
         // Then the check if (owner() == daoAddress) will be true (daoAddr == daoAddr)
         // So daoAddress should be updated to newOwner (which is daoAddr)
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(daoAddr);
+        proofOfCapital.transferOwnership(daoAddr);
 
         // Verify that daoAddress was updated to newOwner since newOwner equals daoAddress
         assertEq(proofOfCapital.owner(), daoAddr);
@@ -987,7 +987,7 @@ contract ProofOfCapitalTest is Test {
         // Now assign new owner to a different address than daoAddress
         address newOwner = address(0x999);
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // After _transferOwnership, owner() returns newOwner
         // Check: if (owner() == daoAddress) -> if (newOwner == differentDao) -> false
@@ -1006,7 +1006,7 @@ contract ProofOfCapitalTest is Test {
         // Assign new owner to a different address
         address newOwner = address(0x999);
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // After _transferOwnership, owner() returns newOwner
         // Check: if (owner() == daoAddress) -> if (newOwner == initialDao) -> false
@@ -1094,7 +1094,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 2: New reserve owner assigns new owner (owner != reserveOwner case)
         vm.prank(newReserveOwner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Verify state
         assertEq(proofOfCapital.owner(), newOwner);
@@ -1102,7 +1102,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 3: Reserve owner assigns himself as owner too
         vm.prank(newReserveOwner);
-        proofOfCapital.assignNewOwner(newReserveOwner);
+        proofOfCapital.transferOwnership(newReserveOwner);
 
         // Now owner == reserveOwner again
         assertEq(proofOfCapital.owner(), newReserveOwner);
@@ -1110,7 +1110,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 4: Assign final owner (should transfer both)
         vm.prank(newReserveOwner);
-        proofOfCapital.assignNewOwner(finalOwner);
+        proofOfCapital.transferOwnership(finalOwner);
 
         // Both should be transferred
         assertEq(proofOfCapital.owner(), finalOwner);
@@ -2731,15 +2731,15 @@ contract ProofOfCapitalTest is Test {
         // Non-reserve owner tries to assign new owner
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(returnWallet);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
     }
 
     function testOnlyOwnerOrOldContractModifier() public {

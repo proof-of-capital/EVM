@@ -140,17 +140,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         _;
     }
 
-    function _onlyOwnerOrOldContract() internal view {
-        require(msg.sender == owner() || oldContractAddress[msg.sender], AccessDenied());
-    }
-
     modifier onlyActiveContract() {
         _onlyActiveContract();
         _;
-    }
-
-    function _onlyActiveContract() internal view {
-        require(isActive, ContractNotActive());
     }
 
     modifier onlyReserveOwner() {
@@ -158,17 +150,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         _;
     }
 
-    function _onlyReserveOwner() internal view {
-        require(msg.sender == reserveOwner, OnlyReserveOwner());
+    modifier onlyOwnerOrReserveOwner() {
+        _onlyOwnerOrReserveOwner();
+        _;
     }
 
     modifier onlyDao() {
         _onlyDao();
         _;
-    }
-
-    function _onlyDao() internal view {
-        require(msg.sender == daoAddress, AccessDenied());
     }
 
     constructor(IProofOfCapital.InitParams memory params) Ownable(params.initialOwner) {
@@ -410,7 +399,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Assign new owner
      */
-    function assignNewOwner(address newOwner) external override onlyReserveOwner {
+    function transferOwnership(address newOwner) public override onlyOwnerOrReserveOwner {
         require(newOwner != address(0), InvalidNewOwner());
         require(!oldContractAddress[newOwner], OldContractAddressConflict());
 
@@ -778,7 +767,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             }
             unaccountedCollateralBalance += neededAmount;
         }
-        
+
         uint256 remainder = value - neededAmount;
         if (remainder > 0) {
             _transferCollateralTokens(daoAddress, remainder);
@@ -1310,5 +1299,25 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         // Shift controlDay to the nearest future
         controlDay += periodsToAdd * Constants.THIRTY_DAYS;
+    }
+
+    function _onlyActiveContract() internal view {
+        require(isActive, ContractNotActive());
+    }
+
+    function _onlyOwnerOrReserveOwner() internal view {
+        require(msg.sender == owner() || msg.sender == reserveOwner, OnlyReserveOwner());
+    }
+
+    function _onlyOwnerOrOldContract() internal view {
+        require(msg.sender == owner() || oldContractAddress[msg.sender], AccessDenied());
+    }
+
+    function _onlyReserveOwner() internal view {
+        require(msg.sender == reserveOwner, OnlyReserveOwner());
+    }
+
+    function _onlyDao() internal view {
+        require(msg.sender == daoAddress, AccessDenied());
     }
 }

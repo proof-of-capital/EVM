@@ -121,6 +121,7 @@ interface IProofOfCapital {
     event AllTokensWithdrawn(address indexed owner, uint256 amount);
     event AllCollateralTokensWithdrawn(address indexed owner, uint256 amount);
     event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
+    event RoyaltyNotificationFailed(address indexed royaltyAddress, bytes reason);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {

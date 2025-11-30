@@ -40,6 +40,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MockRecipient} from "./mocks/MockRecipient.sol";
+import {MockRoyalty} from "./mocks/MockRoyalty.sol";
 
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -71,9 +72,10 @@ contract ProofOfCapitalTest is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
 
@@ -88,6 +90,10 @@ contract ProofOfCapitalTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+        
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         // Prepare initialization parameters
         IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
@@ -2799,9 +2805,10 @@ contract ProofOfCapitalProfitTest is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
     address public user = address(0x5);
@@ -2815,6 +2822,10 @@ contract ProofOfCapitalProfitTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+        
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         // Deploy implementation
         // Prepare initialization parameters
@@ -2925,9 +2936,10 @@ contract ProofOfCapitalInitializationTest is Test {
     ProofOfCapital public implementation;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
 
@@ -2939,6 +2951,10 @@ contract ProofOfCapitalInitializationTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+        
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         vm.stopPrank();
     }

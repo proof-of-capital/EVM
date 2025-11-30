@@ -558,6 +558,45 @@ contract ProofOfCapitalAdminTest is BaseTest {
         proofOfCapital.switchProfitMode(false);
     }
 
+    function testSwitchProfitModeNotifiesRoyalty() public {
+        // Switch to false and verify royalty was notified
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+        
+        assertEq(mockRoyalty.getLastProfitMode(address(proofOfCapital)), false);
+        assertEq(mockRoyalty.getNotificationCount(address(proofOfCapital)), 1);
+
+        // Switch back to true and verify royalty was notified again
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(true);
+        
+        assertEq(mockRoyalty.getLastProfitMode(address(proofOfCapital)), true);
+        assertEq(mockRoyalty.getNotificationCount(address(proofOfCapital)), 2);
+    }
+
+    function testSwitchProfitModeRoyaltyRevertEmitsEvent() public {
+        // Set mock royalty to revert
+        mockRoyalty.setShouldRevert(true);
+        
+        // Switch profit mode should succeed but emit notification failure event
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, false);
+        emit IProofOfCapital.RoyaltyNotificationFailed(royalty, bytes("MockRoyalty: forced revert"));
+        proofOfCapital.switchProfitMode(false);
+        
+        // Verify the profit mode was still changed
+        assertFalse(proofOfCapital.profitInTime());
+        
+        // Reset mock royalty
+        mockRoyalty.setShouldRevert(false);
+        
+        // Now notification should work without event
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(true);
+        assertEq(mockRoyalty.getLastProfitMode(address(proofOfCapital)), true);
+        assertTrue(proofOfCapital.profitInTime());
+    }
+
     // Tests for setDao function
     function testSetDAOAccessDenied() public {
         // By default, daoAddress is set to owner (from BaseTest)

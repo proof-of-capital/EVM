@@ -37,6 +37,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IProofOfCapital} from "./interfaces/IProofOfCapital.sol";
+import {IRoyalty} from "./interfaces/IRoyalty.sol";
 import {Constants} from "./utils/Constant.sol";
 
 /**
@@ -429,6 +430,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     function switchProfitMode(bool flag) external override onlyOwner {
         profitInTime = flag;
         emit ProfitModeChanged(flag);
+        
+        // Notify royalty contract about profit mode change
+        if (royaltyWalletAddress != address(0)) {
+            try IRoyalty(royaltyWalletAddress).notifyProfitModeChanged(address(this), flag) {}
+            catch (bytes memory reason) {
+                emit RoyaltyNotificationFailed(royaltyWalletAddress, reason);
+            }
+        }
     }
 
     /**

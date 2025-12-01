@@ -35,14 +35,16 @@ import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockRoyalty} from "../mocks/MockRoyalty.sol";
 
 contract BaseTestWithoutOffset is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
 
@@ -55,6 +57,10 @@ contract BaseTestWithoutOffset is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         // Prepare initialization parameters WITHOUT offset
         IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
@@ -73,7 +79,7 @@ contract BaseTestWithoutOffset is Test {
             profitPercentage: 100,
             offsetLaunch: 0, // No offset
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

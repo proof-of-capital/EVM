@@ -11,11 +11,11 @@ pragma solidity 0.8.29;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// Add proper WETH mock with deposit functionality
+// Add proper WETH mock with depositCollateral functionality
 contract MockWETH is ERC20 {
     constructor() ERC20("Wrapped Ether", "WETH") {}
 
-    function deposit() external payable {
+    function depositCollateral() external payable {
         _mint(msg.sender, msg.value);
     }
 

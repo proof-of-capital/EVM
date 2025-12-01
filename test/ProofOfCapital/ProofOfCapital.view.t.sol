@@ -96,25 +96,25 @@ contract ProofOfCapitalViewTest is BaseTest {
 
     function testTokenAvailableInitialState() public view {
         // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
-        // So totalLaunchSold = 0, tokensEarned = 0
+        // So totalLaunchSold = 0, launchTokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
 
         // Verify initial state
         assertEq(totalSold, 0); // offsetLaunch are in unaccountedOffset, not totalLaunchSold
-        assertEq(tokensEarned, 0);
+        assertEq(launchTokensEarned, 0);
 
-        // tokenAvailable should be totalLaunchSold - tokensEarned
-        uint256 expectedAvailable = totalSold - tokensEarned;
+        // tokenAvailable should be totalLaunchSold - launchTokensEarned
+        uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
         assertEq(proofOfCapital.tokenAvailable(), 0); // No tokens available until offset is processed
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
-        // This tests edge case where tokensEarned equals totalLaunchSold
-        // In initial state: totalLaunchSold = 10000e18, tokensEarned = 0
+        // This tests edge case where launchTokensEarned equals totalLaunchSold
+        // In initial state: totalLaunchSold = 10000e18, launchTokensEarned = 0
 
-        // We need to create scenario where tokensEarned increases
+        // We need to create scenario where launchTokensEarned increases
         // This happens when return wallet sells tokens back to contract
 
         // Give tokens to return wallet
@@ -122,32 +122,32 @@ contract ProofOfCapitalViewTest is BaseTest {
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
-        // Return wallet sells tokens back (this increases tokensEarned)
+        // Return wallet sells tokens back (this increases launchTokensEarned)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18);
         vm.stopPrank();
 
-        // Check if tokensEarned increased
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        // Check if launchTokensEarned increased
+        uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // tokenAvailable should be totalSold - tokensEarned
-        uint256 expectedAvailable = totalSold - tokensEarned;
+        // tokenAvailable should be totalSold - launchTokensEarned
+        uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
 
-        // If tokensEarned equals totalSold, available should be 0
-        if (tokensEarned == totalSold) {
+        // If launchTokensEarned equals totalSold, available should be 0
+        if (launchTokensEarned == totalSold) {
             assertEq(proofOfCapital.tokenAvailable(), 0);
         }
     }
 
     function testTokenAvailableStateConsistency() public view {
-        // Test that tokenAvailable always equals totalLaunchSold - tokensEarned
+        // Test that tokenAvailable always equals totalLaunchSold - launchTokensEarned
 
         // Record initial state
         uint256 initialTotalSold = proofOfCapital.totalLaunchSold();
-        uint256 initialTokensEarned = proofOfCapital.tokensEarned();
+        uint256 initialTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 initialAvailable = proofOfCapital.tokenAvailable();
 
         // Verify initial consistency
@@ -155,7 +155,9 @@ contract ProofOfCapitalViewTest is BaseTest {
 
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
-        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.tokensEarned());
+        assertTrue(
+            proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.launchTokensEarned()
+        );
     }
 
     function testViewFunctionsIntegration() public {
@@ -217,8 +219,8 @@ contract ProofOfCapitalViewTest is BaseTest {
 
         // Test tokenAvailable consistency
         uint256 totalSold = proofOfCapital.totalLaunchSold();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 expectedAvailable = totalSold - tokensEarned;
+        uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
+        uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
     }
 }

@@ -86,7 +86,8 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
 
     function testExtendLockEvent() public {
-        uint256 newLockEndTime = block.timestamp + Constants.THREE_MONTHS;
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        uint256 newLockEndTime = initialLockEndTime + Constants.THREE_MONTHS;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
@@ -140,14 +141,14 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
     */
 
-    // Tests for blockDeferredWithdrawal function
+    // Tests for toggleDeferredWithdrawal function
     function testBlockDeferredWithdrawalFromTrueToFalse() public {
         // Initially canWithdrawal should be true (default)
         assertTrue(proofOfCapital.canWithdrawal());
 
         // Block deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should now be false
         assertFalse(proofOfCapital.canWithdrawal());
@@ -156,7 +157,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testBlockDeferredWithdrawalFromFalseToTrueWhenTimeAllows() public {
         // Block withdrawal first
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to less than 60 days before lock end (activation allowed when < 60 days)
@@ -165,7 +166,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Should be able to unblock when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
@@ -176,19 +177,19 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Block withdrawal first
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Try to unblock when more than 60 days remain - should fail
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalAtExactBoundary() public {
         // Block withdrawal first
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to exactly 60 days before lock end
@@ -198,13 +199,13 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // At exactly 60 days, should NOT be able to unblock (require < 60 days)
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalJustOverBoundary() public {
         // First, block withdrawal to set canWithdrawal to false
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to just under the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
@@ -213,7 +214,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Should be able to activate withdrawal when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
@@ -221,15 +222,15 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // Non-owner tries to block/unblock withdrawal
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     // Tests for setUnwrapMode function
@@ -239,24 +240,25 @@ contract ProofOfCapitalAdminTest is BaseTest {
         address newReturnWallet = address(0x999);
 
         // Verify initial state
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
 
-        // Change return wallet
+        // Add new return wallet
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
-        // Verify change
-        assertEq(proofOfCapital.returnWalletAddress(), newReturnWallet);
+        // Verify both wallets are return wallets
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
+        assertTrue(proofOfCapital.returnWalletAddresses(newReturnWallet));
     }
 
     function testChangeReturnWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
-        proofOfCapital.changeReturnWallet(address(0));
+        proofOfCapital.setReturnWallet(address(0), true);
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
     }
 
     function testChangeReturnWalletOnlyOwner() public {
@@ -265,18 +267,19 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // Non-owner tries to change return wallet
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
+        assertFalse(proofOfCapital.returnWalletAddresses(newReturnWallet));
     }
 
     function testChangeReturnWalletEvent() public {
@@ -286,31 +289,35 @@ contract ProofOfCapitalAdminTest is BaseTest {
         vm.prank(owner);
         vm.expectEmit(true, false, false, false);
         emit IProofOfCapital.ReturnWalletChanged(newReturnWallet);
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
     }
 
     function testChangeReturnWalletMultipleTimes() public {
         address firstNewWallet = address(0x777);
         address secondNewWallet = address(0x888);
 
-        // First change
+        // First add
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(firstNewWallet);
-        assertEq(proofOfCapital.returnWalletAddress(), firstNewWallet);
+        proofOfCapital.setReturnWallet(firstNewWallet, true);
+        assertTrue(proofOfCapital.returnWalletAddresses(firstNewWallet));
 
-        // Second change
+        // Second add
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(secondNewWallet);
-        assertEq(proofOfCapital.returnWalletAddress(), secondNewWallet);
+        proofOfCapital.setReturnWallet(secondNewWallet, true);
+        assertTrue(proofOfCapital.returnWalletAddresses(secondNewWallet));
+
+        // Both should be return wallets
+        assertTrue(proofOfCapital.returnWalletAddresses(firstNewWallet));
+        assertTrue(proofOfCapital.returnWalletAddresses(secondNewWallet));
     }
 
     function testChangeReturnWalletToSameAddress() public {
-        // Change to same address should work (no restriction)
+        // Set to same address should work (no restriction)
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(returnWallet);
+        proofOfCapital.setReturnWallet(returnWallet, true);
 
-        // Verify it's still the same
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        // Verify it's still a return wallet
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
     }
 
     function testChangeReturnWalletValidAddresses() public {
@@ -323,8 +330,8 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         for (uint256 i = 0; i < validAddresses.length; i++) {
             vm.prank(owner);
-            proofOfCapital.changeReturnWallet(validAddresses[i]);
-            assertEq(proofOfCapital.returnWalletAddress(), validAddresses[i]);
+            proofOfCapital.setReturnWallet(validAddresses[i], true);
+            assertTrue(proofOfCapital.returnWalletAddresses(validAddresses[i]));
         }
     }
 
@@ -555,6 +562,45 @@ contract ProofOfCapitalAdminTest is BaseTest {
         vm.prank(marketMaker);
         vm.expectRevert();
         proofOfCapital.switchProfitMode(false);
+    }
+
+    function testSwitchProfitModeNotifiesRoyalty() public {
+        // Switch to false and verify royalty was notified
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(false);
+
+        assertEq(mockRoyalty.getLastProfitMode(address(proofOfCapital)), false);
+        assertEq(mockRoyalty.getNotificationCount(address(proofOfCapital)), 1);
+
+        // Switch back to true and verify royalty was notified again
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(true);
+
+        assertEq(mockRoyalty.getLastProfitMode(address(proofOfCapital)), true);
+        assertEq(mockRoyalty.getNotificationCount(address(proofOfCapital)), 2);
+    }
+
+    function testSwitchProfitModeRoyaltyRevertEmitsEvent() public {
+        // Set mock royalty to revert
+        mockRoyalty.setShouldRevert(true);
+
+        // Switch profit mode should succeed but emit notification failure event
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, false);
+        emit IProofOfCapital.RoyaltyNotificationFailed(royalty, bytes("MockRoyalty: forced revert"));
+        proofOfCapital.switchProfitMode(false);
+
+        // Verify the profit mode was still changed
+        assertFalse(proofOfCapital.profitInTime());
+
+        // Reset mock royalty
+        mockRoyalty.setShouldRevert(false);
+
+        // Now notification should work without event
+        vm.prank(owner);
+        proofOfCapital.switchProfitMode(true);
+        assertEq(mockRoyalty.getLastProfitMode(address(proofOfCapital)), true);
+        assertTrue(proofOfCapital.profitInTime());
     }
 
     // Tests for setDao function

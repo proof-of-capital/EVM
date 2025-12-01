@@ -30,6 +30,8 @@
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
 pragma solidity 0.8.29;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 /**
  * @title IProofOfCapital
  * @dev Interface for Proof of Capital contract
@@ -41,13 +43,14 @@ interface IProofOfCapital {
     error ContractNotActive();
     error OnlyReserveOwner();
     error InitialPriceMustBePositive();
-    error MultiplierTooHigh();
-    error MultiplierTooLow();
+    error InvalidLevelDecreaseMultiplierAfterTrend();
+    error InvalidLevelIncreaseMultiplier();
     error PriceIncrementTooLow();
     error InvalidRoyaltyProfitPercentage();
     error ETHTransferFailed();
     error LockCannotExceedFiveYears();
     error InvalidTimePeriod();
+    error NewLockMustBeGreaterThanOld();
     error CannotActivateWithdrawalTooCloseToLockEnd();
     error InvalidRecipientOrAmount();
     error DeferredWithdrawalBlocked();
@@ -83,8 +86,6 @@ interface IProofOfCapital {
     error LockIsActive();
     error OldContractAddressZero();
     error OldContractAddressConflict();
-    error NoReturnWalletChangeProposed();
-    error ReturnWalletChangeDelayNotPassed();
     error InvalidDAOAddress();
     error InsufficientUnaccountedCollateralBalance();
     error InsufficientUnaccountedOffsetBalance();
@@ -92,14 +93,14 @@ interface IProofOfCapital {
     error UnaccountedOffsetBalanceNotSet();
     error ContractAlreadyInitialized();
     error ProfitBeforeTrendChangeMustBePositive();
+    error UseReturnWalletFunction();
+    error OnlyReturnWallet();
 
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
     event UnaccountedOffsetBalanceProcessed(uint256 amount);
     event UnaccountedOffsetTokenBalanceProcessed(uint256 amount);
-    event ReturnWalletChangeProposed(address indexed newReturnWalletAddress, uint256 proposalTime);
-    event ReturnWalletChangeConfirmed(address indexed newReturnWalletAddress);
     event DAOAddressChanged(address indexed newDaoAddress);
     event LockExtended(uint256 additionalTime);
     event MarketMakerStatusChanged(address indexed marketMaker, bool isActive);
@@ -116,6 +117,7 @@ interface IProofOfCapital {
     event AllTokensWithdrawn(address indexed owner, uint256 amount);
     event AllCollateralTokensWithdrawn(address indexed owner, uint256 amount);
     event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
+    event RoyaltyNotificationFailed(address indexed royaltyAddress, bytes reason);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
@@ -134,7 +136,7 @@ interface IProofOfCapital {
         uint256 profitPercentage;
         uint256 offsetLaunch;
         uint256 controlPeriod;
-        address collateralAddress;
+        address collateralToken;
         uint256 royaltyProfitPercent;
         address[] oldContractAddresses; // Array of old contract addresses
         uint256 profitBeforeTrendChange; // Profit percentage before trend change
@@ -143,22 +145,26 @@ interface IProofOfCapital {
 
     // Management functions
 
-    function extendLock(uint256 additionalTime) external;
-    function blockDeferredWithdrawal() external;
-    function assignNewOwner(address newOwner) external;
+    function extendLock(uint256 lockTimestamp) external;
+    function toggleDeferredWithdrawal() external;
     function assignNewReserveOwner(address newReserveOwner) external;
     function switchProfitMode(bool flag) external;
-    function changeReturnWallet(address newReturnWalletAddress) external;
+    function setReturnWallet(address returnWalletAddress, bool isReturnWallet) external;
     function changeRoyaltyWallet(address newRoyaltyWalletAddress) external;
     function changeProfitPercentage(uint256 newRoyaltyProfitPercentage) external;
 
     // Market maker management
     function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external;
 
+    // Old contract management
+    function registerOldContract(address oldContractAddr) external;
+
     // Trading functions
-    function buyTokens(uint256 amount) external;
-    function deposit(uint256 amount) external;
-    function sellTokens(uint256 amount) external;
+    function buyLaunchTokens(uint256 amount) external;
+    function depositCollateral(uint256 amount) external;
+    function depositLaunch(uint256 amount) external;
+    function sellLaunchTokens(uint256 amount) external;
+    function sellLaunchTokensReturnWallet(uint256 amount) external;
 
     // Deferred withdrawals
     function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external;
@@ -169,9 +175,17 @@ interface IProofOfCapital {
     function confirmCollateralDeferredWithdrawal() external;
 
     // Withdrawal functions
-    function withdrawAllTokens() external;
+    function withdrawAllLaunchTokens() external;
     function withdrawAllCollateralTokens() external;
     function getProfitOnRequest() external;
+
+    // DAO management
+    function setDao(address newDaoAddress) external;
+
+    // Unaccounted balance calculations
+    function calculateUnaccountedCollateralBalance(uint256 amount) external;
+    function calculateUnaccountedOffsetBalance(uint256 amount) external;
+    function calculateUnaccountedOffsetLaunchBalance(uint256 amount) external;
 
     // View functions
     function remainingSeconds() external view returns (uint256);
@@ -180,10 +194,58 @@ interface IProofOfCapital {
 
     // State variables getters
     function isActive() external view returns (bool);
+    function oldContractAddress(address) external view returns (bool);
+    function reserveOwner() external view returns (address);
+    function launchToken() external view returns (IERC20);
+    function returnWalletAddresses(address) external view returns (bool);
+    function royaltyWalletAddress() external view returns (address);
+    function daoAddress() external view returns (address);
     function lockEndTime() external view returns (uint256);
+    function controlDay() external view returns (uint256);
+    function controlPeriod() external view returns (uint256);
+    function initialPricePerToken() external view returns (uint256);
+    function firstLevelTokenQuantity() external view returns (uint256);
     function currentPrice() external view returns (uint256);
+    function quantityTokensPerLevel() external view returns (uint256);
+    function remainderOfStep() external view returns (uint256);
+    function currentStep() external view returns (uint256);
+    function priceIncrementMultiplier() external view returns (uint256);
+    function levelIncreaseMultiplier() external view returns (int256);
+    function trendChangeStep() external view returns (uint256);
+    function levelDecreaseMultiplierAfterTrend() external view returns (int256);
+    function profitPercentage() external view returns (uint256);
+    function royaltyProfitPercent() external view returns (uint256);
+    function creatorProfitPercent() external view returns (uint256);
+    function profitBeforeTrendChange() external view returns (uint256);
     function totalLaunchSold() external view returns (uint256);
     function contractCollateralBalance() external view returns (uint256);
+    function launchBalance() external view returns (uint256);
+    function launchTokensEarned() external view returns (uint256);
+    function actualProfit() external view returns (uint256);
+    function currentStepEarned() external view returns (uint256);
+    function remainderOfStepEarned() external view returns (uint256);
+    function quantityTokensPerLevelEarned() external view returns (uint256);
+    function currentPriceEarned() external view returns (uint256);
+    function offsetLaunch() external view returns (uint256);
+    function offsetStep() external view returns (uint256);
+    function offsetPrice() external view returns (uint256);
+    function remainderOfStepOffset() external view returns (uint256);
+    function quantityTokensPerLevelOffset() external view returns (uint256);
+    function collateralToken() external view returns (IERC20);
+    function marketMakerAddresses(address) external view returns (bool);
+    function ownerCollateralBalance() external view returns (uint256);
+    function royaltyCollateralBalance() external view returns (uint256);
     function profitInTime() external view returns (bool);
     function canWithdrawal() external view returns (bool);
+    function launchDeferredWithdrawalDate() external view returns (uint256);
+    function launchDeferredWithdrawalAmount() external view returns (uint256);
+    function recipientDeferredWithdrawalLaunch() external view returns (address);
+    function collateralTokenDeferredWithdrawalDate() external view returns (uint256);
+    function recipientDeferredWithdrawalCollateralToken() external view returns (address);
+    function unaccountedCollateralBalance() external view returns (uint256);
+    function unaccountedOffset() external view returns (uint256);
+    function unaccountedOffsetLaunchBalance() external view returns (uint256);
+    function unaccountedReturnBuybackBalance() external view returns (uint256);
+    function isInitialized() external view returns (bool);
+    function isFirstLaunchDeposit() external view returns (bool);
 }

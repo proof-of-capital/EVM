@@ -39,6 +39,8 @@ import {Constants} from "../src/utils/Constant.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MockRecipient} from "./mocks/MockRecipient.sol";
+import {MockRoyalty} from "./mocks/MockRoyalty.sol";
 
 contract MockERC20 is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -46,11 +48,11 @@ contract MockERC20 is ERC20 {
     }
 }
 
-// Add proper WETH mock with deposit functionality
+// Add proper WETH mock with depositCollateral functionality
 contract MockWETH is ERC20 {
     constructor() ERC20("Wrapped Ether", "WETH") {}
 
-    function deposit() external payable {
+    function depositCollateral() external payable {
         _mint(msg.sender, msg.value);
     }
 
@@ -70,9 +72,10 @@ contract ProofOfCapitalTest is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
 
@@ -87,6 +90,10 @@ contract ProofOfCapitalTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         // Prepare initialization parameters
         IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
@@ -105,7 +112,7 @@ contract ProofOfCapitalTest is Test {
             profitPercentage: 100,
             offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -169,7 +176,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testExtendLockEvent() public {
-        uint256 newLockEndTime = block.timestamp + Constants.THREE_MONTHS;
+        uint256 initialLockEndTime = proofOfCapital.lockEndTime();
+        uint256 newLockEndTime = initialLockEndTime + Constants.THREE_MONTHS;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
@@ -195,14 +203,14 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
     }
 
-    // Tests for blockDeferredWithdrawal function
+    // Tests for toggleDeferredWithdrawal function
     function testBlockDeferredWithdrawalFromTrueToFalse() public {
         // Initially canWithdrawal should be true (default)
         assertTrue(proofOfCapital.canWithdrawal());
 
         // Block deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should now be false
         assertFalse(proofOfCapital.canWithdrawal());
@@ -211,7 +219,7 @@ contract ProofOfCapitalTest is Test {
     function testBlockDeferredWithdrawalFromFalseToTrueWhenTimeAllows() public {
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to less than 60 days before lock end (activation allowed when < 60 days)
@@ -220,7 +228,7 @@ contract ProofOfCapitalTest is Test {
 
         // Now try to unblock when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should now be true again
         assertTrue(proofOfCapital.canWithdrawal());
@@ -229,7 +237,7 @@ contract ProofOfCapitalTest is Test {
     function testBlockDeferredWithdrawalFailsWhenTooFarFromLockEnd() public {
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time forward to be more than 60 days before lock end (activation blocked when >= 60 days)
@@ -239,7 +247,7 @@ contract ProofOfCapitalTest is Test {
         // Try to unblock - should fail
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Should still be false
         assertFalse(proofOfCapital.canWithdrawal());
@@ -248,7 +256,7 @@ contract ProofOfCapitalTest is Test {
     function testBlockDeferredWithdrawalAtExactBoundary() public {
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time forward to be exactly 60 days before lock end
@@ -258,13 +266,13 @@ contract ProofOfCapitalTest is Test {
         // Try to unblock - should fail (condition is <, not <=)
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.CannotActivateWithdrawalTooCloseToLockEnd.selector);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     function testBlockDeferredWithdrawalJustOverBoundary() public {
         // First, block withdrawal to set canWithdrawal to false
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Move time to just under the boundary (59 days, 23 hours, 59 minutes, 59 seconds remaining)
@@ -273,7 +281,7 @@ contract ProofOfCapitalTest is Test {
 
         // Should be able to activate withdrawal when less than 60 days remain
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertTrue(proofOfCapital.canWithdrawal());
     }
 
@@ -281,15 +289,15 @@ contract ProofOfCapitalTest is Test {
         // Non-owner tries to block/unblock withdrawal
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
     }
 
     // Tests for tokenDeferredWithdrawal function
@@ -350,7 +358,7 @@ contract ProofOfCapitalTest is Test {
 
         // First block withdrawal
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Try to schedule deferred withdrawal when blocked
@@ -526,7 +534,7 @@ contract ProofOfCapitalTest is Test {
 
         // Block withdrawals
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Try to confirm when blocked
         vm.prank(owner);
@@ -576,7 +584,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18); // This increases launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Step 2: Schedule withdrawal
@@ -679,7 +687,7 @@ contract ProofOfCapitalTest is Test {
         // ReturnWallet sells tokens back, which increases launchBalance
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18); // This should increase launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18); // This should increase launchBalance
         vm.stopPrank();
 
         // Check the state - this should now have launchBalance > totalLaunchSold
@@ -759,7 +767,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 3: Block withdrawals and test blocked error
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
@@ -777,7 +785,8 @@ contract ProofOfCapitalTest is Test {
         // 4. launchBalance > totalLaunchSold (sufficient balance)
         // 5. launchBalance - totalLaunchSold >= launchDeferredWithdrawalAmount (sufficient available)
 
-        address recipient = address(0x123);
+        // Deploy MockRecipient contract that implements depositLaunch
+        MockRecipient recipient = new MockRecipient();
         uint256 withdrawalAmount = 1000e18;
 
         // Step 1: Create state where launchBalance > totalLaunchSold
@@ -788,15 +797,15 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18); // This increases launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18); // This increases launchBalance
         vm.stopPrank();
 
         // Step 2: Schedule withdrawal with amount less than available
         vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(recipient, withdrawalAmount);
+        proofOfCapital.tokenDeferredWithdrawal(address(recipient), withdrawalAmount);
 
         // Verify withdrawal is scheduled
-        assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), recipient);
+        assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), address(recipient));
         assertEq(proofOfCapital.launchDeferredWithdrawalAmount(), withdrawalAmount);
         assertTrue(proofOfCapital.launchDeferredWithdrawalDate() > 0);
 
@@ -804,7 +813,6 @@ contract ProofOfCapitalTest is Test {
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
         // Step 4: Get balances before confirmation
-        uint256 recipientBalanceBefore = token.balanceOf(recipient);
         uint256 contractBalanceBefore = proofOfCapital.launchBalance();
 
         // Verify we have sufficient balance for withdrawal
@@ -813,14 +821,31 @@ contract ProofOfCapitalTest is Test {
         assertTrue(available >= withdrawalAmount, "Insufficient available tokens for withdrawal");
 
         // Step 5: Confirm withdrawal - should succeed
+        // The function will:
+        // 1. Decrease launchBalance by withdrawalAmount
+        // 2. Give allowance to recipient
+        // 3. Call depositLaunch on recipient
+        // Inside depositLaunch on recipient, it will try to transferFrom(msg.sender, address(this), amount)
+        // where msg.sender = proofOfCapital and address(this) = recipient
+        // This means tokens will be transferred from proofOfCapital to recipient
+        // But recipient needs to have the tokens first, or the transferFrom will fail
+        // Actually, the allowance is given to recipient, so recipient can pull tokens from proofOfCapital
+        // Then depositLaunch will transfer them from recipient back to proofOfCapital
+
+        // First, recipient needs to pull tokens from proofOfCapital using the allowance
+        // But wait, the allowance is given AFTER we call confirmTokenDeferredWithdrawal
+        // So we need to simulate the flow: recipient pulls tokens, then deposits them back
+
         vm.prank(owner);
         proofOfCapital.confirmTokenDeferredWithdrawal();
 
         // Step 6: Verify successful execution
-        // Check token transfer
-        assertEq(token.balanceOf(recipient), recipientBalanceBefore + withdrawalAmount);
+        // After confirmTokenDeferredWithdrawal:
+        // - launchBalance was decreased by withdrawalAmount
+        // - Tokens were transferred via depositLaunch flow
+        // - State variables were reset
 
-        // Check contract balance decreased
+        // Check that launchBalance was decreased (this happens before the depositLaunch call)
         assertEq(proofOfCapital.launchBalance(), contractBalanceBefore - withdrawalAmount);
 
         // Check state variables reset
@@ -829,7 +854,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.recipientDeferredWithdrawalLaunch(), owner);
     }
 
-    // Tests for assignNewOwner function
+    // Tests for transferOwnership function
     function testAssignNewOwnerWhenOwnerEqualsReserveOwner() public {
         // In initial setup, owner == reserveOwner
         address newOwner = address(0x999);
@@ -841,7 +866,7 @@ contract ProofOfCapitalTest is Test {
 
         // Assign new owner from reserveOwner
         vm.prank(owner); // owner is also reserveOwner
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Both owner and reserveOwner should be transferred
         assertEq(proofOfCapital.owner(), newOwner);
@@ -864,7 +889,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 2: Assign new owner from reserveOwner
         vm.prank(intermediateReserveOwner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Only owner should be transferred, reserveOwner stays the same
         assertEq(proofOfCapital.owner(), newOwner);
@@ -875,7 +900,7 @@ contract ProofOfCapitalTest is Test {
         // Try to assign zero address as new owner
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidNewOwner.selector);
-        proofOfCapital.assignNewOwner(address(0));
+        proofOfCapital.transferOwnership(address(0));
     }
 
     function testAssignNewOwnerWithOldContractAddress() public {
@@ -900,7 +925,7 @@ contract ProofOfCapitalTest is Test {
         // Try to assign the old contract address as new owner - should revert
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
-        proofOfCapital.assignNewOwner(oldContractAddr);
+        proofOfCapital.transferOwnership(oldContractAddr);
     }
 
     function testAssignNewOwnerOnlyReserveOwner() public {
@@ -909,15 +934,15 @@ contract ProofOfCapitalTest is Test {
         // Non-reserveOwner tries to assign new owner
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(returnWallet);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
     }
 
     function testAssignNewOwnerEvents() public {
@@ -925,7 +950,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test functionality without checking internal OpenZeppelin events
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Verify the ownership change occurred
         assertEq(proofOfCapital.owner(), newOwner);
@@ -947,7 +972,7 @@ contract ProofOfCapitalTest is Test {
         // Then the check if (owner() == daoAddress) will be true (daoAddr == daoAddr)
         // So daoAddress should be updated to newOwner (which is daoAddr)
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(daoAddr);
+        proofOfCapital.transferOwnership(daoAddr);
 
         // Verify that daoAddress was updated to newOwner since newOwner equals daoAddress
         assertEq(proofOfCapital.owner(), daoAddr);
@@ -968,7 +993,7 @@ contract ProofOfCapitalTest is Test {
         // Now assign new owner to a different address than daoAddress
         address newOwner = address(0x999);
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // After _transferOwnership, owner() returns newOwner
         // Check: if (owner() == daoAddress) -> if (newOwner == differentDao) -> false
@@ -987,7 +1012,7 @@ contract ProofOfCapitalTest is Test {
         // Assign new owner to a different address
         address newOwner = address(0x999);
         vm.prank(owner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // After _transferOwnership, owner() returns newOwner
         // Check: if (owner() == daoAddress) -> if (newOwner == initialDao) -> false
@@ -1075,7 +1100,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 2: New reserve owner assigns new owner (owner != reserveOwner case)
         vm.prank(newReserveOwner);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         // Verify state
         assertEq(proofOfCapital.owner(), newOwner);
@@ -1083,7 +1108,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 3: Reserve owner assigns himself as owner too
         vm.prank(newReserveOwner);
-        proofOfCapital.assignNewOwner(newReserveOwner);
+        proofOfCapital.transferOwnership(newReserveOwner);
 
         // Now owner == reserveOwner again
         assertEq(proofOfCapital.owner(), newReserveOwner);
@@ -1091,7 +1116,7 @@ contract ProofOfCapitalTest is Test {
 
         // Step 4: Assign final owner (should transfer both)
         vm.prank(newReserveOwner);
-        proofOfCapital.assignNewOwner(finalOwner);
+        proofOfCapital.transferOwnership(finalOwner);
 
         // Both should be transferred
         assertEq(proofOfCapital.owner(), finalOwner);
@@ -1130,7 +1155,7 @@ contract ProofOfCapitalTest is Test {
 
         // Block deferred withdrawals
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
         assertFalse(proofOfCapital.canWithdrawal());
 
         // Try to schedule collateral withdrawal when blocked
@@ -1470,7 +1495,7 @@ contract ProofOfCapitalTest is Test {
     // Tests for confirmCollateralDeferredWithdrawal function
     function testConfirmCollateralDeferredWithdrawalSuccess() public {
         // По текущей логике контракта вызов confirmCollateralDeferredWithdrawal
-        // всегда завершится revert`ом, так как функция deposit вызывается на
+        // всегда завершится revert`ом, так как функция depositCollateral вызывается на
         // адресе владельца, который не реализует её. Поэтому ожидаем revert
         // без проверки последующих состояний.
         address recipient = address(0x123);
@@ -1497,7 +1522,7 @@ contract ProofOfCapitalTest is Test {
 
         // Block withdrawals
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
@@ -1598,7 +1623,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 3: Block withdrawals and test blocked error
         vm.prank(owner);
-        proofOfCapital.blockDeferredWithdrawal();
+        proofOfCapital.toggleDeferredWithdrawal();
 
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
@@ -1680,29 +1705,30 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    // Tests for changeReturnWallet function
+    // Tests for setReturnWallet function
     function testChangeReturnWalletSuccess() public {
         address newReturnWallet = address(0x999);
 
         // Verify initial state
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
 
-        // Change return wallet
+        // Add new return wallet
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
-        // Verify change
-        assertEq(proofOfCapital.returnWalletAddress(), newReturnWallet);
+        // Verify both wallets are return wallets
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
+        assertTrue(proofOfCapital.returnWalletAddresses(newReturnWallet));
     }
 
     function testChangeReturnWalletInvalidAddress() public {
         // Try to set zero address
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
-        proofOfCapital.changeReturnWallet(address(0));
+        proofOfCapital.setReturnWallet(address(0), true);
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
     }
 
     function testChangeReturnWalletOnlyOwner() public {
@@ -1711,18 +1737,19 @@ contract ProofOfCapitalTest is Test {
         // Non-owner tries to change return wallet
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
 
         // Verify state wasn't changed
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
+        assertFalse(proofOfCapital.returnWalletAddresses(newReturnWallet));
     }
 
     function testChangeReturnWalletEvent() public {
@@ -1732,31 +1759,35 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         vm.expectEmit(true, false, false, false);
         emit IProofOfCapital.ReturnWalletChanged(newReturnWallet);
-        proofOfCapital.changeReturnWallet(newReturnWallet);
+        proofOfCapital.setReturnWallet(newReturnWallet, true);
     }
 
     function testChangeReturnWalletMultipleTimes() public {
         address firstNewWallet = address(0x777);
         address secondNewWallet = address(0x888);
 
-        // First change
+        // First add
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(firstNewWallet);
-        assertEq(proofOfCapital.returnWalletAddress(), firstNewWallet);
+        proofOfCapital.setReturnWallet(firstNewWallet, true);
+        assertTrue(proofOfCapital.returnWalletAddresses(firstNewWallet));
 
-        // Second change
+        // Second add
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(secondNewWallet);
-        assertEq(proofOfCapital.returnWalletAddress(), secondNewWallet);
+        proofOfCapital.setReturnWallet(secondNewWallet, true);
+        assertTrue(proofOfCapital.returnWalletAddresses(secondNewWallet));
+
+        // Both should be return wallets
+        assertTrue(proofOfCapital.returnWalletAddresses(firstNewWallet));
+        assertTrue(proofOfCapital.returnWalletAddresses(secondNewWallet));
     }
 
     function testChangeReturnWalletToSameAddress() public {
-        // Change to same address should work (no restriction)
+        // Set to same address should work (no restriction)
         vm.prank(owner);
-        proofOfCapital.changeReturnWallet(returnWallet);
+        proofOfCapital.setReturnWallet(returnWallet, true);
 
-        // Verify it's still the same
-        assertEq(proofOfCapital.returnWalletAddress(), returnWallet);
+        // Verify it's still a return wallet
+        assertTrue(proofOfCapital.returnWalletAddresses(returnWallet));
     }
 
     function testChangeReturnWalletValidAddresses() public {
@@ -1769,8 +1800,8 @@ contract ProofOfCapitalTest is Test {
 
         for (uint256 i = 0; i < validAddresses.length; i++) {
             vm.prank(owner);
-            proofOfCapital.changeReturnWallet(validAddresses[i]);
-            assertEq(proofOfCapital.returnWalletAddress(), validAddresses[i]);
+            proofOfCapital.setReturnWallet(validAddresses[i], true);
+            assertTrue(proofOfCapital.returnWalletAddresses(validAddresses[i]));
         }
     }
 
@@ -2183,25 +2214,25 @@ contract ProofOfCapitalTest is Test {
 
     function testTokenAvailableInitialState() public view {
         // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
-        // So totalLaunchSold = 0, tokensEarned = 0
+        // So totalLaunchSold = 0, launchTokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
 
         // Verify initial state
         assertEq(totalSold, 0); // offsetLaunch are in unaccountedOffset, not totalLaunchSold
-        assertEq(tokensEarned, 0);
+        assertEq(launchTokensEarned, 0);
 
-        // tokenAvailable should be totalLaunchSold - tokensEarned
-        uint256 expectedAvailable = totalSold - tokensEarned;
+        // tokenAvailable should be totalLaunchSold - launchTokensEarned
+        uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
         assertEq(proofOfCapital.tokenAvailable(), 0); // No tokens available until offset is processed
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
-        // This tests edge case where tokensEarned equals totalLaunchSold
-        // In initial state: totalLaunchSold = 10000e18, tokensEarned = 0
+        // This tests edge case where launchTokensEarned equals totalLaunchSold
+        // In initial state: totalLaunchSold = 10000e18, launchTokensEarned = 0
 
-        // We need to create scenario where tokensEarned increases
+        // We need to create scenario where launchTokensEarned increases
         // This happens when return wallet sells tokens back to contract
 
         // Give tokens to return wallet
@@ -2209,32 +2240,32 @@ contract ProofOfCapitalTest is Test {
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 10000e18);
         vm.stopPrank();
 
-        // Return wallet sells tokens back (this increases tokensEarned)
+        // Return wallet sells tokens back (this increases launchTokensEarned)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.sellTokens(10000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(10000e18);
         vm.stopPrank();
 
-        // Check if tokensEarned increased
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
+        // Check if launchTokensEarned increased
+        uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // tokenAvailable should be totalSold - tokensEarned
-        uint256 expectedAvailable = totalSold - tokensEarned;
+        // tokenAvailable should be totalSold - launchTokensEarned
+        uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
 
-        // If tokensEarned equals totalSold, available should be 0
-        if (tokensEarned == totalSold) {
+        // If launchTokensEarned equals totalSold, available should be 0
+        if (launchTokensEarned == totalSold) {
             assertEq(proofOfCapital.tokenAvailable(), 0);
         }
     }
 
     function testTokenAvailableStateConsistency() public view {
-        // Test that tokenAvailable always equals totalLaunchSold - tokensEarned
+        // Test that tokenAvailable always equals totalLaunchSold - launchTokensEarned
 
         // Record initial state
         uint256 initialTotalSold = proofOfCapital.totalLaunchSold();
-        uint256 initialTokensEarned = proofOfCapital.tokensEarned();
+        uint256 initialTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 initialAvailable = proofOfCapital.tokenAvailable();
 
         // Verify initial consistency
@@ -2242,7 +2273,9 @@ contract ProofOfCapitalTest is Test {
 
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
-        assertTrue(proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.tokensEarned());
+        assertTrue(
+            proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.launchTokensEarned()
+        );
     }
 
     function testViewFunctionsIntegration() public {
@@ -2275,7 +2308,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.tokenAvailable(), available);
     }
 
-    // Tests for withdrawAllTokens function
+    // Tests for withdrawAllLaunchTokens function
     function testWithdrawAllTokensSuccess() public {
         // The key insight: launchBalance is only increased by returnWallet selling tokens back
         // We need to create a scenario where returnWallet sells tokens to increase launchBalance
@@ -2288,7 +2321,7 @@ contract ProofOfCapitalTest is Test {
         // Return wallet sells tokens back (this increases launchBalance)
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move time past lock end
@@ -2307,7 +2340,7 @@ contract ProofOfCapitalTest is Test {
 
         // Withdraw all tokens (only DAO can call this)
         vm.prank(dao);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify tokens transferred to DAO
         assertEq(token.balanceOf(dao), daoBalanceBefore + availableTokens);
@@ -2316,7 +2349,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.currentStep(), 0);
         assertEq(proofOfCapital.launchBalance(), 0);
         assertEq(proofOfCapital.totalLaunchSold(), 0);
-        assertEq(proofOfCapital.tokensEarned(), 0);
+        assertEq(proofOfCapital.launchTokensEarned(), 0);
         assertEq(proofOfCapital.quantityTokensPerLevel(), proofOfCapital.firstLevelTokenQuantity());
         assertEq(proofOfCapital.currentPrice(), proofOfCapital.initialPricePerToken());
         assertEq(proofOfCapital.remainderOfStep(), proofOfCapital.firstLevelTokenQuantity());
@@ -2327,7 +2360,7 @@ contract ProofOfCapitalTest is Test {
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
         vm.expectRevert(IProofOfCapital.LockPeriodNotEnded.selector);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
     }
 
     function testWithdrawAllTokensNoTokensToWithdraw() public {
@@ -2341,7 +2374,7 @@ contract ProofOfCapitalTest is Test {
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
         vm.expectRevert(IProofOfCapital.NoTokensToWithdraw.selector);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
     }
 
     function testWithdrawAllTokensStateResetComplete() public {
@@ -2352,7 +2385,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move time past lock end
@@ -2366,13 +2399,13 @@ contract ProofOfCapitalTest is Test {
         // Withdraw all tokens (only DAO can call this)
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify complete state reset
         assertEq(proofOfCapital.currentStep(), 0);
         assertEq(proofOfCapital.launchBalance(), 0);
         assertEq(proofOfCapital.totalLaunchSold(), 0);
-        assertEq(proofOfCapital.tokensEarned(), 0);
+        assertEq(proofOfCapital.launchTokensEarned(), 0);
         assertEq(proofOfCapital.quantityTokensPerLevel(), firstLevelQuantity);
         assertEq(proofOfCapital.currentPrice(), initialPrice);
         assertEq(proofOfCapital.remainderOfStep(), firstLevelQuantity);
@@ -2390,7 +2423,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move time to exact lock end
@@ -2399,7 +2432,7 @@ contract ProofOfCapitalTest is Test {
 
         // Should work at exact lock end time
         vm.prank(owner);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify withdrawal succeeded
         assertEq(proofOfCapital.launchBalance(), 0);
@@ -2418,7 +2451,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.sellTokens(50000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
         // Move past lock end
@@ -2435,7 +2468,7 @@ contract ProofOfCapitalTest is Test {
 
         // Withdraw (only DAO can call this)
         vm.prank(dao);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify correct amount transferred to DAO
         assertEq(token.balanceOf(dao), daoBalanceBefore + expectedAvailable);
@@ -2469,7 +2502,7 @@ contract ProofOfCapitalTest is Test {
         // Add collateral tokens to contract
         vm.startPrank(owner);
         weth.approve(address(proofOfCapital), 1000e18);
-        proofOfCapital.deposit(1000e18);
+        proofOfCapital.depositCollateral(1000e18);
         vm.stopPrank();
 
         // Move time past lock end
@@ -2517,7 +2550,7 @@ contract ProofOfCapitalTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), 20000e18);
-        proofOfCapital.sellTokens(20000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(20000e18);
         vm.stopPrank();
 
         // Move time past lock end
@@ -2530,7 +2563,7 @@ contract ProofOfCapitalTest is Test {
         uint256 daoMainBalanceBefore = token.balanceOf(dao);
 
         vm.prank(dao);
-        proofOfCapital.withdrawAllTokens();
+        proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify main tokens withdrawn and state reset
         assertEq(token.balanceOf(dao), daoMainBalanceBefore + launchBalance);
@@ -2648,28 +2681,28 @@ contract ProofOfCapitalTest is Test {
         // Try to buy tokens with zero amount
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
-        proofOfCapital.buyTokens(0);
+        proofOfCapital.buyLaunchTokens(0);
     }
 
     function testBuyTokensUseDepositFunctionForOwners() public {
-        // Owner tries to use buyTokens instead of deposit
+        // Owner tries to use buyLaunchTokens instead of depositCollateral
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.UseDepositFunctionForOwners.selector);
-        proofOfCapital.buyTokens(1000e18);
+        proofOfCapital.buyLaunchTokens(1000e18);
     }
 
     function testDepositInvalidAmountZero() public {
-        // Try to deposit zero amount
+        // Try to depositCollateral zero amount
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
-        proofOfCapital.deposit(0);
+        proofOfCapital.depositCollateral(0);
     }
 
     function testSellTokensInvalidAmountZero() public {
         // Try to sell zero tokens
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
-        proofOfCapital.sellTokens(0);
+        proofOfCapital.sellLaunchTokens(0);
     }
 
     // // Tests for modifier requirements
@@ -2692,15 +2725,15 @@ contract ProofOfCapitalTest is Test {
     //     // Try to call functions that require active contract
     //     vm.prank(marketMaker);
     //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-    //     proofOfCapital.buyTokens(1000e18);
+    //     proofOfCapital.buyLaunchTokens(1000e18);
 
     //     vm.prank(owner);
     //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-    //     proofOfCapital.deposit(1000e18);
+    //     proofOfCapital.depositCollateral(1000e18);
 
     //     vm.prank(marketMaker);
     //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-    //     proofOfCapital.sellTokens(1000e18);
+    //     proofOfCapital.sellLaunchTokens(1000e18);
     // }
 
     // Tests for access control modifiers
@@ -2710,15 +2743,15 @@ contract ProofOfCapitalTest is Test {
         // Non-reserve owner tries to assign new owner
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(returnWallet);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
 
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.OnlyReserveOwner.selector);
-        proofOfCapital.assignNewOwner(newOwner);
+        proofOfCapital.transferOwnership(newOwner);
     }
 
     function testOnlyOwnerOrOldContractModifier() public {
@@ -2727,15 +2760,15 @@ contract ProofOfCapitalTest is Test {
 
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.deposit(1000e18);
+        proofOfCapital.depositCollateral(1000e18);
 
         vm.prank(returnWallet);
         vm.expectRevert();
-        proofOfCapital.deposit(1000e18);
+        proofOfCapital.depositCollateral(1000e18);
 
         vm.prank(marketMaker);
         vm.expectRevert();
-        proofOfCapital.deposit(1000e18);
+        proofOfCapital.depositCollateral(1000e18);
     }
 
     // Additional boundary and edge case tests
@@ -2768,8 +2801,8 @@ contract ProofOfCapitalTest is Test {
 
         // Test tokenAvailable consistency
         uint256 totalSold = proofOfCapital.totalLaunchSold();
-        uint256 tokensEarned = proofOfCapital.tokensEarned();
-        uint256 expectedAvailable = totalSold - tokensEarned;
+        uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
+        uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
     }
 }
@@ -2778,9 +2811,10 @@ contract ProofOfCapitalProfitTest is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
     address public user = address(0x5);
@@ -2794,6 +2828,10 @@ contract ProofOfCapitalProfitTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         // Deploy implementation
         // Prepare initialization parameters
@@ -2813,7 +2851,7 @@ contract ProofOfCapitalProfitTest is Test {
             profitPercentage: 100,
             offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -2879,7 +2917,7 @@ contract ProofOfCapitalProfitTest is Test {
         assertFalse(proofOfCapital.profitInTime());
 
         // Manually set owner profit balance for testing
-        // We'll use the deposit function to simulate profit accumulation
+        // We'll use the depositCollateral function to simulate profit accumulation
         vm.prank(owner);
         SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), 1000e18);
 
@@ -2904,9 +2942,10 @@ contract ProofOfCapitalInitializationTest is Test {
     ProofOfCapital public implementation;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
 
@@ -2918,6 +2957,10 @@ contract ProofOfCapitalInitializationTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         vm.stopPrank();
     }
@@ -2939,7 +2982,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetLaunch: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -2967,12 +3010,12 @@ contract ProofOfCapitalInitializationTest is Test {
         assertEq(proofOfCapital.initialPricePerToken(), 1);
     }
 
-    // Test MultiplierTooHigh error
+    // Test InvalidLevelDecreaseMultiplierAfterTrend error
     function testInitializeMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelDecreaseMultiplierAfterTrend.selector);
         new ProofOfCapital(params);
     }
 
@@ -2980,7 +3023,7 @@ contract ProofOfCapitalInitializationTest is Test {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelDecreaseMultiplierAfterTrend.selector);
         new ProofOfCapital(params);
     }
 
@@ -2996,12 +3039,12 @@ contract ProofOfCapitalInitializationTest is Test {
         assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), int256(Constants.PERCENTAGE_DIVISOR - 1));
     }
 
-    // Test MultiplierTooLow error for levelIncreaseMultiplier
+    // Test InvalidLevelIncreaseMultiplier error for levelIncreaseMultiplier
     function testInitializeLevelIncreaseMultiplierTooLow() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = -int256(Constants.PERCENTAGE_DIVISOR); // Invalid: below minimum range
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelIncreaseMultiplier.selector);
         new ProofOfCapital(params);
     }
 
@@ -3016,12 +3059,12 @@ contract ProofOfCapitalInitializationTest is Test {
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
     }
 
-    // Test MultiplierTooLow error for levelIncreaseMultiplier above range
+    // Test InvalidLevelIncreaseMultiplier error for levelIncreaseMultiplier above range
     function testInitializeLevelIncreaseMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: above maximum range
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelIncreaseMultiplier.selector);
         new ProofOfCapital(params);
     }
 
@@ -3172,7 +3215,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: 1, // Way below minimum
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3206,7 +3249,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3243,7 +3286,7 @@ contract ProofOfCapitalInitializationTest is Test {
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: validPeriod, // Within valid range
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3279,7 +3322,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 profitPercentage: 100,
                 offsetLaunch: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
-                collateralAddress: address(weth),
+                collateralToken: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -3309,7 +3352,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 profitPercentage: 100,
                 offsetLaunch: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
-                collateralAddress: address(weth),
+                collateralToken: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

@@ -67,11 +67,11 @@ contract ProofOfCapitalCalculateUnaccountedCollateralBalanceTest is BaseTest {
         weth.approve(address(proofOfCapital), type(uint256).max);
 
         // Setup unaccountedCollateralBalance by making deposits
-        // This requires offsetLaunch > tokensEarned (which is true by default)
-        // Use deposit() function to deposit collateral tokens, which calls _handleOwnerDeposit
+        // This requires offsetLaunch > launchTokensEarned (which is true by default)
+        // Use depositCollateral() function to depositCollateral collateral tokens, which calls _handleOwnerDeposit
         uint256 depositAmount = 10000e18;
         vm.prank(owner);
-        proofOfCapital.deposit(depositAmount);
+        proofOfCapital.depositCollateral(depositAmount);
 
         // Verify unaccountedCollateralBalance was set
         assertGt(proofOfCapital.unaccountedCollateralBalance(), 0, "unaccountedCollateralBalance should be set");

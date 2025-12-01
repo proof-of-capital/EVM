@@ -70,7 +70,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
             profitPercentage: 100,
             offsetLaunch: 2000e18, // Medium offset - should create offsetStep around 3-4
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -117,7 +117,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
 
         // Create initial state with collateral balance
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(20000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(20000e18);
 
         uint256 initialOwnerWethBalance = weth.balanceOf(owner);
 
@@ -125,7 +125,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
         uint256 smallSellAmount = 100e18;
 
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(smallSellAmount);
+        proofOfCapital.sellLaunchTokensReturnWallet(smallSellAmount);
 
         uint256 finalOwnerWethBalance = weth.balanceOf(owner);
 

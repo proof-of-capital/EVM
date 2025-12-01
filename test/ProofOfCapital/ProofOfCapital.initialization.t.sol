@@ -72,12 +72,12 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapital.initialPricePerToken(), 1);
     }
 
-    // Test MultiplierTooHigh error
+    // Test InvalidLevelDecreaseMultiplierAfterTrend error
     function testInitializeMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: equal to divisor
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelDecreaseMultiplierAfterTrend.selector);
         new ProofOfCapital(params);
     }
 
@@ -85,7 +85,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelDecreaseMultiplierAfterTrend = int256(Constants.PERCENTAGE_DIVISOR + 1); // Invalid: above divisor
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooHigh.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelDecreaseMultiplierAfterTrend.selector);
         new ProofOfCapital(params);
     }
 
@@ -101,12 +101,12 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), int256(Constants.PERCENTAGE_DIVISOR - 1));
     }
 
-    // Test MultiplierTooLow error for levelIncreaseMultiplier
+    // Test InvalidLevelIncreaseMultiplier error for levelIncreaseMultiplier
     function testInitializeLevelIncreaseMultiplierTooLow() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = -int256(Constants.PERCENTAGE_DIVISOR); // Invalid: below minimum range
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelIncreaseMultiplier.selector);
         new ProofOfCapital(params);
     }
 
@@ -121,12 +121,12 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
     }
 
-    // Test MultiplierTooLow error for levelIncreaseMultiplier above range
+    // Test InvalidLevelIncreaseMultiplier error for levelIncreaseMultiplier above range
     function testInitializeLevelIncreaseMultiplierTooHigh() public {
         IProofOfCapital.InitParams memory params = getValidParams();
         params.levelIncreaseMultiplier = int256(Constants.PERCENTAGE_DIVISOR); // Invalid: above maximum range
 
-        vm.expectRevert(IProofOfCapital.MultiplierTooLow.selector);
+        vm.expectRevert(IProofOfCapital.InvalidLevelIncreaseMultiplier.selector);
         new ProofOfCapital(params);
     }
 
@@ -277,7 +277,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: 1, // Way below minimum
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -311,7 +311,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: Constants.MAX_CONTROL_PERIOD + 1 days, // Above maximum
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -348,7 +348,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
             profitPercentage: 100,
             offsetLaunch: 1000e18,
             controlPeriod: validPeriod, // Within valid range
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -384,7 +384,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 profitPercentage: 100,
                 offsetLaunch: 1000e18,
                 controlPeriod: Constants.MIN_CONTROL_PERIOD, // Exactly minimum
-                collateralAddress: address(weth),
+                collateralToken: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -414,7 +414,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
                 profitPercentage: 100,
                 offsetLaunch: 1000e18,
                 controlPeriod: Constants.MAX_CONTROL_PERIOD, // Exactly maximum
-                collateralAddress: address(weth),
+                collateralToken: address(weth),
                 royaltyProfitPercent: 500,
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -529,7 +529,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify addresses were set correctly
-        assertEq(proofOfCapital.returnWalletAddress(), uniqueReturnWallet);
+        assertTrue(proofOfCapital.returnWalletAddresses(uniqueReturnWallet));
         assertEq(proofOfCapital.royaltyWalletAddress(), uniqueRoyaltyWallet);
     }
 
@@ -544,7 +544,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify addresses were set correctly
-        assertEq(proofOfCapital.returnWalletAddress(), params.returnWalletAddress);
+        assertTrue(proofOfCapital.returnWalletAddresses(params.returnWalletAddress));
         assertEq(proofOfCapital.royaltyWalletAddress(), params.royaltyWalletAddress);
     }
 
@@ -582,7 +582,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         // Should not revert
         ProofOfCapital proofOfCapitalValid = new ProofOfCapital(paramsValid);
 
-        assertEq(proofOfCapitalValid.returnWalletAddress(), address(0x777));
+        assertTrue(proofOfCapitalValid.returnWalletAddresses(address(0x777)));
         assertEq(proofOfCapitalValid.royaltyWalletAddress(), address(0x888));
     }
 

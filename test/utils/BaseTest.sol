@@ -35,6 +35,7 @@ import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockRoyalty} from "../mocks/MockRoyalty.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -44,9 +45,10 @@ contract BaseTest is Test {
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
     MockERC20 public weth;
+    MockRoyalty public mockRoyalty;
 
     address public owner = address(0x1);
-    address public royalty = address(0x2);
+    address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
 
@@ -59,6 +61,10 @@ contract BaseTest is Test {
         // Deploy mock tokens
         token = new MockERC20("TestToken", "TT");
         weth = new MockERC20("WETH", "WETH");
+
+        // Deploy mock royalty contract
+        mockRoyalty = new MockRoyalty();
+        royalty = address(mockRoyalty);
 
         // Prepare initialization parameters
         IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
@@ -77,7 +83,7 @@ contract BaseTest is Test {
             profitPercentage: 100,
             offsetLaunch: 10000e18, // Add offset to enable trading
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -108,7 +114,7 @@ contract BaseTest is Test {
             profitPercentage: 100,
             offsetLaunch: 10000e18,
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
@@ -129,7 +135,7 @@ contract BaseTest is Test {
 
         vm.startPrank(returnWallet);
         token.approve(address(proofOfCapital), amount * 2);
-        proofOfCapital.sellTokens(amount); // This increases launchBalance
+        proofOfCapital.sellLaunchTokensReturnWallet(amount); // This increases launchBalance
         vm.stopPrank();
     }
 
@@ -151,7 +157,7 @@ contract BaseTest is Test {
             profitPercentage: 100,
             offsetLaunch: 0, // No offset
             controlPeriod: Constants.MIN_CONTROL_PERIOD,
-            collateralAddress: address(weth),
+            collateralToken: address(weth),
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)

@@ -108,7 +108,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         assertFalse(proofOfCapital.profitInTime());
 
         // Manually set owner profit balance for testing
-        // We'll use the deposit function to simulate profit accumulation
+        // We'll use the depositCollateral function to simulate profit accumulation
         vm.prank(owner);
         SafeERC20.safeTransfer(IERC20(address(weth)), address(proofOfCapital), 1000e18);
 
@@ -141,16 +141,16 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         vm.startPrank(testOwner);
 
-        // Transfer launch tokens from owner to contract and deposit them
+        // Transfer launch tokens from owner to contract and depositCollateral them
         uint256 tokensToDeposit = 100000e18; // Use smaller amount
         SafeERC20.safeTransfer(IERC20(address(testToken)), address(testContract), tokensToDeposit);
         testToken.approve(address(testContract), tokensToDeposit);
-        testContract.depositTokens(tokensToDeposit); // This increases launchBalance
+        testContract.depositLaunch(tokensToDeposit); // This increases launchBalance
 
         // Create contractCollateralBalance by depositing WETH
         uint256 depositAmount = 20000e18; // Use smaller amount
         testWeth.approve(address(testContract), depositAmount);
-        testContract.deposit(depositAmount);
+        testContract.depositCollateral(depositAmount);
 
         // Transfer WETH to market maker for purchases
         SafeERC20.safeTransfer(IERC20(address(testWeth)), testMarketMaker, 100000e18);
@@ -170,12 +170,12 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 initialOwnerCollateralBalance = testContract.ownerCollateralBalance();
         assertEq(initialOwnerCollateralBalance, 0, "Initial owner collateral balance should be 0");
 
-        // Market maker buys tokens to generate profit (this calls _handleTokenPurchaseCommon)
+        // Market maker buys tokens to generate profit (this calls _handleLaunchTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
         // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForCollateralAmount
         uint256 purchaseAmount = 3e18;
         vm.prank(testMarketMaker);
-        testContract.buyTokens(purchaseAmount);
+        testContract.buyLaunchTokens(purchaseAmount);
 
         // Verify profit was accumulated
         uint256 ownerCollateralBalanceAfterPurchase = testContract.ownerCollateralBalance();
@@ -213,16 +213,16 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         vm.startPrank(testOwner);
 
-        // Transfer launch tokens from owner to contract and deposit them
+        // Transfer launch tokens from owner to contract and depositCollateral them
         uint256 tokensToDeposit = 100000e18; // Use smaller amount
         SafeERC20.safeTransfer(IERC20(address(testToken)), address(testContract), tokensToDeposit);
         testToken.approve(address(testContract), tokensToDeposit);
-        testContract.depositTokens(tokensToDeposit); // This increases launchBalance
+        testContract.depositLaunch(tokensToDeposit); // This increases launchBalance
 
         // Create contractCollateralBalance by depositing WETH
         uint256 depositAmount = 20000e18; // Use smaller amount
         testWeth.approve(address(testContract), depositAmount);
-        testContract.deposit(depositAmount);
+        testContract.depositCollateral(depositAmount);
 
         // Transfer WETH to market maker for purchases
         SafeERC20.safeTransfer(IERC20(address(testWeth)), testMarketMaker, 100000e18);
@@ -242,12 +242,12 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 initialRoyaltyCollateralBalance = testContract.royaltyCollateralBalance();
         assertEq(initialRoyaltyCollateralBalance, 0, "Initial royalty collateral balance should be 0");
 
-        // Market maker buys tokens to generate profit (this calls _handleTokenPurchaseCommon)
+        // Market maker buys tokens to generate profit (this calls _handleLaunchTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
         // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForCollateralAmount
         uint256 purchaseAmount = 1e18;
         vm.prank(testMarketMaker);
-        testContract.buyTokens(purchaseAmount);
+        testContract.buyLaunchTokens(purchaseAmount);
 
         // Verify profit was accumulated
         uint256 royaltyCollateralBalanceAfterPurchase = testContract.royaltyCollateralBalance();
@@ -492,7 +492,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         assertEq(proofOfCapital.royaltyProfitPercent(), newPercentage);
     }
 
-    // Test for TradingNotAllowedOnlyMarketMakers require in _handleTokenPurchaseCommon
+    // Test for TradingNotAllowedOnlyMarketMakers require in _handleLaunchTokenPurchaseCommon
     function testBuyTokensTradingNotAllowedOnlyMarketMakers() public {
         // Create a regular user (not market maker, not owner)
         address regularUser = address(0x777);
@@ -509,7 +509,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Create collateral balance first to enable token purchases
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(15000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(15000e18);
 
         // Move time to be more than 60 days before lock end to remove time-based trading access
         uint256 mmLockEndTime = proofOfCapital.lockEndTime();
@@ -521,7 +521,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Regular user (non-market maker) tries to buy tokens without trading access
         vm.prank(regularUser);
         vm.expectRevert(IProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
-        proofOfCapital.buyTokens(1000e18);
+        proofOfCapital.buyLaunchTokens(1000e18);
     }
 
     function testBuyTokensWithTradingAccess() public {
@@ -542,7 +542,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Create collateral balance first to enable token purchases
         vm.prank(returnWallet);
-        proofOfCapital.sellTokens(15000e18);
+        proofOfCapital.sellLaunchTokensReturnWallet(15000e18);
 
         // Activate trading access by scheduling deferred withdrawal
         vm.prank(owner);
@@ -555,7 +555,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 initialTokenBalance = token.balanceOf(regularUser);
 
         vm.prank(regularUser);
-        proofOfCapital.buyTokens(1000e18); // Should not revert
+        proofOfCapital.buyLaunchTokens(1000e18); // Should not revert
 
         // Verify tokens were purchased
         assertTrue(token.balanceOf(regularUser) > initialTokenBalance, "Regular user should receive tokens");

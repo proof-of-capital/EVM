@@ -146,10 +146,10 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
             targetTime = lockEndTime - Constants.SIXTY_DAYS - 1;
         }
         vm.warp(targetTime);
-        address collateralAddress = proofOfCapital.collateralAddress();
+        address collateralTokenAddress = address(proofOfCapital.collateralToken());
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.OldContractAddressConflict.selector);
-        proofOfCapital.registerOldContract(collateralAddress);
+        proofOfCapital.registerOldContract(collateralTokenAddress);
     }
 
     // Test registration fails with market maker address

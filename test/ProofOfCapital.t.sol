@@ -2345,14 +2345,8 @@ contract ProofOfCapitalTest is Test {
         // Verify tokens transferred to DAO
         assertEq(token.balanceOf(dao), daoBalanceBefore + availableTokens);
 
-        // Verify state reset
-        assertEq(proofOfCapital.currentStep(), 0);
-        assertEq(proofOfCapital.launchBalance(), 0);
-        assertEq(proofOfCapital.totalLaunchSold(), 0);
-        assertEq(proofOfCapital.launchTokensEarned(), 0);
-        assertEq(proofOfCapital.quantityTokensPerLevel(), proofOfCapital.firstLevelTokenQuantity());
-        assertEq(proofOfCapital.currentPrice(), proofOfCapital.initialPricePerToken());
-        assertEq(proofOfCapital.remainderOfStep(), proofOfCapital.firstLevelTokenQuantity());
+        // Verify contract is inactive
+        assertEq(proofOfCapital.isActive(), false);
     }
 
     function testWithdrawAllTokensLockPeriodNotEnded() public {
@@ -2392,27 +2386,13 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // Record initial values for comparison
-        uint256 firstLevelQuantity = proofOfCapital.firstLevelTokenQuantity();
-        uint256 initialPrice = proofOfCapital.initialPricePerToken();
-
         // Withdraw all tokens (only DAO can call this)
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
         proofOfCapital.withdrawAllLaunchTokens();
 
-        // Verify complete state reset
-        assertEq(proofOfCapital.currentStep(), 0);
-        assertEq(proofOfCapital.launchBalance(), 0);
-        assertEq(proofOfCapital.totalLaunchSold(), 0);
-        assertEq(proofOfCapital.launchTokensEarned(), 0);
-        assertEq(proofOfCapital.quantityTokensPerLevel(), firstLevelQuantity);
-        assertEq(proofOfCapital.currentPrice(), initialPrice);
-        assertEq(proofOfCapital.remainderOfStep(), firstLevelQuantity);
-        assertEq(proofOfCapital.currentStepEarned(), 0);
-        assertEq(proofOfCapital.remainderOfStepEarned(), firstLevelQuantity);
-        assertEq(proofOfCapital.quantityTokensPerLevelEarned(), firstLevelQuantity);
-        assertEq(proofOfCapital.currentPriceEarned(), initialPrice);
+        // Verify contract is inactive
+        assertEq(proofOfCapital.isActive(), false);
     }
 
     function testWithdrawAllTokensAtExactLockEnd() public {
@@ -2434,8 +2414,8 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         proofOfCapital.withdrawAllLaunchTokens();
 
-        // Verify withdrawal succeeded
-        assertEq(proofOfCapital.launchBalance(), 0);
+        // Verify withdrawal succeeded and contract is inactive
+        assertEq(proofOfCapital.isActive(), false);
     }
 
     function testWithdrawAllTokensCalculatesAvailableCorrectly() public {
@@ -2556,17 +2536,16 @@ contract ProofOfCapitalTest is Test {
         vm.warp(lockEndTime + 1);
 
         // Test main token withdrawal
-        uint256 launchBalance = proofOfCapital.launchBalance() - proofOfCapital.totalLaunchSold();
+        uint256 contractBalance = token.balanceOf(address(proofOfCapital));
         address dao = proofOfCapital.daoAddress();
         uint256 daoMainBalanceBefore = token.balanceOf(dao);
 
         vm.prank(dao);
         proofOfCapital.withdrawAllLaunchTokens();
 
-        // Verify main tokens withdrawn and state reset
-        assertEq(token.balanceOf(dao), daoMainBalanceBefore + launchBalance);
-        assertEq(proofOfCapital.launchBalance(), 0);
-        assertEq(proofOfCapital.totalLaunchSold(), 0);
+        // Verify main tokens withdrawn and contract is inactive
+        assertEq(token.balanceOf(dao), daoMainBalanceBefore + contractBalance);
+        assertEq(proofOfCapital.isActive(), false);
 
         // Second test: test collateral token withdrawal with zero balance (expected to fail)
         vm.prank(dao);

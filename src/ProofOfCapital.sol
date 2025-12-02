@@ -576,18 +576,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         launchToken.safeTransfer(daoAddress, _launchBalance);
 
-        // Reset state
-        currentStep = 0;
-        launchBalance = 0;
-        totalLaunchSold = 0;
-        launchTokensEarned = 0;
-        quantityTokensPerLevel = firstLevelTokenQuantity;
-        currentPrice = initialPricePerToken;
-        remainderOfStep = firstLevelTokenQuantity;
-        currentStepEarned = 0;
-        remainderOfStepEarned = firstLevelTokenQuantity;
-        quantityTokensPerLevelEarned = firstLevelTokenQuantity;
-        currentPriceEarned = initialPricePerToken;
         isActive = false;
 
         emit AllTokensWithdrawn(daoAddress, _launchBalance);

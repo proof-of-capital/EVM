@@ -95,6 +95,7 @@ interface IProofOfCapital {
     error ProfitBeforeTrendChangeMustBePositive();
     error UseReturnWalletFunction();
     error OnlyReturnWallet();
+    error InvalidTokenForWithdrawal();
 
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
@@ -118,6 +119,7 @@ interface IProofOfCapital {
     event AllCollateralTokensWithdrawn(address indexed owner, uint256 amount);
     event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
     event RoyaltyNotificationFailed(address indexed royaltyAddress, bytes reason);
+    event TokenWithdrawn(address indexed token, address indexed recipient, uint256 amount);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
@@ -177,6 +179,7 @@ interface IProofOfCapital {
     // Withdrawal functions
     function withdrawAllLaunchTokens() external;
     function withdrawAllCollateralTokens() external;
+    function withdrawToken(address token, uint256 amount) external;
     function getProfitOnRequest() external;
 
     // DAO management

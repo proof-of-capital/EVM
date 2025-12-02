@@ -2561,6 +2561,140 @@ contract ProofOfCapitalTest is Test {
         // Even though we can't easily create collateral balance due to offset logic
     }
 
+    // Tests for withdrawToken function
+    function testWithdrawTokenSuccess() public {
+        // Create a new ERC20 token (not launch or collateral)
+        MockERC20 otherToken = new MockERC20("OtherToken", "OT");
+
+        // Transfer tokens to contract
+        uint256 amount = 10000e18;
+        otherToken.transfer(address(proofOfCapital), amount);
+
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = otherToken.balanceOf(dao);
+
+        // Withdraw tokens (only DAO can call this, works at any time)
+        vm.prank(dao);
+        proofOfCapital.withdrawToken(address(otherToken), amount);
+
+        // Verify tokens transferred to DAO
+        assertEq(otherToken.balanceOf(dao), daoBalanceBefore + amount);
+        assertEq(otherToken.balanceOf(address(proofOfCapital)), 0);
+    }
+
+    function testWithdrawTokenOnlyDAO() public {
+        // Create a new ERC20 token
+        MockERC20 otherToken = new MockERC20("OtherToken", "OT");
+        otherToken.transfer(address(proofOfCapital), 10000e18);
+
+        // Non-DAO tries to withdraw (should fail)
+        vm.prank(royalty);
+        vm.expectRevert();
+        proofOfCapital.withdrawToken(address(otherToken), 1000e18);
+
+        vm.prank(returnWallet);
+        vm.expectRevert();
+        proofOfCapital.withdrawToken(address(otherToken), 1000e18);
+
+        vm.prank(marketMaker);
+        vm.expectRevert();
+        proofOfCapital.withdrawToken(address(otherToken), 1000e18);
+    }
+
+    function testWithdrawTokenInvalidTokenLaunchToken() public {
+        address dao = proofOfCapital.daoAddress();
+
+        // Try to withdraw launch token (should fail)
+        vm.prank(dao);
+        vm.expectRevert(IProofOfCapital.InvalidTokenForWithdrawal.selector);
+        proofOfCapital.withdrawToken(address(token), 1000e18);
+    }
+
+    function testWithdrawTokenInvalidTokenCollateralToken() public {
+        address dao = proofOfCapital.daoAddress();
+
+        // Try to withdraw collateral token (should fail)
+        vm.prank(dao);
+        vm.expectRevert(IProofOfCapital.InvalidTokenForWithdrawal.selector);
+        proofOfCapital.withdrawToken(address(weth), 1000e18);
+    }
+
+    function testWithdrawTokenInvalidAddress() public {
+        address dao = proofOfCapital.daoAddress();
+
+        // Try to withdraw with zero address (should fail)
+        vm.prank(dao);
+        vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
+        proofOfCapital.withdrawToken(address(0), 1000e18);
+    }
+
+    function testWithdrawTokenInvalidAmount() public {
+        MockERC20 otherToken = new MockERC20("OtherToken", "OT");
+        address dao = proofOfCapital.daoAddress();
+
+        // Try to withdraw zero amount (should fail)
+        vm.prank(dao);
+        vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
+        proofOfCapital.withdrawToken(address(otherToken), 0);
+    }
+
+    function testWithdrawTokenWorksBeforeLockEnd() public {
+        // Create a new ERC20 token
+        MockERC20 otherToken = new MockERC20("OtherToken", "OT");
+        uint256 amount = 5000e18;
+        otherToken.transfer(address(proofOfCapital), amount);
+
+        // Verify we're before lock end
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        assertTrue(block.timestamp < lockEndTime);
+
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = otherToken.balanceOf(dao);
+
+        // Withdraw tokens before lock end (should work)
+        vm.prank(dao);
+        proofOfCapital.withdrawToken(address(otherToken), amount);
+
+        // Verify tokens transferred to DAO
+        assertEq(otherToken.balanceOf(dao), daoBalanceBefore + amount);
+    }
+
+    function testWithdrawTokenWorksAfterLockEnd() public {
+        // Create a new ERC20 token
+        MockERC20 otherToken = new MockERC20("OtherToken", "OT");
+        uint256 amount = 5000e18;
+        otherToken.transfer(address(proofOfCapital), amount);
+
+        // Move time past lock end
+        uint256 lockEndTime = proofOfCapital.lockEndTime();
+        vm.warp(lockEndTime + 1);
+
+        address dao = proofOfCapital.daoAddress();
+        uint256 daoBalanceBefore = otherToken.balanceOf(dao);
+
+        // Withdraw tokens after lock end (should work)
+        vm.prank(dao);
+        proofOfCapital.withdrawToken(address(otherToken), amount);
+
+        // Verify tokens transferred to DAO
+        assertEq(otherToken.balanceOf(dao), daoBalanceBefore + amount);
+    }
+
+    function testWithdrawTokenEmitsEvent() public {
+        MockERC20 otherToken = new MockERC20("OtherToken", "OT");
+        uint256 amount = 3000e18;
+        otherToken.transfer(address(proofOfCapital), amount);
+
+        address dao = proofOfCapital.daoAddress();
+
+        // Expect event
+        vm.expectEmit(true, true, false, true);
+        emit IProofOfCapital.TokenWithdrawn(address(otherToken), dao, amount);
+
+        vm.prank(dao);
+        proofOfCapital.withdrawToken(address(otherToken), amount);
+    }
+
     // Tests for setMarketMaker function
     function testSetMarketMakerInvalidAddress() public {
         // Try to set market maker with zero address

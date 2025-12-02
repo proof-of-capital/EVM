@@ -597,6 +597,24 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
+     * @dev Withdraw any ERC20 token from contract (except launch and collateral tokens)
+     * @notice Only DAO can withdraw tokens, works at any time regardless of lock
+     * @param token Address of the token to withdraw
+     * @param amount Amount of tokens to withdraw
+     */
+    function withdrawToken(address token, uint256 amount) external override onlyDao {
+        require(token != address(0), InvalidAddress());
+        if (token == address(launchToken) || token == address(collateralToken)) {
+            revert InvalidTokenForWithdrawal();
+        }
+        require(amount > 0, InvalidAmount());
+
+        IERC20(token).safeTransfer(daoAddress, amount);
+
+        emit TokenWithdrawn(token, daoAddress, amount);
+    }
+
+    /**
      * @dev Set DAO address (can only be called by current DAO)
      */
     function setDao(address newDaoAddress) external override {

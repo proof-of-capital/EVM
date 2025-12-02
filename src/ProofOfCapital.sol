@@ -644,7 +644,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         uint256 change = amount - deltaCollateralBalance;
         if (change > 0) {
-            _transferCollateralTokens(daoAddress, change);
+            collateralToken.safeTransfer(daoAddress, change);
         }
 
         emit UnaccountedCollateralBalanceProcessed(amount, deltaCollateralBalance, change);
@@ -698,14 +698,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         if (msg.sender == owner()) {
             require(ownerCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = ownerCollateralBalance;
-            _transferCollateralTokens(owner(), ownerCollateralBalance);
+            collateralToken.safeTransfer(owner(), ownerCollateralBalance);
             ownerCollateralBalance = 0;
             emit ProfitWithdrawn(owner(), profitAmount);
         } else {
             require(msg.sender == royaltyWalletAddress, AccessDenied());
             require(royaltyCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = royaltyCollateralBalance;
-            _transferCollateralTokens(royaltyWalletAddress, royaltyCollateralBalance);
+            collateralToken.safeTransfer(royaltyWalletAddress, royaltyCollateralBalance);
             royaltyCollateralBalance = 0;
             emit ProfitWithdrawn(royaltyWalletAddress, profitAmount);
         }
@@ -758,8 +758,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
         if (profitInTime) {
-            _transferCollateralTokens(owner(), creatorProfit);
-            _transferCollateralTokens(royaltyWalletAddress, royaltyProfit);
+            collateralToken.safeTransfer(owner(), creatorProfit);
+            collateralToken.safeTransfer(royaltyWalletAddress, royaltyProfit);
         } else {
             ownerCollateralBalance += creatorProfit;
             royaltyCollateralBalance += royaltyProfit;
@@ -817,7 +817,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         launchBalance += amount;
 
         if (collateralAmountToPay > 0) {
-            _transferCollateralTokens(daoAddress, collateralAmountToPay);
+            collateralToken.safeTransfer(daoAddress, collateralAmountToPay);
         }
     }
 
@@ -840,7 +840,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         contractCollateralBalance -= collateralAmountToPay;
         totalLaunchSold -= amount;
 
-        _transferCollateralTokens(msg.sender, collateralAmountToPay);
+        collateralToken.safeTransfer(msg.sender, collateralAmountToPay);
 
         emit TokensSold(msg.sender, amount, collateralAmountToPay);
     }
@@ -1237,18 +1237,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         remainderOfStepEarned = uint256(remainderOfStepLocal);
 
         return collateralAmountToPay;
-    }
-
-    /**
-     * @dev General transfer function for collateral tokens (ERC20 only)
-     * @param to Recipient address
-     * @param amount Amount to transfer
-     */
-    function _transferCollateralTokens(address to, uint256 amount) internal {
-        if (amount == 0) return;
-
-        // Transfer collateral tokens
-        collateralToken.safeTransfer(to, amount);
     }
 
     /**

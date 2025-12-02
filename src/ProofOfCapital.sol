@@ -615,10 +615,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Set DAO address (can only be called by current DAO)
+     * @dev Set DAO address (can only be called by current DAO if owner equals DAO)
      */
     function setDao(address newDaoAddress) external override {
         require(msg.sender == daoAddress, AccessDenied());
+        require(owner() == daoAddress, AccessDenied());
         require(newDaoAddress != address(0), InvalidDAOAddress());
         daoAddress = newDaoAddress;
         emit DAOAddressChanged(newDaoAddress);

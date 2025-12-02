@@ -693,7 +693,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Get profit on request
      */
-    function getProfitOnRequest() external override nonReentrant {
+    function claimProfitOnRequest() external override nonReentrant {
         if (msg.sender == owner()) {
             require(ownerCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = ownerCollateralBalance;

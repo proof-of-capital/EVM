@@ -2995,7 +2995,7 @@ contract ProofOfCapitalProfitTest is Test {
         weth.approve(address(proofOfCapital), type(uint256).max);
     }
 
-    function testGetProfitOnRequestWhenProfitModeNotActive() public {
+    function testClaimProfitOnRequestWhenProfitModeNotActive() public {
         // Disable profit on request mode
         vm.prank(owner);
         proofOfCapital.switchProfitMode(false);
@@ -3005,28 +3005,28 @@ contract ProofOfCapitalProfitTest is Test {
         // So it will revert with NoProfitAvailable instead
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestWithNoProfitAvailable() public {
+    function testClaimProfitOnRequestWithNoProfitAvailable() public {
         // Try to get profit when there's no profit
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
 
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestUnauthorized() public {
+    function testClaimProfitOnRequestUnauthorized() public {
         // Unauthorized user tries to get profit (without any trading)
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.AccessDenied.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestOwnerSimple() public {
+    function testClaimProfitOnRequestOwnerSimple() public {
         // Enable profit on request mode (profitInTime = false for accumulation)
         vm.prank(owner);
         proofOfCapital.switchProfitMode(false);
@@ -3043,14 +3043,14 @@ contract ProofOfCapitalProfitTest is Test {
         // Owner requests profit when no profit available
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestRoyaltySimple() public {
+    function testClaimProfitOnRequestRoyaltySimple() public {
         // Royalty requests profit when no profit available
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 }
 

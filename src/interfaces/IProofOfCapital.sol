@@ -180,7 +180,7 @@ interface IProofOfCapital {
     function withdrawAllLaunchTokens() external;
     function withdrawAllCollateralTokens() external;
     function withdrawToken(address token, uint256 amount) external;
-    function getProfitOnRequest() external;
+    function claimProfitOnRequest() external;
 
     // DAO management
     function setDao(address newDaoAddress) external;

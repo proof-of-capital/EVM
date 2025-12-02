@@ -70,7 +70,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         token.approve(address(proofOfCapital), type(uint256).max);
     }
 
-    function testGetProfitOnRequestWhenProfitModeNotActive() public {
+    function testClaimProfitOnRequestWhenProfitModeNotActive() public {
         // Disable profit on request mode
         vm.prank(owner);
         proofOfCapital.switchProfitMode(false);
@@ -80,28 +80,28 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // So it will revert with NoProfitAvailable instead
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestWithNoProfitAvailable() public {
+    function testClaimProfitOnRequestWithNoProfitAvailable() public {
         // Try to get profit when there's no profit
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
 
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestUnauthorized() public {
+    function testClaimProfitOnRequestUnauthorized() public {
         // Unauthorized user tries to get profit (without any trading)
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.AccessDenied.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestOwnerSimple() public {
+    function testClaimProfitOnRequestOwnerSimple() public {
         // Enable profit on request mode (profitInTime = false for accumulation)
         vm.prank(owner);
         proofOfCapital.switchProfitMode(false);
@@ -118,17 +118,17 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Owner requests profit when no profit available
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestRoyaltySimple() public {
+    function testClaimProfitOnRequestRoyaltySimple() public {
         // Royalty requests profit when no profit available
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.NoProfitAvailable.selector);
-        proofOfCapital.getProfitOnRequest();
+        proofOfCapital.claimProfitOnRequest();
     }
 
-    function testGetProfitOnRequestOwnerSuccess() public {
+    function testClaimProfitOnRequestOwnerSuccess() public {
         // Use separate base test without offset
         BaseTestWithoutOffset baseTest = new BaseTestWithoutOffset();
         baseTest.setUp();
@@ -188,7 +188,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         emit IProofOfCapital.ProfitWithdrawn(testOwner, ownerCollateralBalanceAfterPurchase, true);
 
         vm.prank(testOwner);
-        testContract.getProfitOnRequest();
+        testContract.claimProfitOnRequest();
 
         // Verify profit was withdrawn
         assertEq(testContract.ownerCollateralBalance(), 0, "Owner collateral balance should be 0 after withdrawal");
@@ -199,7 +199,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         );
     }
 
-    function testGetProfitOnRequestRoyaltySuccess() public {
+    function testClaimProfitOnRequestRoyaltySuccess() public {
         // Use separate base test without offset
         BaseTestWithoutOffset baseTest = new BaseTestWithoutOffset();
         baseTest.setUp();
@@ -262,7 +262,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         emit IProofOfCapital.ProfitWithdrawn(testRoyalty, royaltyCollateralBalanceAfterPurchase, false);
 
         vm.prank(testRoyalty);
-        testContract.getProfitOnRequest();
+        testContract.claimProfitOnRequest();
 
         // Verify profit was withdrawn
         assertEq(testContract.royaltyCollateralBalance(), 0, "Royalty collateral balance should be 0 after withdrawal");

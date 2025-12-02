@@ -513,7 +513,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(amount > 0, InvalidAmount());
 
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
-        _handleOwnerDeposit(amount);
+        unaccountedCollateralBalance += amount;
+        emit CollateralDeposited(amount);
     }
 
     /**
@@ -739,22 +740,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             return Constants.MAX_CONTROL_PERIOD;
         }
         return period;
-    }
-
-    function _handleOwnerDeposit(uint256 value) internal {
-        uint256 neededAmount = 0;
-        if (offsetLaunch > launchTokensEarned) {
-            neededAmount = offsetLaunch - launchTokensEarned;
-            if (neededAmount > value) {
-                neededAmount = value;
-            }
-            unaccountedCollateralBalance += neededAmount;
-        }
-
-        uint256 remainder = value - neededAmount;
-        if (remainder > 0) {
-            _transferCollateralTokens(daoAddress, remainder);
-        }
     }
 
     /**

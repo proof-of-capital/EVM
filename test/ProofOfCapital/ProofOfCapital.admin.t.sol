@@ -648,10 +648,10 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testSetDAOSuccessWhenOwnerEqualsDao() public {
         // By default, owner == daoAddress, so it should work
         address newDaoAddress = address(0x999);
-        
+
         vm.prank(owner); // owner is the default daoAddress
         proofOfCapital.setDao(newDaoAddress);
-        
+
         assertEq(proofOfCapital.daoAddress(), newDaoAddress);
     }
 }

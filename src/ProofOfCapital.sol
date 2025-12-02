@@ -571,11 +571,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function withdrawAllLaunchTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
+        uint _launchBalance = launchToken.balanceOf(address(this));
+        require(_launchBalance > 0, NoTokensToWithdraw());
 
-        uint256 availableTokens = launchBalance - totalLaunchSold;
-        require(availableTokens > 0, NoTokensToWithdraw());
-
-        launchToken.safeTransfer(daoAddress, availableTokens);
+        launchToken.safeTransfer(daoAddress, _launchBalance);
 
         // Reset state
         currentStep = 0;
@@ -591,7 +590,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         currentPriceEarned = initialPricePerToken;
         isActive = false;
 
-        emit AllTokensWithdrawn(daoAddress, availableTokens);
+        emit AllTokensWithdrawn(daoAddress, _launchBalance);
     }
 
     /**

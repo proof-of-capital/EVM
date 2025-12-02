@@ -2458,10 +2458,8 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // Calculate expected available tokens
-        uint256 contractBalance = proofOfCapital.launchBalance();
-        uint256 totalSold = proofOfCapital.totalLaunchSold();
-        uint256 expectedAvailable = contractBalance - totalSold;
+        // Get actual contract balance (function now uses balanceOf instead of launchBalance - totalLaunchSold)
+        uint256 expectedAvailable = token.balanceOf(address(proofOfCapital));
 
         address dao = proofOfCapital.daoAddress();
         uint256 daoBalanceBefore = token.balanceOf(dao);

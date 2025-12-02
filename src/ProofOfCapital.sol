@@ -724,9 +724,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function tokenAvailable() external view override returns (uint256) {
-        if (totalLaunchSold < launchTokensEarned) {
-            return 0;
-        }
         return totalLaunchSold - launchTokensEarned;
     }
 

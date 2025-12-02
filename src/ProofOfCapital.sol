@@ -525,16 +525,20 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        // If this is the first deposit, add directly to balance
         if (!isFirstLaunchDeposit) {
             launchBalance += amount;
             isFirstLaunchDeposit = true;
         } else {
-            // For subsequent deposits, check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
-            if (totalLaunchSold == offsetLaunch && (offsetLaunch - launchTokensEarned) >= amount) {
-                unaccountedOffsetLaunchBalance += amount;
-            } else {
-                launchBalance += amount;
+            launchBalance += amount;
+
+            if (totalLaunchSold == offsetLaunch) {
+   
+                uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+                if (availableCapacity > unaccountedOffsetLaunchBalance) {
+                    uint256 remainingCapacity = availableCapacity - unaccountedOffsetLaunchBalance;
+                    uint256 newAmount = amount < remainingCapacity ? amount : remainingCapacity;
+                    unaccountedOffsetLaunchBalance += newAmount;
+                }
             }
         }
     }

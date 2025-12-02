@@ -2467,8 +2467,8 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // In initial state, contractCollateralBalance = 0
-        assertEq(proofOfCapital.contractCollateralBalance(), 0);
+        // In initial state, contract balance = 0
+        assertEq(weth.balanceOf(address(proofOfCapital)), 0);
 
         address dao = proofOfCapital.daoAddress();
         vm.prank(dao);
@@ -2477,6 +2477,11 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawAllCollateralTokensOnlyDAO() public {
+        // Set a different DAO address (not owner)
+        address daoAddr = address(0x777);
+        vm.prank(owner);
+        proofOfCapital.setDao(daoAddr);
+
         // Add collateral tokens to contract
         vm.startPrank(owner);
         weth.approve(address(proofOfCapital), 1000e18);

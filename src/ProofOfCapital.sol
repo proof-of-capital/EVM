@@ -532,7 +532,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             launchBalance += amount;
 
             if (totalLaunchSold == offsetLaunch) {
-   
                 uint256 availableCapacity = offsetLaunch - launchTokensEarned;
                 if (availableCapacity > unaccountedOffsetLaunchBalance) {
                     uint256 remainingCapacity = availableCapacity - unaccountedOffsetLaunchBalance;
@@ -571,7 +570,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function withdrawAllLaunchTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
-        uint _launchBalance = launchToken.balanceOf(address(this));
+        uint256 _launchBalance = launchToken.balanceOf(address(this));
         require(_launchBalance > 0, NoTokensToWithdraw());
 
         launchToken.safeTransfer(daoAddress, _launchBalance);
@@ -587,14 +586,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function withdrawAllCollateralTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
-        require(contractCollateralBalance > 0, NoCollateralTokensToWithdraw());
+        uint256 _collateralBalance = collateralToken.balanceOf(address(this));
+        require(_collateralBalance > 0, NoCollateralTokensToWithdraw());
 
-        uint256 withdrawnAmount = contractCollateralBalance;
-        contractCollateralBalance = 0;
         isActive = false;
-        _transferCollateralTokens(daoAddress, withdrawnAmount);
 
-        emit AllCollateralTokensWithdrawn(daoAddress, withdrawnAmount);
+        collateralToken.safeTransfer(daoAddress, _collateralBalance);
+
+        emit AllCollateralTokensWithdrawn(daoAddress, _collateralBalance);
     }
 
     /**

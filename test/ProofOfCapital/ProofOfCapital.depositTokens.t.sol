@@ -167,19 +167,25 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
 
         // First deposit to set the flag
         uint256 firstDepositAmount = 100e18;
-        require((offsetLaunch - launchTokensEarned) >= firstDepositAmount, "Test setup: insufficient offset capacity for first deposit");
-        
+        require(
+            (offsetLaunch - launchTokensEarned) >= firstDepositAmount,
+            "Test setup: insufficient offset capacity for first deposit"
+        );
+
         uint256 initialContractBalanceBeforeFirst = proofOfCapital.launchBalance();
-        
+
         vm.prank(owner);
         proofOfCapital.depositLaunch(firstDepositAmount);
-        
+
         // First deposit should go to launchBalance only
         assertEq(proofOfCapital.launchBalance(), initialContractBalanceBeforeFirst + firstDepositAmount);
 
         // Second deposit - should go to BOTH launchBalance AND unaccountedOffsetLaunchBalance
         uint256 depositAmount = 1000e18;
-        require((offsetLaunch - launchTokensEarned) >= depositAmount + firstDepositAmount, "Test setup: insufficient offset capacity");
+        require(
+            (offsetLaunch - launchTokensEarned) >= depositAmount + firstDepositAmount,
+            "Test setup: insufficient offset capacity"
+        );
 
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialContractBalance = proofOfCapital.launchBalance();
@@ -313,15 +319,18 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         // First deposit to set the flag
         uint256 firstDepositAmount = 100e18;
         uint256 initialContractBalanceBeforeFirst = proofOfCapital.launchBalance();
-        
+
         vm.prank(owner);
         proofOfCapital.depositLaunch(firstDepositAmount);
-        
+
         // First deposit should go to launchBalance only
         assertEq(proofOfCapital.launchBalance(), initialContractBalanceBeforeFirst + firstDepositAmount);
 
         uint256 exactAmount = 1000e18;
-        require((offsetLaunch - launchTokensEarned) >= exactAmount + firstDepositAmount, "Test setup: no capacity for depositCollateral");
+        require(
+            (offsetLaunch - launchTokensEarned) >= exactAmount + firstDepositAmount,
+            "Test setup: no capacity for depositCollateral"
+        );
 
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialBalance = proofOfCapital.launchBalance();
@@ -359,11 +368,12 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 depositAmount = maxAmount + 1 - firstDepositAmount; // One more than remaining capacity after first deposit
         uint256 initialContractBalance = proofOfCapital.launchBalance();
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
-        
+
         // Full capacity is still available for unaccounted since first deposit didn't use it
         uint256 availableForUnaccounted = maxAmount;
         // But depositAmount is less than maxAmount, so all of depositAmount goes to unaccounted
-        uint256 expectedUnaccountedIncrease = depositAmount < availableForUnaccounted ? depositAmount : availableForUnaccounted;
+        uint256 expectedUnaccountedIncrease =
+            depositAmount < availableForUnaccounted ? depositAmount : availableForUnaccounted;
 
         vm.prank(owner);
         proofOfCapital.depositLaunch(depositAmount);

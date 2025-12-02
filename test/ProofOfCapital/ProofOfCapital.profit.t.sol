@@ -185,7 +185,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Owner requests profit withdrawal
         vm.expectEmit(false, false, false, true);
-        emit IProofOfCapital.ProfitWithdrawn(testOwner, ownerCollateralBalanceAfterPurchase, true);
+        emit IProofOfCapital.ProfitWithdrawn(testOwner, ownerCollateralBalanceAfterPurchase);
 
         vm.prank(testOwner);
         testContract.claimProfitOnRequest();
@@ -259,7 +259,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Royalty wallet requests profit withdrawal
         vm.expectEmit(false, false, false, true);
-        emit IProofOfCapital.ProfitWithdrawn(testRoyalty, royaltyCollateralBalanceAfterPurchase, false);
+        emit IProofOfCapital.ProfitWithdrawn(testRoyalty, royaltyCollateralBalanceAfterPurchase);
 
         vm.prank(testRoyalty);
         testContract.claimProfitOnRequest();

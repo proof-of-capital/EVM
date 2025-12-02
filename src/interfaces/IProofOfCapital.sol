@@ -117,7 +117,7 @@ interface IProofOfCapital {
     event CollateralDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
     event AllTokensWithdrawn(address indexed owner, uint256 amount);
     event AllCollateralTokensWithdrawn(address indexed owner, uint256 amount);
-    event ProfitWithdrawn(address indexed recipient, uint256 amount, bool isOwner);
+    event ProfitWithdrawn(address indexed recipient, uint256 amount);
     event RoyaltyNotificationFailed(address indexed royaltyAddress, bytes reason);
     event TokenWithdrawn(address indexed token, address indexed recipient, uint256 amount);
 

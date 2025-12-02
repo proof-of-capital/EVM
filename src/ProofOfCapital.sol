@@ -699,14 +699,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             uint256 profitAmount = ownerCollateralBalance;
             _transferCollateralTokens(owner(), ownerCollateralBalance);
             ownerCollateralBalance = 0;
-            emit ProfitWithdrawn(owner(), profitAmount, true);
+            emit ProfitWithdrawn(owner(), profitAmount);
         } else {
             require(msg.sender == royaltyWalletAddress, AccessDenied());
             require(royaltyCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = royaltyCollateralBalance;
             _transferCollateralTokens(royaltyWalletAddress, royaltyCollateralBalance);
             royaltyCollateralBalance = 0;
-            emit ProfitWithdrawn(royaltyWalletAddress, profitAmount, false);
+            emit ProfitWithdrawn(royaltyWalletAddress, profitAmount);
         }
     }
 

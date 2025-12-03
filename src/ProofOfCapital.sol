@@ -513,7 +513,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         require(amount > 0, InvalidAmount());
 
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
-        _handleOwnerDeposit(amount);
+        unaccountedCollateralBalance += amount;
+        emit CollateralDeposited(amount);
     }
 
     /**
@@ -525,16 +526,19 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        // If this is the first deposit, add directly to balance
         if (!isFirstLaunchDeposit) {
             launchBalance += amount;
             isFirstLaunchDeposit = true;
         } else {
-            // For subsequent deposits, check if we should accumulate in unaccountedOffsetLaunchBalance for gradual offset reduction
-            if (totalLaunchSold == offsetLaunch && (offsetLaunch - launchTokensEarned) >= amount) {
-                unaccountedOffsetLaunchBalance += amount;
-            } else {
-                launchBalance += amount;
+            launchBalance += amount;
+
+            if (totalLaunchSold == offsetLaunch) {
+                uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+                if (availableCapacity > unaccountedOffsetLaunchBalance) {
+                    uint256 remainingCapacity = availableCapacity - unaccountedOffsetLaunchBalance;
+                    uint256 newAmount = amount < remainingCapacity ? amount : remainingCapacity;
+                    unaccountedOffsetLaunchBalance += newAmount;
+                }
             }
         }
     }
@@ -567,27 +571,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function withdrawAllLaunchTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
+        uint256 _launchBalance = launchToken.balanceOf(address(this));
+        require(_launchBalance > 0, NoTokensToWithdraw());
 
-        uint256 availableTokens = launchBalance - totalLaunchSold;
-        require(availableTokens > 0, NoTokensToWithdraw());
+        launchToken.safeTransfer(daoAddress, _launchBalance);
 
-        launchToken.safeTransfer(daoAddress, availableTokens);
-
-        // Reset state
-        currentStep = 0;
-        launchBalance = 0;
-        totalLaunchSold = 0;
-        launchTokensEarned = 0;
-        quantityTokensPerLevel = firstLevelTokenQuantity;
-        currentPrice = initialPricePerToken;
-        remainderOfStep = firstLevelTokenQuantity;
-        currentStepEarned = 0;
-        remainderOfStepEarned = firstLevelTokenQuantity;
-        quantityTokensPerLevelEarned = firstLevelTokenQuantity;
-        currentPriceEarned = initialPricePerToken;
         isActive = false;
 
-        emit AllTokensWithdrawn(daoAddress, availableTokens);
+        emit AllTokensWithdrawn(daoAddress, _launchBalance);
     }
 
     /**
@@ -596,21 +587,40 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      */
     function withdrawAllCollateralTokens() external override onlyDao nonReentrant {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
-        require(contractCollateralBalance > 0, NoCollateralTokensToWithdraw());
+        uint256 _collateralBalance = collateralToken.balanceOf(address(this));
+        require(_collateralBalance > 0, NoCollateralTokensToWithdraw());
 
-        uint256 withdrawnAmount = contractCollateralBalance;
-        contractCollateralBalance = 0;
         isActive = false;
-        _transferCollateralTokens(daoAddress, withdrawnAmount);
 
-        emit AllCollateralTokensWithdrawn(daoAddress, withdrawnAmount);
+        collateralToken.safeTransfer(daoAddress, _collateralBalance);
+
+        emit AllCollateralTokensWithdrawn(daoAddress, _collateralBalance);
     }
 
     /**
-     * @dev Set DAO address (can only be called by current DAO)
+     * @dev Withdraw any ERC20 token from contract (except launch and collateral tokens)
+     * @notice Only DAO can withdraw tokens, works at any time regardless of lock
+     * @param token Address of the token to withdraw
+     * @param amount Amount of tokens to withdraw
+     */
+    function withdrawToken(address token, uint256 amount) external override onlyDao {
+        require(token != address(0), InvalidAddress());
+        if (token == address(launchToken) || token == address(collateralToken)) {
+            revert InvalidTokenForWithdrawal();
+        }
+        require(amount > 0, InvalidAmount());
+
+        IERC20(token).safeTransfer(daoAddress, amount);
+
+        emit TokenWithdrawn(token, daoAddress, amount);
+    }
+
+    /**
+     * @dev Set DAO address (can only be called by current DAO if owner equals DAO)
      */
     function setDao(address newDaoAddress) external override {
         require(msg.sender == daoAddress, AccessDenied());
+        require(owner() == daoAddress, AccessDenied());
         require(newDaoAddress != address(0), InvalidDAOAddress());
         daoAddress = newDaoAddress;
         emit DAOAddressChanged(newDaoAddress);
@@ -634,7 +644,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         uint256 change = amount - deltaCollateralBalance;
         if (change > 0) {
-            _transferCollateralTokens(daoAddress, change);
+            collateralToken.safeTransfer(daoAddress, change);
         }
 
         emit UnaccountedCollateralBalanceProcessed(amount, deltaCollateralBalance, change);
@@ -684,20 +694,20 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Get profit on request
      */
-    function getProfitOnRequest() external override nonReentrant {
+    function claimProfitOnRequest() external override nonReentrant {
         if (msg.sender == owner()) {
             require(ownerCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = ownerCollateralBalance;
-            _transferCollateralTokens(owner(), ownerCollateralBalance);
+            collateralToken.safeTransfer(owner(), ownerCollateralBalance);
             ownerCollateralBalance = 0;
-            emit ProfitWithdrawn(owner(), profitAmount, true);
+            emit ProfitWithdrawn(owner(), profitAmount);
         } else {
             require(msg.sender == royaltyWalletAddress, AccessDenied());
             require(royaltyCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = royaltyCollateralBalance;
-            _transferCollateralTokens(royaltyWalletAddress, royaltyCollateralBalance);
+            collateralToken.safeTransfer(royaltyWalletAddress, royaltyCollateralBalance);
             royaltyCollateralBalance = 0;
-            emit ProfitWithdrawn(royaltyWalletAddress, profitAmount, false);
+            emit ProfitWithdrawn(royaltyWalletAddress, profitAmount);
         }
     }
 
@@ -715,9 +725,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     }
 
     function tokenAvailable() external view override returns (uint256) {
-        if (totalLaunchSold < launchTokensEarned) {
-            return 0;
-        }
         return totalLaunchSold - launchTokensEarned;
     }
 
@@ -733,22 +740,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             return Constants.MAX_CONTROL_PERIOD;
         }
         return period;
-    }
-
-    function _handleOwnerDeposit(uint256 value) internal {
-        uint256 neededAmount = 0;
-        if (offsetLaunch > launchTokensEarned) {
-            neededAmount = offsetLaunch - launchTokensEarned;
-            if (neededAmount > value) {
-                neededAmount = value;
-            }
-            unaccountedCollateralBalance += neededAmount;
-        }
-
-        uint256 remainder = value - neededAmount;
-        if (remainder > 0) {
-            _transferCollateralTokens(daoAddress, remainder);
-        }
     }
 
     /**
@@ -767,8 +758,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
         if (profitInTime) {
-            _transferCollateralTokens(owner(), creatorProfit);
-            _transferCollateralTokens(royaltyWalletAddress, royaltyProfit);
+            collateralToken.safeTransfer(owner(), creatorProfit);
+            collateralToken.safeTransfer(royaltyWalletAddress, royaltyProfit);
         } else {
             ownerCollateralBalance += creatorProfit;
             royaltyCollateralBalance += royaltyProfit;
@@ -826,7 +817,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         launchBalance += amount;
 
         if (collateralAmountToPay > 0) {
-            _transferCollateralTokens(daoAddress, collateralAmountToPay);
+            collateralToken.safeTransfer(daoAddress, collateralAmountToPay);
         }
     }
 
@@ -849,7 +840,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         contractCollateralBalance -= collateralAmountToPay;
         totalLaunchSold -= amount;
 
-        _transferCollateralTokens(msg.sender, collateralAmountToPay);
+        collateralToken.safeTransfer(msg.sender, collateralAmountToPay);
 
         emit TokensSold(msg.sender, amount, collateralAmountToPay);
     }
@@ -1246,18 +1237,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         remainderOfStepEarned = uint256(remainderOfStepLocal);
 
         return collateralAmountToPay;
-    }
-
-    /**
-     * @dev General transfer function for collateral tokens (ERC20 only)
-     * @param to Recipient address
-     * @param amount Amount to transfer
-     */
-    function _transferCollateralTokens(address to, uint256 amount) internal {
-        if (amount == 0) return;
-
-        // Transfer collateral tokens
-        collateralToken.safeTransfer(to, amount);
     }
 
     /**

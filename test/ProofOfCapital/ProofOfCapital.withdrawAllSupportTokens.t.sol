@@ -69,37 +69,30 @@ contract ProofOfCapitalWithdrawAllCollateralTokensTest is BaseTest {
         vm.warp(lockEndTime + 1);
 
         // Step 3: Record initial state
-        uint256 initialCollateralBalance = proofOfCapital.contractCollateralBalance();
+        uint256 contractBalance = weth.balanceOf(address(proofOfCapital));
         bool initialIsActive = proofOfCapital.isActive();
         address dao = proofOfCapital.daoAddress();
         uint256 daoBalanceBefore = weth.balanceOf(dao);
 
         // Verify preconditions
-        assertTrue(initialCollateralBalance > 0, "Should have collateral balance");
+        assertTrue(contractBalance > 0, "Should have collateral balance");
         assertTrue(initialIsActive, "Contract should be active initially");
         assertEq(dao, owner, "DAO should be owner by default");
 
         // Step 4: Withdraw all collateral tokens (only DAO can call this)
         vm.expectEmit(true, false, false, true);
-        emit IProofOfCapital.AllCollateralTokensWithdrawn(dao, initialCollateralBalance);
+        emit IProofOfCapital.AllCollateralTokensWithdrawn(dao, contractBalance);
 
         vm.prank(dao);
         proofOfCapital.withdrawAllCollateralTokens();
 
         // Step 5: Verify state changes
-        // Verify contractCollateralBalance is set to 0 (line 755)
-        assertEq(
-            proofOfCapital.contractCollateralBalance(), 0, "contractCollateralBalance should be zero after withdrawal"
-        );
-
-        // Verify isActive is set to false (line 756)
+        // Verify isActive is set to false
         assertFalse(proofOfCapital.isActive(), "isActive should be false after withdrawal");
 
-        // Verify tokens were transferred to daoAddress (line 757)
+        // Verify tokens were transferred to daoAddress
         uint256 daoBalanceAfter = weth.balanceOf(dao);
-        assertEq(
-            daoBalanceAfter, daoBalanceBefore + initialCollateralBalance, "DAO should receive all collateral tokens"
-        );
+        assertEq(daoBalanceAfter, daoBalanceBefore + contractBalance, "DAO should receive all collateral tokens");
 
         // Verify withdrawnAmount equals initial collateral balance (line 754)
         // This is implicit in the transfer check above

@@ -1027,9 +1027,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
-                }
-
-                if (localCurrentStep > currentStepEarned) {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
@@ -1160,9 +1157,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
-                }
-
-                if (localCurrentStep > currentStepEarned) {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {

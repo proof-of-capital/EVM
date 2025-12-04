@@ -87,7 +87,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override contractCollateralBalance; // WETH balance for backing
     uint256 public override launchBalance; // Main token balance
     uint256 public override launchTokensEarned;
-    uint256 public override actualProfit;
 
     // Return tracking variables
     uint256 public override currentStepEarned;
@@ -753,7 +752,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
 
-        uint256 totalLaunch = _calculateLaunchToGiveForCollateralAmount(collateralAmount);
+        (uint256 totalLaunch, uint256 actualProfit) = _calculateLaunchToGiveForCollateralAmount(collateralAmount);
         uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
@@ -770,6 +769,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         if (collateralAmount > actualProfit) {
             netValue = collateralAmount - actualProfit;
         }
+
         contractCollateralBalance += netValue;
         totalLaunchSold += totalLaunch;
 
@@ -1065,7 +1065,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         return (amountCollateral - uint256(remainingAddCollateral));
     }
 
-    function _calculateLaunchToGiveForCollateralAmount(uint256 collateralAmount) internal returns (uint256) {
+    function _calculateLaunchToGiveForCollateralAmount(uint256 collateralAmount) internal returns (uint256, uint256) {
         uint256 launchToGive = 0;
         int256 remainingCollateralAmount = int256(collateralAmount);
         uint256 localCurrentStep = currentStep;
@@ -1118,11 +1118,10 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         currentStep = localCurrentStep;
         quantityLaunchPerLevel = launchPerLevel;
         currentPrice = currentPriceLocal;
-        actualProfit = totalProfit;
 
         remainderOfStep = uint256(remainderOfStepLocal);
 
-        return launchToGive;
+        return (launchToGive, totalProfit);
     }
 
     function _calculateCollateralToPayForTokenAmount(uint256 launchAmount) internal returns (uint256) {

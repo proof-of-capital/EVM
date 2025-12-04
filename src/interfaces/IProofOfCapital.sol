@@ -227,7 +227,6 @@ interface IProofOfCapital {
     function contractCollateralBalance() external view returns (uint256);
     function launchBalance() external view returns (uint256);
     function launchTokensEarned() external view returns (uint256);
-    function actualProfit() external view returns (uint256);
     function currentStepEarned() external view returns (uint256);
     function remainderOfStepEarned() external view returns (uint256);
     function quantityLaunchPerLevelEarned() external view returns (uint256);

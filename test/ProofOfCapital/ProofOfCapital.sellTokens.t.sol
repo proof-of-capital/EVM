@@ -128,7 +128,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Schedule main token deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(owner, 1000e18);
+        proofOfCapital.launchDeferredWithdrawal(owner, 1000e18);
 
         // User tries to sell - gets NoTokensAvailableForBuyback in initial state
         vm.prank(user);
@@ -467,7 +467,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     }
 
     function testBuyTokensHitsConsoleLogBranches() public {
-        // Test to hit both console.log branches in _calculateTokensToGiveForCollateralAmount
+        // Test to hit both console.log branches in _calculateLaunchToGiveForCollateralAmount
         // First branch: localCurrentStep > trendChangeStep (buy_branch_trend_change)
         // Second branch: localCurrentStep <= trendChangeStep (buy_branch_normal)
 

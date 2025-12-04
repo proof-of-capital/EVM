@@ -79,13 +79,13 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         uint256 tokensEarnedAfterSale = proofOfCapital.launchTokensEarned();
         assertTrue(tokensEarnedAfterSale > 0, "Should have tokens earned after return wallet sale");
 
-        // Step 4: Set offsetLaunch to be larger than launchTokensEarned and ensure tokensAvailableForReturnBuyback > 0
+        // Step 4: Set offsetLaunch to be larger than launchTokensEarned and ensure launchAvailableForReturnBuyback > 0
         uint256 currentTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 currentTotalTokensSold = proofOfCapital.totalLaunchSold();
 
-        // Make sure totalLaunchSold > launchTokensEarned so that tokensAvailableForReturnBuyback > 0
+        // Make sure totalLaunchSold > launchTokensEarned so that launchAvailableForReturnBuyback > 0
         if (currentTotalTokensSold <= currentTokensEarned) {
-            // Increase totalLaunchSold to make tokensAvailableForReturnBuyback > 0
+            // Increase totalLaunchSold to make launchAvailableForReturnBuyback > 0
             uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
             vm.store(address(proofOfCapital), bytes32(totalTokensSoldSlot), bytes32(currentTokensEarned + 2000e18));
             currentTotalTokensSold = currentTokensEarned + 2000e18;
@@ -111,11 +111,11 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 2000e18);
         vm.stopPrank();
 
-        // Step 7: Ensure we have enough tokensAvailableForReturnBuyback before calling sellLaunchTokens
+        // Step 7: Ensure we have enough launchAvailableForReturnBuyback before calling sellLaunchTokens
         uint256 finalTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 finalTotalTokensSold = proofOfCapital.totalLaunchSold();
 
-        // If tokensAvailableForReturnBuyback is 0, we need to increase totalLaunchSold
+        // If launchAvailableForReturnBuyback is 0, we need to increase totalLaunchSold
         if (finalTotalTokensSold <= finalTokensEarned) {
             uint256 totalTokensSoldSlot = _stdstore.target(address(proofOfCapital)).sig("totalLaunchSold()").find();
             vm.store(address(proofOfCapital), bytes32(totalTokensSoldSlot), bytes32(finalTokensEarned + 3000e18));

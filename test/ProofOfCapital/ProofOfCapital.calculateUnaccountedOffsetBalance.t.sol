@@ -288,13 +288,13 @@ contract ProofOfCapitalCalculateUnaccountedOffsetBalanceTest is BaseTest {
         // offsetPrice should increase or stay the same
         assertGe(proofOfCapital.offsetPrice(), initialOffsetPrice, "offsetPrice should increase or stay the same");
 
-        // currentStep, currentPrice, quantityTokensPerLevel should be updated to match offset values
+        // currentStep, currentPrice, quantityLaunchPerLevel should be updated to match offset values
         assertEq(proofOfCapital.currentStep(), proofOfCapital.offsetStep(), "currentStep should match offsetStep");
         assertEq(proofOfCapital.currentPrice(), proofOfCapital.offsetPrice(), "currentPrice should match offsetPrice");
         assertEq(
-            proofOfCapital.quantityTokensPerLevel(),
-            proofOfCapital.quantityTokensPerLevelOffset(),
-            "quantityTokensPerLevel should match quantityTokensPerLevelOffset"
+            proofOfCapital.quantityLaunchPerLevel(),
+            proofOfCapital.quantityLaunchPerLevelOffset(),
+            "quantityLaunchPerLevel should match quantityLaunchPerLevelOffset"
         );
         assertEq(
             proofOfCapital.remainderOfStep(),

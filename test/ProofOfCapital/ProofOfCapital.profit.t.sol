@@ -172,7 +172,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Market maker buys tokens to generate profit (this calls _handleLaunchTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
-        // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForCollateralAmount
+        // The issue is that remainderOfStepLocal can become negative in _calculateLaunchToGiveForCollateralAmount
         uint256 purchaseAmount = 3e18;
         vm.prank(testMarketMaker);
         testContract.buyLaunchTokens(purchaseAmount);
@@ -244,7 +244,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Market maker buys tokens to generate profit (this calls _handleLaunchTokenPurchaseCommon)
         // Use very small amount to avoid overflow in calculations
-        // The issue is that remainderOfStepLocal can become negative in _calculateTokensToGiveForCollateralAmount
+        // The issue is that remainderOfStepLocal can become negative in _calculateLaunchToGiveForCollateralAmount
         uint256 purchaseAmount = 1e18;
         vm.prank(testMarketMaker);
         testContract.buyLaunchTokens(purchaseAmount);
@@ -546,7 +546,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
 
         // Activate trading access by scheduling deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(owner, 1000e18);
+        proofOfCapital.launchDeferredWithdrawal(owner, 1000e18);
 
         // Verify we now have trading access
         assertTrue(_checkTradingAccessHelper(), "Should have trading access");

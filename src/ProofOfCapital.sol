@@ -68,7 +68,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override initialPricePerToken;
     uint256 public override firstLevelTokenQuantity;
     uint256 public override currentPrice;
-    uint256 public override quantityTokensPerLevel;
+    uint256 public override quantityLaunchPerLevel;
     uint256 public override remainderOfStep;
     uint256 public override currentStep;
 
@@ -87,12 +87,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override contractCollateralBalance; // WETH balance for backing
     uint256 public override launchBalance; // Main token balance
     uint256 public override launchTokensEarned;
-    uint256 public override actualProfit;
 
     // Return tracking variables
     uint256 public override currentStepEarned;
     uint256 public override remainderOfStepEarned;
-    uint256 public override quantityTokensPerLevelEarned;
+    uint256 public override quantityLaunchPerLevelEarned;
     uint256 public override currentPriceEarned;
 
     // Offset variables
@@ -100,7 +99,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     uint256 public override offsetStep;
     uint256 public override offsetPrice;
     uint256 public override remainderOfStepOffset;
-    uint256 public override quantityTokensPerLevelOffset;
+    uint256 public override quantityLaunchPerLevelOffset;
 
     // Collateral token variables
     IERC20 public override collateralToken;
@@ -203,7 +202,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // Initialize state variables
         currentStep = 0;
         remainderOfStep = params.firstLevelTokenQuantity;
-        quantityTokensPerLevel = params.firstLevelTokenQuantity;
+        quantityLaunchPerLevel = params.firstLevelTokenQuantity;
         currentPrice = params.initialPricePerToken;
         controlDay = block.timestamp + Constants.THIRTY_DAYS;
         reserveOwner = params.initialOwner;
@@ -215,12 +214,12 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         offsetStep = 0;
         offsetPrice = params.initialPricePerToken;
         remainderOfStepOffset = params.firstLevelTokenQuantity;
-        quantityTokensPerLevelOffset = params.firstLevelTokenQuantity;
+        quantityLaunchPerLevelOffset = params.firstLevelTokenQuantity;
 
         // Initialize earned tracking
         currentStepEarned = 0;
         remainderOfStepEarned = params.firstLevelTokenQuantity;
-        quantityTokensPerLevelEarned = params.firstLevelTokenQuantity;
+        quantityLaunchPerLevelEarned = params.firstLevelTokenQuantity;
         currentPriceEarned = params.initialPricePerToken;
 
         recipientDeferredWithdrawalLaunch = params.initialOwner;
@@ -298,7 +297,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Schedule deferred withdrawal of main token
      */
-    function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
+    function launchDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
         require(recipientAddress != address(0) && amount > 0, InvalidRecipientOrAmount());
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(launchDeferredWithdrawalAmount == 0, LaunchDeferredWithdrawalAlreadyScheduled());
@@ -313,7 +312,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Cancel deferred withdrawal of main token
      */
-    function stopTokenDeferredWithdrawal() external override {
+    function stopLaunchDeferredWithdrawal() external override {
         require(msg.sender == owner() || msg.sender == royaltyWalletAddress || msg.sender == daoAddress, AccessDenied());
         require(launchDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
 
@@ -325,7 +324,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Confirm and execute deferred withdrawal of main token
      */
-    function confirmTokenDeferredWithdrawal() external override onlyOwner {
+    function confirmLaunchDeferredWithdrawal() external override onlyOwner {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(launchDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= launchDeferredWithdrawalDate, WithdrawalDateNotReached());
@@ -724,7 +723,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         return lockEndTime < Constants.SIXTY_DAYS + block.timestamp;
     }
 
-    function tokenAvailable() external view override returns (uint256) {
+    function launchAvailable() external view override returns (uint256) {
         return totalLaunchSold - launchTokensEarned;
     }
 
@@ -753,7 +752,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
 
-        uint256 totalTokens = _calculateTokensToGiveForCollateralAmount(collateralAmount);
+        (uint256 totalLaunch, uint256 actualProfit) = _calculateLaunchToGiveForCollateralAmount(collateralAmount);
         uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
 
@@ -770,27 +769,28 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         if (collateralAmount > actualProfit) {
             netValue = collateralAmount - actualProfit;
         }
+
         contractCollateralBalance += netValue;
-        totalLaunchSold += totalTokens;
+        totalLaunchSold += totalLaunch;
 
-        launchToken.safeTransfer(msg.sender, totalTokens);
+        launchToken.safeTransfer(msg.sender, totalLaunch);
 
-        emit TokensPurchased(msg.sender, totalTokens, collateralAmount);
+        emit TokensPurchased(msg.sender, totalLaunch, collateralAmount);
     }
 
     function _handleReturnWalletSale(uint256 amount) internal {
         uint256 collateralAmountToPay = 0;
 
         // Check to prevent arithmetic underflow
-        uint256 tokensAvailableForReturnBuyback = 0;
+        uint256 launchAvailableForReturnBuyback = 0;
         if (totalLaunchSold > launchTokensEarned) {
-            tokensAvailableForReturnBuyback = totalLaunchSold - launchTokensEarned;
+            launchAvailableForReturnBuyback = totalLaunchSold - launchTokensEarned;
         }
 
         // Add unaccounted balance from previous calls
         uint256 totalAmount = amount + unaccountedReturnBuybackBalance;
         uint256 effectiveAmount =
-            totalAmount < tokensAvailableForReturnBuyback ? totalAmount : tokensAvailableForReturnBuyback;
+            totalAmount < launchAvailableForReturnBuyback ? totalAmount : launchAvailableForReturnBuyback;
 
         // Store the difference for future processing
         uint256 remainingAmount = totalAmount - effectiveAmount;
@@ -831,8 +831,8 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         // Check for tokens available for buyback (prevents underflow and ensures > 0)
         require(totalLaunchSold > maxEarnedOrOffset, NoTokensAvailableForBuyback());
 
-        uint256 tokensAvailableForBuyback = totalLaunchSold - maxEarnedOrOffset;
-        require(tokensAvailableForBuyback >= amount, InsufficientTokensForBuyback());
+        uint256 launchAvailableForBuyback = totalLaunchSold - maxEarnedOrOffset;
+        require(launchAvailableForBuyback >= amount, InsufficientTokensForBuyback());
 
         uint256 collateralAmountToPay = _calculateCollateralToPayForTokenAmount(amount);
         require(contractCollateralBalance >= collateralAmountToPay, InsufficientCollateralBalance());
@@ -883,37 +883,37 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         }
     }
 
-    function _calculateTokensPerLevel(uint256 tokensPerLevel, uint256 currentStepParam)
+    function _calculateLaunchPerLevel(uint256 launchPerLevel, uint256 currentStepParam)
         internal
         view
         returns (uint256)
     {
         if (currentStepParam > trendChangeStep) {
-            return (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierAfterTrend))
+            return (launchPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierAfterTrend))
                 / Constants.PERCENTAGE_DIVISOR;
         } else {
-            return (tokensPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier))
+            return (launchPerLevel * uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier))
                 / Constants.PERCENTAGE_DIVISOR;
         }
     }
 
     // Full implementation of calculation functions based on Tact contract
-    function _calculateOffset(uint256 amountTokens) internal {
-        int256 remainingOffsetTokens = int256(amountTokens);
+    function _calculateOffset(uint256 amountLaunch) internal {
+        int256 remainingOffsetTokens = int256(amountLaunch);
         uint256 localCurrentStep = offsetStep;
         int256 remainderOfStepLocal = int256(remainderOfStepOffset);
-        uint256 tokensPerLevel = quantityTokensPerLevelOffset;
+        uint256 launchPerLevel = quantityLaunchPerLevelOffset;
         uint256 currentPriceLocal = currentPrice;
 
         while (remainingOffsetTokens > 0) {
-            int256 tokensAvailableInStep = remainderOfStepLocal;
+            int256 launchAvailableInStep = remainderOfStepLocal;
 
-            if (remainingOffsetTokens >= tokensAvailableInStep) {
-                remainingOffsetTokens -= int256(tokensAvailableInStep);
+            if (remainingOffsetTokens >= launchAvailableInStep) {
+                remainingOffsetTokens -= int256(launchAvailableInStep);
                 localCurrentStep += 1;
 
-                tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
-                remainderOfStepLocal = int256(tokensPerLevel);
+                launchPerLevel = _calculateLaunchPerLevel(launchPerLevel, localCurrentStep);
+                remainderOfStepLocal = int256(launchPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
@@ -924,42 +924,42 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
         offsetStep = localCurrentStep;
         remainderOfStepOffset = uint256(remainderOfStepLocal);
-        quantityTokensPerLevelOffset = tokensPerLevel;
+        quantityLaunchPerLevelOffset = launchPerLevel;
         offsetPrice = currentPriceLocal;
 
         currentStep = localCurrentStep;
-        quantityTokensPerLevel = tokensPerLevel;
+        quantityLaunchPerLevel = launchPerLevel;
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        launchBalance += amountTokens;
-        totalLaunchSold += amountTokens;
+        launchBalance += amountLaunch;
+        totalLaunchSold += amountLaunch;
     }
 
     /**
      * @dev Calculate change in offset when adding tokens (reducing offset)
-     * @param amountToken Amount of tokens being added
+     * @param amountLaunch Amount of tokens being added
      * @return Current step after recalculation
      */
-    function _calculateChangeOffsetLaunch(uint256 amountToken) internal returns (uint256) {
-        int256 remainingAddTokens = int256(amountToken);
+    function _calculateChangeOffsetLaunch(uint256 amountLaunch) internal returns (uint256) {
+        int256 remainingAddTokens = int256(amountLaunch);
         uint256 localCurrentStep = offsetStep;
         int256 remainderOfStepLocal = int256(remainderOfStepOffset);
-        uint256 tokensPerLevel = quantityTokensPerLevelOffset;
+        uint256 launchPerLevel = quantityLaunchPerLevelOffset;
         uint256 currentPriceLocal = offsetPrice;
 
         while (remainingAddTokens > 0) {
-            int256 tokensAvailableInStep = int256(tokensPerLevel) - remainderOfStepLocal;
+            int256 launchAvailableInStep = int256(launchPerLevel) - remainderOfStepLocal;
 
-            if (remainingAddTokens >= tokensAvailableInStep) {
-                remainingAddTokens -= tokensAvailableInStep;
+            if (remainingAddTokens >= launchAvailableInStep) {
+                remainingAddTokens -= launchAvailableInStep;
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
-                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        launchPerLevel = (launchPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierAfterTrend);
                     } else {
-                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        launchPerLevel = (launchPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
@@ -967,7 +967,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
-                    remainderOfStepLocal = int256(tokensPerLevel);
+                    remainderOfStepLocal = int256(launchPerLevel);
                     remainingAddTokens = 0;
                 }
             } else {
@@ -979,16 +979,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         offsetStep = localCurrentStep;
         remainderOfStepOffset = uint256(remainderOfStepLocal);
         offsetPrice = currentPriceLocal;
-        quantityTokensPerLevelOffset = tokensPerLevel;
+        quantityLaunchPerLevelOffset = launchPerLevel;
 
-        offsetLaunch -= amountToken;
+        offsetLaunch -= amountLaunch;
 
         currentStep = localCurrentStep;
-        quantityTokensPerLevel = tokensPerLevel;
+        quantityLaunchPerLevel = launchPerLevel;
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        totalLaunchSold -= amountToken;
+        totalLaunchSold -= amountLaunch;
 
         return localCurrentStep;
     }
@@ -999,42 +999,38 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         int256 remainingAddTokens = int256(offsetLaunch) - int256(launchTokensEarned);
         uint256 localCurrentStep = offsetStep;
         uint256 remainderOfStepLocal = remainderOfStepOffset;
-        uint256 tokensPerLevel = quantityTokensPerLevelOffset;
+        uint256 launchPerLevel = quantityLaunchPerLevelOffset;
         uint256 currentPriceLocal = offsetPrice;
 
         while (remainingAddCollateral > 0 && remainingAddTokens > 0) {
-            uint256 tokensAvailableInStep = tokensPerLevel - remainderOfStepLocal;
+            uint256 launchAvailableInStep = launchPerLevel - remainderOfStepLocal;
             uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-            uint256 collateralInStep = (uint256(tokensAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
+            uint256 collateralInStep = (uint256(launchAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
             uint256 collateralRealInStep = (collateralInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                 / Constants.PERCENTAGE_DIVISOR;
 
             if (
                 remainingAddCollateral >= int256(collateralRealInStep)
-                    && remainingAddTokens >= int256(tokensAvailableInStep)
+                    && remainingAddTokens >= int256(launchAvailableInStep)
             ) {
                 remainingAddCollateral -= int256(collateralRealInStep);
-                remainingOffsetTokensLocal -= tokensAvailableInStep;
-                remainingAddTokens -= int256(tokensAvailableInStep);
+                remainingOffsetTokensLocal -= launchAvailableInStep;
+                remainingAddTokens -= int256(launchAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
-                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        launchPerLevel = (launchPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierAfterTrend);
                     } else {
-                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        launchPerLevel = (launchPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
-                }
-
-                if (localCurrentStep > currentStepEarned) {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
-                    localCurrentStep = currentStepEarned;
-                    remainderOfStepLocal = tokensPerLevel;
+                    remainderOfStepLocal = launchPerLevel;
                     remainingAddTokens = 0;
                 }
             } else {
@@ -1042,20 +1038,20 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     / Constants.PERCENTAGE_DIVISOR;
 
                 uint256 collateralToPayForStep = 0;
-                uint256 tokensToBuyInThisStep = 0;
+                uint256 launchToBuyInThisStep = 0;
 
                 if (remainingAddCollateral >= int256(collateralRealInStep)) {
                     collateralToPayForStep = (uint256(remainingAddTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
-                    tokensToBuyInThisStep = uint256(remainingAddTokens);
+                    launchToBuyInThisStep = uint256(remainingAddTokens);
                 } else {
                     collateralToPayForStep = uint256(remainingAddCollateral);
-                    tokensToBuyInThisStep =
+                    launchToBuyInThisStep =
                         (uint256(remainingAddCollateral) * Constants.PRICE_PRECISION) / adjustedPrice;
                 }
 
-                remainderOfStepLocal += tokensToBuyInThisStep;
+                remainderOfStepLocal += launchToBuyInThisStep;
                 remainingAddCollateral -= int256(collateralToPayForStep);
-                remainingOffsetTokensLocal -= tokensToBuyInThisStep;
+                remainingOffsetTokensLocal -= launchToBuyInThisStep;
                 remainingAddTokens = 0;
             }
         }
@@ -1063,29 +1059,29 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         offsetStep = localCurrentStep;
         remainderOfStepOffset = remainderOfStepLocal;
         offsetPrice = currentPriceLocal;
-        quantityTokensPerLevelOffset = tokensPerLevel;
+        quantityLaunchPerLevelOffset = launchPerLevel;
         offsetLaunch = remainingOffsetTokensLocal;
 
         return (amountCollateral - uint256(remainingAddCollateral));
     }
 
-    function _calculateTokensToGiveForCollateralAmount(uint256 collateralAmount) internal returns (uint256) {
-        uint256 tokensToGive = 0;
+    function _calculateLaunchToGiveForCollateralAmount(uint256 collateralAmount) internal returns (uint256, uint256) {
+        uint256 launchToGive = 0;
         int256 remainingCollateralAmount = int256(collateralAmount);
         uint256 localCurrentStep = currentStep;
         int256 remainderOfStepLocal = int256(remainderOfStep);
-        uint256 tokensPerLevel = quantityTokensPerLevel;
+        uint256 launchPerLevel = quantityLaunchPerLevel;
         uint256 currentPriceLocal = currentPrice;
         uint256 totalProfit = 0;
-        uint256 remainderOfTokens = launchBalance - totalLaunchSold;
+        uint256 remainderOfLaunch = launchBalance - totalLaunchSold;
 
-        while (remainingCollateralAmount > 0 && remainderOfTokens >= tokensToGive) {
-            int256 tokensAvailableInStep = remainderOfStepLocal;
+        while (remainingCollateralAmount > 0 && remainderOfLaunch > launchToGive) {
+            int256 launchAvailableInStep = remainderOfStepLocal;
             int256 collateralRequiredForStep =
-                (int256(tokensAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
+                (int256(launchAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
             if (remainingCollateralAmount >= collateralRequiredForStep) {
-                tokensToGive += uint256(tokensAvailableInStep);
+                launchToGive += uint256(launchAvailableInStep);
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
 
                 uint256 profitInStep =
@@ -1095,14 +1091,14 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 remainingCollateralAmount -= collateralRequiredForStep;
                 localCurrentStep += 1;
 
-                tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
-                remainderOfStepLocal = int256(tokensPerLevel);
+                launchPerLevel = _calculateLaunchPerLevel(launchPerLevel, localCurrentStep);
+                remainderOfStepLocal = int256(launchPerLevel);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
-                uint256 tokensToBuyInThisStep =
+                uint256 launchToBuyInThisStep =
                     (uint256(remainingCollateralAmount) * Constants.PRICE_PRECISION) / currentPriceLocal;
-                tokensToGive += tokensToBuyInThisStep;
+                launchToGive += launchToBuyInThisStep;
                 uint256 collateralSpentInThisStep = uint256(remainingCollateralAmount);
 
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
@@ -1111,80 +1107,75 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 totalProfit += profitInStep;
 
                 remainingCollateralAmount = 0;
-                remainderOfStepLocal -= int256(tokensToBuyInThisStep);
+                remainderOfStepLocal -= int256(launchToBuyInThisStep);
             }
         }
 
-        if (remainderOfTokens < tokensToGive) {
-            tokensToGive = remainderOfTokens;
-        }
+        require(remainderOfLaunch >= launchToGive, InsufficientLaunchAvailable());
+
+        require(remainingCollateralAmount == 0, ExcessCollateralAmount());
 
         currentStep = localCurrentStep;
-        quantityTokensPerLevel = tokensPerLevel;
+        quantityLaunchPerLevel = launchPerLevel;
         currentPrice = currentPriceLocal;
-        actualProfit = totalProfit;
 
         remainderOfStep = uint256(remainderOfStepLocal);
 
-        return tokensToGive;
+        return (launchToGive, totalProfit);
     }
 
-    function _calculateCollateralToPayForTokenAmount(uint256 tokenAmount) internal returns (uint256) {
+    function _calculateCollateralToPayForTokenAmount(uint256 launchAmount) internal returns (uint256) {
         uint256 collateralAmountToPay = 0;
-        int256 remainingTokenAmount = int256(tokenAmount);
+        int256 remainingLaunchAmount = int256(launchAmount);
         uint256 localCurrentStep = currentStep;
         int256 remainderOfStepLocal = int256(remainderOfStep);
-        uint256 tokensPerLevel = quantityTokensPerLevel;
+        uint256 launchPerLevel = quantityLaunchPerLevel;
         uint256 currentPriceLocal = currentPrice;
 
-        while (remainingTokenAmount > 0) {
-            int256 tokensAvailableInStep = int256(tokensPerLevel) - remainderOfStepLocal;
+        while (remainingLaunchAmount > 0) {
+            int256 launchAvailableInStep = int256(launchPerLevel) - remainderOfStepLocal;
 
-            if (remainingTokenAmount >= int256(tokensAvailableInStep)) {
+            if (remainingLaunchAmount >= int256(launchAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
                 uint256 collateralToPayForStep =
-                    (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    (uint256(launchAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
-                remainingTokenAmount -= int256(tokensAvailableInStep);
+                remainingLaunchAmount -= int256(launchAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
-                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        launchPerLevel = (launchPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) - levelDecreaseMultiplierAfterTrend);
                     } else {
-                        tokensPerLevel = (tokensPerLevel * Constants.PERCENTAGE_DIVISOR)
+                        launchPerLevel = (launchPerLevel * Constants.PERCENTAGE_DIVISOR)
                             / uint256(int256(Constants.PERCENTAGE_DIVISOR) + levelIncreaseMultiplier);
                     }
                     currentPriceLocal = (currentPriceLocal * Constants.PERCENTAGE_DIVISOR)
                         / (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier);
-                }
-
-                if (localCurrentStep > currentStepEarned) {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
-                    localCurrentStep = currentStepEarned;
-                    remainderOfStepLocal = int256(tokensPerLevel);
-                    remainingTokenAmount = 0;
+                    remainderOfStepLocal = int256(launchPerLevel);
+                    remainingLaunchAmount = 0;
                 }
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
                 uint256 collateralToPayForStep =
-                    (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    (uint256(remainingLaunchAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
-                remainderOfStepLocal += int256(remainingTokenAmount);
-                remainingTokenAmount = 0;
+                remainderOfStepLocal += int256(remainingLaunchAmount);
+                remainingLaunchAmount = 0;
             }
         }
 
         currentStep = localCurrentStep;
-        quantityTokensPerLevel = tokensPerLevel;
+        quantityLaunchPerLevel = launchPerLevel;
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
@@ -1192,29 +1183,29 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         return collateralAmountToPay;
     }
 
-    function _calculateCollateralForTokenAmountEarned(uint256 tokenAmount) internal returns (uint256) {
+    function _calculateCollateralForTokenAmountEarned(uint256 launchAmount) internal returns (uint256) {
         uint256 collateralAmountToPay = 0;
-        int256 remainingTokenAmount = int256(tokenAmount);
+        int256 remainingLaunchAmount = int256(launchAmount);
         uint256 localCurrentStep = currentStepEarned;
         int256 remainderOfStepLocal = int256(remainderOfStepEarned);
-        uint256 tokensPerLevel = quantityTokensPerLevelEarned;
+        uint256 launchPerLevel = quantityLaunchPerLevelEarned;
         uint256 currentPriceLocal = currentPriceEarned;
 
-        while (remainingTokenAmount > 0 && localCurrentStep <= currentStep) {
-            int256 tokensAvailableInStep = remainderOfStepLocal;
+        while (remainingLaunchAmount > 0 && localCurrentStep <= currentStep) {
+            int256 launchAvailableInStep = remainderOfStepLocal;
 
-            if (remainingTokenAmount >= int256(tokensAvailableInStep)) {
+            if (remainingLaunchAmount >= int256(launchAvailableInStep)) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
                 uint256 collateralToPayForStep =
-                    (uint256(tokensAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    (uint256(launchAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
                 localCurrentStep += 1;
-                tokensPerLevel = _calculateTokensPerLevel(tokensPerLevel, localCurrentStep);
-                remainderOfStepLocal = int256(tokensPerLevel);
-                remainingTokenAmount -= int256(tokensAvailableInStep);
+                launchPerLevel = _calculateLaunchPerLevel(launchPerLevel, localCurrentStep);
+                remainderOfStepLocal = int256(launchPerLevel);
+                remainingLaunchAmount -= int256(launchAvailableInStep);
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
@@ -1222,16 +1213,16 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
                 uint256 collateralToPayForStep =
-                    (uint256(remainingTokenAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    (uint256(remainingLaunchAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
-                remainderOfStepLocal -= remainingTokenAmount;
-                remainingTokenAmount = 0;
+                remainderOfStepLocal -= remainingLaunchAmount;
+                remainingLaunchAmount = 0;
             }
         }
 
         currentStepEarned = localCurrentStep;
-        quantityTokensPerLevelEarned = tokensPerLevel;
+        quantityLaunchPerLevelEarned = launchPerLevel;
         currentPriceEarned = currentPriceLocal;
 
         remainderOfStepEarned = uint256(remainderOfStepLocal);

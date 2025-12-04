@@ -104,10 +104,10 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertEq(totalSold, 0); // offsetLaunch are in unaccountedOffset, not totalLaunchSold
         assertEq(launchTokensEarned, 0);
 
-        // tokenAvailable should be totalLaunchSold - launchTokensEarned
+        // launchAvailable should be totalLaunchSold - launchTokensEarned
         uint256 expectedAvailable = totalSold - launchTokensEarned;
-        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
-        assertEq(proofOfCapital.tokenAvailable(), 0); // No tokens available until offset is processed
+        assertEq(proofOfCapital.launchAvailable(), expectedAvailable);
+        assertEq(proofOfCapital.launchAvailable(), 0); // No tokens available until offset is processed
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
@@ -132,23 +132,23 @@ contract ProofOfCapitalViewTest is BaseTest {
         uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 totalSold = proofOfCapital.totalLaunchSold();
 
-        // tokenAvailable should be totalSold - launchTokensEarned
+        // launchAvailable should be totalSold - launchTokensEarned
         uint256 expectedAvailable = totalSold - launchTokensEarned;
-        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
+        assertEq(proofOfCapital.launchAvailable(), expectedAvailable);
 
         // If launchTokensEarned equals totalSold, available should be 0
         if (launchTokensEarned == totalSold) {
-            assertEq(proofOfCapital.tokenAvailable(), 0);
+            assertEq(proofOfCapital.launchAvailable(), 0);
         }
     }
 
     function testTokenAvailableStateConsistency() public view {
-        // Test that tokenAvailable always equals totalLaunchSold - launchTokensEarned
+        // Test that launchAvailable always equals totalLaunchSold - launchTokensEarned
 
         // Record initial state
         uint256 initialTotalSold = proofOfCapital.totalLaunchSold();
         uint256 initialTokensEarned = proofOfCapital.launchTokensEarned();
-        uint256 initialAvailable = proofOfCapital.tokenAvailable();
+        uint256 initialAvailable = proofOfCapital.launchAvailable();
 
         // Verify initial consistency
         assertEq(initialAvailable, initialTotalSold - initialTokensEarned);
@@ -156,7 +156,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         // After any state changes, consistency should be maintained
         // This is a property that should always hold
         assertTrue(
-            proofOfCapital.tokenAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.launchTokensEarned()
+            proofOfCapital.launchAvailable() == proofOfCapital.totalLaunchSold() - proofOfCapital.launchTokensEarned()
         );
     }
 
@@ -166,7 +166,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         // Initial state
         uint256 remaining = proofOfCapital.remainingSeconds();
         bool tradingOpp = proofOfCapital.tradingOpportunity();
-        uint256 available = proofOfCapital.tokenAvailable();
+        uint256 available = proofOfCapital.launchAvailable();
 
         // Verify logical consistency
         // If remaining > 60 days, trading opportunity should be false
@@ -187,7 +187,7 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertTrue(newRemaining < remaining);
 
         // Available should remain the same (no trading activity)
-        assertEq(proofOfCapital.tokenAvailable(), available);
+        assertEq(proofOfCapital.launchAvailable(), available);
     }
 
     function testRemainingSecondsAfterLockEnd() public {
@@ -217,10 +217,10 @@ contract ProofOfCapitalViewTest is BaseTest {
         assertEq(proofOfCapital.remainingSeconds(), 0);
         assertTrue(proofOfCapital.tradingOpportunity()); // 0 < 60 days is true
 
-        // Test tokenAvailable consistency
+        // Test launchAvailable consistency
         uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
         uint256 expectedAvailable = totalSold - launchTokensEarned;
-        assertEq(proofOfCapital.tokenAvailable(), expectedAvailable);
+        assertEq(proofOfCapital.launchAvailable(), expectedAvailable);
     }
 }

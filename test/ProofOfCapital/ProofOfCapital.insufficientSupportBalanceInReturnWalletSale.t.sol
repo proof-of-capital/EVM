@@ -83,7 +83,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
         assertTrue(tokensEarnedAfterSale > 0, "Should have tokens earned after return wallet sale");
 
         // Step 4: Now we have totalLaunchSold = 5000e18, launchTokensEarned = 1000e18
-        // So tokensAvailableForReturnBuyback = 5000e18 - 1000e18 = 4000e18
+        // So launchAvailableForReturnBuyback = 5000e18 - 1000e18 = 4000e18
 
         // Step 5: Use stdstore to reduce offsetLaunch so that collateralAmountToPay > 0
         // This will make offsetAmount smaller, so effectiveAmount can exceed it

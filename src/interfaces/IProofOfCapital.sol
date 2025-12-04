@@ -96,6 +96,8 @@ interface IProofOfCapital {
     error UseReturnWalletFunction();
     error OnlyReturnWallet();
     error InvalidTokenForWithdrawal();
+    error InsufficientLaunchAvailable();
+    error ExcessCollateralAmount();
 
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
@@ -170,9 +172,9 @@ interface IProofOfCapital {
     function sellLaunchTokensReturnWallet(uint256 amount) external;
 
     // Deferred withdrawals
-    function tokenDeferredWithdrawal(address recipientAddress, uint256 amount) external;
-    function stopTokenDeferredWithdrawal() external;
-    function confirmTokenDeferredWithdrawal() external;
+    function launchDeferredWithdrawal(address recipientAddress, uint256 amount) external;
+    function stopLaunchDeferredWithdrawal() external;
+    function confirmLaunchDeferredWithdrawal() external;
     function collateralDeferredWithdrawal(address recipientAddress) external;
     function stopCollateralDeferredWithdrawal() external;
     function confirmCollateralDeferredWithdrawal() external;
@@ -194,7 +196,7 @@ interface IProofOfCapital {
     // View functions
     function remainingSeconds() external view returns (uint256);
     function tradingOpportunity() external view returns (bool);
-    function tokenAvailable() external view returns (uint256);
+    function launchAvailable() external view returns (uint256);
 
     // State variables getters
     function isActive() external view returns (bool);
@@ -210,7 +212,7 @@ interface IProofOfCapital {
     function initialPricePerToken() external view returns (uint256);
     function firstLevelTokenQuantity() external view returns (uint256);
     function currentPrice() external view returns (uint256);
-    function quantityTokensPerLevel() external view returns (uint256);
+    function quantityLaunchPerLevel() external view returns (uint256);
     function remainderOfStep() external view returns (uint256);
     function currentStep() external view returns (uint256);
     function priceIncrementMultiplier() external view returns (uint256);
@@ -225,16 +227,15 @@ interface IProofOfCapital {
     function contractCollateralBalance() external view returns (uint256);
     function launchBalance() external view returns (uint256);
     function launchTokensEarned() external view returns (uint256);
-    function actualProfit() external view returns (uint256);
     function currentStepEarned() external view returns (uint256);
     function remainderOfStepEarned() external view returns (uint256);
-    function quantityTokensPerLevelEarned() external view returns (uint256);
+    function quantityLaunchPerLevelEarned() external view returns (uint256);
     function currentPriceEarned() external view returns (uint256);
     function offsetLaunch() external view returns (uint256);
     function offsetStep() external view returns (uint256);
     function offsetPrice() external view returns (uint256);
     function remainderOfStepOffset() external view returns (uint256);
-    function quantityTokensPerLevelOffset() external view returns (uint256);
+    function quantityLaunchPerLevelOffset() external view returns (uint256);
     function collateralToken() external view returns (IERC20);
     function marketMakerAddresses(address) external view returns (bool);
     function ownerCollateralBalance() external view returns (uint256);

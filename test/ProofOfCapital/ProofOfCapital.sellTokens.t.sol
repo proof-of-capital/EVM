@@ -128,7 +128,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Schedule main token deferred withdrawal
         vm.prank(owner);
-        proofOfCapital.tokenDeferredWithdrawal(owner, 1000e18);
+        proofOfCapital.launchDeferredWithdrawal(owner, 1000e18);
 
         // User tries to sell - gets NoTokensAvailableForBuyback in initial state
         vm.prank(user);
@@ -251,6 +251,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(returnWallet);
         SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
 
+        // Transfer more tokens to returnWallet for additional sales
+        vm.prank(owner);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 30000e18);
+
         // Approve tokens for returnWallet
         vm.prank(returnWallet);
         token.approve(address(customContract), type(uint256).max);
@@ -258,6 +262,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // returnWallet sells tokens to add to contract balance
         vm.prank(returnWallet);
         customContract.sellLaunchTokensReturnWallet(5000e18);
+
+        // Sell more tokens to ensure enough launch tokens are available
+        vm.prank(returnWallet);
+        customContract.sellLaunchTokensReturnWallet(20000e18);
 
         // Approve WETH for market maker
         vm.prank(marketMaker);
@@ -467,7 +475,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     }
 
     function testBuyTokensHitsConsoleLogBranches() public {
-        // Test to hit both console.log branches in _calculateTokensToGiveForCollateralAmount
+        // Test to hit both console.log branches in _calculateLaunchToGiveForCollateralAmount
         // First branch: localCurrentStep > trendChangeStep (buy_branch_trend_change)
         // Second branch: localCurrentStep <= trendChangeStep (buy_branch_normal)
 
@@ -482,6 +490,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Transfer tokens from returnWallet to custom contract
         vm.prank(returnWallet);
         SafeERC20.safeTransfer(IERC20(address(token)), address(customContract), 40000e18);
+
+        // Transfer more tokens to returnWallet for additional sales
+        vm.prank(owner);
+        SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 30000e18);
 
         // Approve tokens for returnWallet
         vm.prank(returnWallet);
@@ -506,6 +518,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Verify first buy hit the "normal" branch: currentStep (1) <= trendChangeStep (3)
         assertGt(currentStepAfterFirst, 0, "currentStep should be > 0 after first buy");
         assertLe(currentStepAfterFirst, customContract.trendChangeStep(), "First buy should hit normal branch");
+
+        // Sell more tokens to ensure enough launch tokens are available for second buy
+        vm.prank(returnWallet);
+        customContract.sellLaunchTokensReturnWallet(20000e18);
 
         // Buy more tokens to exceed trendChangeStep
         vm.prank(marketMaker);

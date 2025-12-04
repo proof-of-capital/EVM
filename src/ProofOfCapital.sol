@@ -1030,7 +1030,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
-                    localCurrentStep = currentStepEarned;
                     remainderOfStepLocal = launchPerLevel;
                     remainingAddTokens = 0;
                 }
@@ -1160,7 +1159,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
                     localCurrentStep -= 1;
                     remainderOfStepLocal = 0;
                 } else {
-                    localCurrentStep = currentStepEarned;
                     remainderOfStepLocal = int256(launchPerLevel);
                     remainingLaunchAmount = 0;
                 }

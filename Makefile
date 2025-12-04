@@ -1,210 +1,238 @@
 # Makefile for ProofOfCapital contract deployment and management
 
-# Default network (can be overridden)
-NETWORK ?= sepolia
+.PHONY: all build test clean install format lint gas-report test-coverage setup-env check dev-setup help
+.PHONY: deploy deploy-local deploy-sepolia deploy-mainnet deploy-polygon
+.PHONY: deploy-dry-run deploy-dry-run-local deploy-dry-run-sepolia deploy-dry-run-mainnet deploy-dry-run-polygon
+.PHONY: verify verify-sepolia verify-mainnet verify-polygon
 
-# Load environment variables
 include .env
-export
 
-# Colors for output
-RED=\033[0;31m
-GREEN=\033[0;32m
-YELLOW=\033[1;33m
-BLUE=\033[0;34m
-NC=\033[0m # No Color
+LOCAL_RPC_URL := http://127.0.0.1:8545
 
-.PHONY: help build test deploy upgrade verify clean install
+SEPOLIA_RPC := ${RPC_URL_SEPOLIA}
+MAINNET_RPC := ${RPC_URL_MAINNET}
+POLYGON_RPC := ${RPC_URL_POLYGON}
 
-help: ## Display this help message
-	@echo "$(BLUE)ProofOfCapital Contract Management$(NC)"
-	@echo ""
-	@echo "$(YELLOW)Available commands:$(NC)"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+DEPLOY_SCRIPT := script/DeployProofOfCapital.s.sol:DeployProofOfCapital
 
-install: ## Install dependencies
-	@echo "$(YELLOW)Installing dependencies...$(NC)"
+PRIVATE_KEY := ${PRIVATE_KEY}
+
+all: help
+
+install:
+	@echo "Installing dependencies..."
 	forge install
-	@echo "$(GREEN)Dependencies installed successfully!$(NC)"
+	@echo "Dependencies installed successfully!"
 
-build: ## Build the contracts
-	@echo "$(YELLOW)Building contracts...$(NC)"
+build:
+	@echo "Building contracts..."
 	forge build
-	@echo "$(GREEN)Build completed successfully!$(NC)"
+	@echo "Build completed successfully!"
 
-test: ## Run tests
-	@echo "$(YELLOW)Running tests...$(NC)"
+test:
+	@echo "Running tests..."
 	forge test -vvv
-	@echo "$(GREEN)Tests completed!$(NC)"
+	@echo "Tests completed!"
 
-test-coverage: ## Run tests with coverage
-	@echo "$(YELLOW)Running tests with coverage...$(NC)"
+test-coverage:
+	@echo "Running tests with coverage..."
 	forge coverage
-	@echo "$(GREEN)Coverage report generated!$(NC)"
+	@echo "Coverage report generated!"
 
-deploy-dry-run: build ## Simulate deployment without broadcasting
-	@echo "$(YELLOW)Simulating deployment to $(NETWORK)...$(NC)"
-	@$(MAKE) _deploy-with-network NETWORK=$(NETWORK) DRY_RUN=true
-
-deploy: build ## Deploy ProofOfCapital contract
-	@echo "$(YELLOW)Deploying ProofOfCapital to $(NETWORK)...$(NC)"
-	@if [ ! -f .env ]; then \
-		echo "$(RED)Error: .env file not found. Please copy env.example to .env and configure it.$(NC)"; \
-		exit 1; \
-	fi
-	@$(MAKE) _deploy-with-network NETWORK=$(NETWORK)
-
-upgrade-dry-run: build ## Simulate upgrade without broadcasting
-	@echo "$(YELLOW)Simulating upgrade on $(NETWORK)...$(NC)"
-	@$(MAKE) _upgrade-with-network NETWORK=$(NETWORK) DRY_RUN=true
-
-upgrade: build ## Upgrade ProofOfCapital contract
-	@echo "$(YELLOW)Upgrading ProofOfCapital on $(NETWORK)...$(NC)"
-	@$(MAKE) _upgrade-with-network NETWORK=$(NETWORK)
-
-# Function to set network-specific variables
-define set_network_vars
-	$(eval NETWORK_RPC_URL := $(if $(filter mainnet,$(1)),$(RPC_URL_MAINNET),$(if $(filter sepolia,$(1)),$(RPC_URL_SEPOLIA),$(if $(filter polygon,$(1)),$(RPC_URL_POLYGON),))))
-	$(eval NETWORK_API_KEY := $(if $(filter mainnet,$(1)),$(ETHERSCAN_API_KEY_MAINNET),$(if $(filter sepolia,$(1)),$(ETHERSCAN_API_KEY_SEPOLIA),$(if $(filter polygon,$(1)),$(POLYGONSCAN_API_KEY_POLYGON),))))
-	$(eval NETWORK_WETH := $(if $(filter mainnet,$(1)),$(WETH_ADDRESS_MAINNET),$(if $(filter sepolia,$(1)),$(WETH_ADDRESS_SEPOLIA),$(if $(filter polygon,$(1)),$(WETH_ADDRESS_POLYGON),))))
-	$(eval NETWORK_TOKEN_SUPPORT := $(if $(filter mainnet,$(1)),$(TOKEN_SUPPORT_ADDRESS_MAINNET),$(if $(filter sepolia,$(1)),$(TOKEN_SUPPORT_ADDRESS_SEPOLIA),$(if $(filter polygon,$(1)),$(TOKEN_SUPPORT_ADDRESS_POLYGON),))))
-	$(eval NETWORK_PROXY := $(if $(filter mainnet,$(1)),$(PROXY_ADDRESS_MAINNET),$(if $(filter sepolia,$(1)),$(PROXY_ADDRESS_SEPOLIA),$(if $(filter polygon,$(1)),$(PROXY_ADDRESS_POLYGON),))))
-endef
-
-# Internal deployment function that uses pre-set network variables
-_deploy-with-network:
-	$(call set_network_vars,$(NETWORK))
-	@if [ -z "$(NETWORK)" ] || [ "$(NETWORK)" != "mainnet" ] && [ "$(NETWORK)" != "sepolia" ] && [ "$(NETWORK)" != "polygon" ]; then \
-		echo "$(RED)Error: Unsupported network $(NETWORK). Use: mainnet, sepolia, or polygon$(NC)"; \
-		exit 1; \
-	fi
-	@if [ -z "$(NETWORK_RPC_URL)" ]; then \
-		echo "$(RED)Error: RPC_URL not set for $(NETWORK) network$(NC)"; \
-		exit 1; \
-	fi
-	@if [ -z "$(NETWORK_API_KEY)" ]; then \
-		echo "$(RED)Error: API_KEY not set for $(NETWORK) network$(NC)"; \
-		exit 1; \
-	fi
-	@echo "$(BLUE)Network: $(NETWORK)$(NC)"
-	@echo "$(BLUE)RPC URL: $(NETWORK_RPC_URL)$(NC)"
-	@echo "$(BLUE)WETH Address: $(NETWORK_WETH)$(NC)"
-	@if [ "$(DRY_RUN)" = "true" ]; then \
-		WETH_ADDRESS=$(NETWORK_WETH) TOKEN_SUPPORT_ADDRESS=$(NETWORK_TOKEN_SUPPORT) \
-		forge script script/DeployProofOfCapital.s.sol:DeployProofOfCapital \
-			--rpc-url $(NETWORK_RPC_URL) \
-			-vvvv; \
-	else \
-		WETH_ADDRESS=$(NETWORK_WETH) TOKEN_SUPPORT_ADDRESS=$(NETWORK_TOKEN_SUPPORT) \
-		forge script script/DeployProofOfCapital.s.sol:DeployProofOfCapital \
-			--rpc-url $(NETWORK_RPC_URL) \
-			--broadcast \
-			--verify \
-			--etherscan-api-key $(NETWORK_API_KEY) \
-			-vvvv; \
-	fi
-
-# Internal upgrade function that uses pre-set network variables
-_upgrade-with-network:
-	$(call set_network_vars,$(NETWORK))
-	@if [ -z "$(NETWORK)" ] || [ "$(NETWORK)" != "mainnet" ] && [ "$(NETWORK)" != "sepolia" ] && [ "$(NETWORK)" != "polygon" ]; then \
-		echo "$(RED)Error: Unsupported network $(NETWORK). Use: mainnet, sepolia, or polygon$(NC)"; \
-		exit 1; \
-	fi
-	@if [ -z "$(NETWORK_RPC_URL)" ]; then \
-		echo "$(RED)Error: RPC_URL not set for $(NETWORK) network$(NC)"; \
-		exit 1; \
-	fi
-	@if [ -z "$(NETWORK_PROXY)" ]; then \
-		echo "$(RED)Error: PROXY_ADDRESS not set for $(NETWORK) network$(NC)"; \
-		exit 1; \
-	fi
-	@echo "$(BLUE)Network: $(NETWORK)$(NC)"
-	@echo "$(BLUE)RPC URL: $(NETWORK_RPC_URL)$(NC)"
-	@echo "$(BLUE)Proxy Address: $(NETWORK_PROXY)$(NC)"
-	@if [ "$(DRY_RUN)" = "true" ]; then \
-		PROXY_ADDRESS=$(NETWORK_PROXY) \
-		forge script script/UpgradeProofOfCapital.s.sol:UpgradeProofOfCapital \
-			--rpc-url $(NETWORK_RPC_URL) \
-			-vvvv; \
-	else \
-		PROXY_ADDRESS=$(NETWORK_PROXY) \
-		forge script script/UpgradeProofOfCapital.s.sol:UpgradeProofOfCapital \
-			--rpc-url $(NETWORK_RPC_URL) \
-			--broadcast \
-			--verify \
-			--etherscan-api-key $(NETWORK_API_KEY) \
-			-vvvv; \
-	fi
-
-verify: ## Verify contract on Etherscan
-	$(call set_network_vars,$(NETWORK))
-	@echo "$(YELLOW)Verifying contract...$(NC)"
-	@if [ -z "$(CONTRACT_ADDRESS)" ]; then \
-		echo "$(RED)Error: CONTRACT_ADDRESS not set$(NC)"; \
-		exit 1; \
-	fi
-	@if [ -z "$(NETWORK)" ] || [ "$(NETWORK)" != "mainnet" ] && [ "$(NETWORK)" != "sepolia" ] && [ "$(NETWORK)" != "polygon" ]; then \
-		echo "$(RED)Error: Unsupported network $(NETWORK)$(NC)"; \
-		exit 1; \
-	fi
-	@forge verify-contract $(CONTRACT_ADDRESS) src/ProofOfCapital.sol:ProofOfCapital \
-		--chain-id $$(cast chain-id --rpc-url $(NETWORK_RPC_URL)) \
-		--etherscan-api-key $(NETWORK_API_KEY)
-	@echo "$(GREEN)Verification completed!$(NC)"
-
-clean: ## Clean build artifacts
-	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
+clean:
+	@echo "Cleaning build artifacts..."
 	forge clean
 	rm -f deployment-*.txt
-	@echo "$(GREEN)Clean completed!$(NC)"
+	@echo "Clean completed!"
 
-format: ## Format code
-	@echo "$(YELLOW)Formatting code...$(NC)"
+format:
+	@echo "Formatting code..."
 	forge fmt
-	@echo "$(GREEN)Code formatted!$(NC)"
+	@echo "Code formatted!"
 
-lint: ## Run linter
-	@echo "$(YELLOW)Running linter...$(NC)"
+lint:
+	@echo "Running linter..."
 	forge fmt --check
-	@echo "$(GREEN)Linting completed!$(NC)"
+	@echo "Linting completed!"
 
-gas-report: ## Generate gas usage report
-	@echo "$(YELLOW)Generating gas report...$(NC)"
+gas-report:
+	@echo "Generating gas report..."
 	forge test --gas-report
-	@echo "$(GREEN)Gas report generated!$(NC)"
+	@echo "Gas report generated!"
 
-setup-env: ## Setup environment file from example
+setup-env:
 	@if [ ! -f .env ]; then \
-		echo "$(YELLOW)Creating .env file from env.example...$(NC)"; \
+		echo "Creating .env file from env.example..."; \
 		cp env.example .env; \
-		echo "$(GREEN).env file created. Please edit it with your configuration.$(NC)"; \
+		echo ".env file created. Please edit it with your configuration."; \
 	else \
-		echo "$(YELLOW).env file already exists.$(NC)"; \
+		echo ".env file already exists."; \
 	fi
 
-# Network-specific commands
-deploy-mainnet: ## Deploy to mainnet
-	@$(MAKE) deploy NETWORK=mainnet
+# Deploy commands
+deploy-local:
+	forge clean
+	@echo "Deploying ProofOfCapital to local network..."
+	WETH_ADDRESS=${WETH_ADDRESS_SEPOLIA} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_SEPOLIA} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${LOCAL_RPC_URL} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		-vvv
 
-deploy-sepolia: ## Deploy to sepolia
-	@$(MAKE) deploy NETWORK=sepolia
+deploy-sepolia:
+	forge clean
+	@echo "Deploying ProofOfCapital to Sepolia test network..."
+	WETH_ADDRESS=${WETH_ADDRESS_SEPOLIA} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_SEPOLIA} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${SEPOLIA_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--verify \
+		--etherscan-api-key ${ETHERSCAN_API_KEY} \
+		--verifier etherscan \
+		-vvv
 
-deploy-polygon: ## Deploy to polygon
-	@$(MAKE) deploy NETWORK=polygon
+deploy-mainnet:
+	forge clean
+	@echo "Deploying ProofOfCapital to Mainnet..."
+	WETH_ADDRESS=${WETH_ADDRESS_MAINNET} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_MAINNET} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${MAINNET_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--verify \
+		--etherscan-api-key ${ETHERSCAN_API_KEY} \
+		--verifier etherscan \
+		-vvv
 
-upgrade-mainnet: ## Upgrade on mainnet
-	@$(MAKE) upgrade NETWORK=mainnet
+deploy-polygon:
+	forge clean
+	@echo "Deploying ProofOfCapital to Polygon network..."
+	WETH_ADDRESS=${WETH_ADDRESS_POLYGON} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_POLYGON} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${POLYGON_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--verify \
+		--etherscan-api-key ${ETHERSCAN_API_KEY} \
+		--verifier etherscan \
+		--legacy \
+		-vvv
 
-upgrade-sepolia: ## Upgrade on sepolia
-	@$(MAKE) upgrade NETWORK=sepolia
+# Deploy dry-run commands (simulate without broadcasting)
+deploy-dry-run-local:
+	forge clean
+	@echo "Simulating deployment to local network..."
+	WETH_ADDRESS=${WETH_ADDRESS_SEPOLIA} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_SEPOLIA} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${LOCAL_RPC_URL} \
+		--private-key ${PRIVATE_KEY} \
+		-vvv
 
-upgrade-polygon: ## Upgrade on polygon
-	@$(MAKE) upgrade NETWORK=polygon
+deploy-dry-run-sepolia:
+	forge clean
+	@echo "Simulating deployment to Sepolia test network..."
+	WETH_ADDRESS=${WETH_ADDRESS_SEPOLIA} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_SEPOLIA} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${SEPOLIA_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		-vvv
+
+deploy-dry-run-mainnet:
+	forge clean
+	@echo "Simulating deployment to Mainnet..."
+	WETH_ADDRESS=${WETH_ADDRESS_MAINNET} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_MAINNET} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${MAINNET_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		-vvv
+
+deploy-dry-run-polygon:
+	forge clean
+	@echo "Simulating deployment to Polygon network..."
+	WETH_ADDRESS=${WETH_ADDRESS_POLYGON} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_POLYGON} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${POLYGON_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		-vvv
+
+# Verify commands
+verify-sepolia:
+	@echo "Verifying contract on Sepolia..."
+	@if [ -z "$(CONTRACT_ADDRESS)" ]; then \
+		echo "Error: CONTRACT_ADDRESS not set"; \
+		exit 1; \
+	fi
+	forge verify-contract $(CONTRACT_ADDRESS) src/ProofOfCapital.sol:ProofOfCapital \
+		--chain-id $$(cast chain-id --rpc-url ${SEPOLIA_RPC}) \
+		--etherscan-api-key ${ETHERSCAN_API_KEY}
+	@echo "Verification completed!"
+
+verify-mainnet:
+	@echo "Verifying contract on Mainnet..."
+	@if [ -z "$(CONTRACT_ADDRESS)" ]; then \
+		echo "Error: CONTRACT_ADDRESS not set"; \
+		exit 1; \
+	fi
+	forge verify-contract $(CONTRACT_ADDRESS) src/ProofOfCapital.sol:ProofOfCapital \
+		--chain-id $$(cast chain-id --rpc-url ${MAINNET_RPC}) \
+		--etherscan-api-key ${ETHERSCAN_API_KEY}
+	@echo "Verification completed!"
+
+verify-polygon:
+	@echo "Verifying contract on Polygon..."
+	@if [ -z "$(CONTRACT_ADDRESS)" ]; then \
+		echo "Error: CONTRACT_ADDRESS not set"; \
+		exit 1; \
+	fi
+	forge verify-contract $(CONTRACT_ADDRESS) src/ProofOfCapital.sol:ProofOfCapital \
+		--chain-id $$(cast chain-id --rpc-url ${POLYGON_RPC}) \
+		--etherscan-api-key ${ETHERSCAN_API_KEY}
+	@echo "Verification completed!"
 
 # Development helpers
-dev-setup: install setup-env build test ## Complete development setup
-	@echo "$(GREEN)Development environment setup completed!$(NC)"
+dev-setup: install setup-env build test
+	@echo "Development environment setup completed!"
 
-check: build test lint ## Run all checks
-	@echo "$(GREEN)All checks passed!$(NC)" 
+check: build test lint
+	@echo "All checks passed!"
+
+help:
+	@echo "Available commands:"
+	@echo "  make build                    - Build contracts"
+	@echo "  make test                     - Run tests"
+	@echo "  make test-coverage            - Run tests with coverage"
+	@echo "  make clean                    - Clean build artifacts"
+	@echo "  make format                   - Format code"
+	@echo "  make lint                     - Run linter"
+	@echo "  make gas-report               - Generate gas usage report"
+	@echo "  make install                  - Install dependencies"
+	@echo "  make setup-env                - Setup environment file from example"
+	@echo "  make check                    - Run all checks (build, test, lint)"
+	@echo "  make dev-setup                - Complete development setup"
+	@echo ""
+	@echo "Deploy commands:"
+	@echo "  make deploy-local             - Deploy to local network"
+	@echo "  make deploy-sepolia           - Deploy to Sepolia with verification"
+	@echo "  make deploy-mainnet           - Deploy to Mainnet with verification (use with caution!)"
+	@echo "  make deploy-polygon           - Deploy to Polygon with verification"
+	@echo ""
+	@echo "Deploy dry-run commands (simulate without broadcasting):"
+	@echo "  make deploy-dry-run-local     - Simulate deployment to local network"
+	@echo "  make deploy-dry-run-sepolia   - Simulate deployment to Sepolia"
+	@echo "  make deploy-dry-run-mainnet   - Simulate deployment to Mainnet"
+	@echo "  make deploy-dry-run-polygon   - Simulate deployment to Polygon"
+	@echo ""
+	@echo "Verify commands:"
+	@echo "  make verify-sepolia           - Verify contract on Sepolia (requires CONTRACT_ADDRESS)"
+	@echo "  make verify-mainnet           - Verify contract on Mainnet (requires CONTRACT_ADDRESS)"
+	@echo "  make verify-polygon           - Verify contract on Polygon (requires CONTRACT_ADDRESS)"
+	@echo ""
+	@echo "Before deploying, make sure to set up the required environment variables in .env file:"
+	@echo "  - PRIVATE_KEY: Your private key for deployment"
+	@echo "  - RPC_URL_SEPOLIA, RPC_URL_MAINNET, RPC_URL_POLYGON: RPC URLs for the networks"
+	@echo "  - WETH_ADDRESS_SEPOLIA, WETH_ADDRESS_MAINNET, WETH_ADDRESS_POLYGON: WETH token addresses"
+	@echo "  - TOKEN_SUPPORT_ADDRESS_SEPOLIA, TOKEN_SUPPORT_ADDRESS_MAINNET, TOKEN_SUPPORT_ADDRESS_POLYGON: Token support addresses"
+	@echo "  - ETHERSCAN_API_KEY: Etherscan API key (unified for all networks)"
+	@echo "  - CONTRACT_ADDRESS: Contract address (for verification)"

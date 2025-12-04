@@ -1075,7 +1075,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         uint256 totalProfit = 0;
         uint256 remainderOfLaunch = launchBalance - totalLaunchSold;
 
-        while (remainingCollateralAmount > 0 && remainderOfLaunch >= launchToGive) {
+        while (remainingCollateralAmount > 0 && remainderOfLaunch > launchToGive) {
             int256 launchAvailableInStep = remainderOfStepLocal;
             int256 collateralRequiredForStep =
                 (int256(launchAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);

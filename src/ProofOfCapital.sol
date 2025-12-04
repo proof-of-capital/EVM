@@ -1111,9 +1111,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
             }
         }
 
-        if (remainderOfLaunch < launchToGive) {
-            launchToGive = remainderOfLaunch;
-        }
+        require(remainderOfLaunch >= launchToGive, InsufficientLaunchAvailable());
+
+        require(remainingCollateralAmount == 0, ExcessCollateralAmount());
 
         currentStep = localCurrentStep;
         quantityLaunchPerLevel = launchPerLevel;

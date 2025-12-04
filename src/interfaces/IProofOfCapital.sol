@@ -96,6 +96,8 @@ interface IProofOfCapital {
     error UseReturnWalletFunction();
     error OnlyReturnWallet();
     error InvalidTokenForWithdrawal();
+    error InsufficientLaunchAvailable();
+    error ExcessCollateralAmount();
 
     // Events
     event OldContractRegistered(address indexed oldContractAddress);

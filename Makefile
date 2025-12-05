@@ -1,9 +1,9 @@
 # Makefile for ProofOfCapital contract deployment and management
 
 .PHONY: all build test clean install format lint gas-report test-coverage setup-env check dev-setup help
-.PHONY: deploy deploy-local deploy-sepolia deploy-mainnet deploy-polygon
-.PHONY: deploy-dry-run deploy-dry-run-local deploy-dry-run-sepolia deploy-dry-run-mainnet deploy-dry-run-polygon
-.PHONY: verify verify-sepolia verify-mainnet verify-polygon
+.PHONY: deploy deploy-local deploy-sepolia deploy-mainnet deploy-polygon deploy-bsc
+.PHONY: deploy-dry-run deploy-dry-run-local deploy-dry-run-sepolia deploy-dry-run-mainnet deploy-dry-run-polygon deploy-dry-run-bsc
+.PHONY: verify verify-sepolia verify-mainnet verify-polygon verify-bsc
 
 include .env
 
@@ -12,6 +12,7 @@ LOCAL_RPC_URL := http://127.0.0.1:8545
 SEPOLIA_RPC := ${RPC_URL_SEPOLIA}
 MAINNET_RPC := ${RPC_URL_MAINNET}
 POLYGON_RPC := ${RPC_URL_POLYGON}
+BSC_RPC := ${RPC_URL_BSC}
 
 DEPLOY_SCRIPT := script/DeployProofOfCapital.s.sol:DeployProofOfCapital
 
@@ -120,6 +121,19 @@ deploy-polygon:
 		--legacy \
 		-vvv
 
+deploy-bsc:
+	forge clean
+	@echo "Deploying ProofOfCapital to BSC network..."
+	TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_BSC} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${BSC_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--verify \
+		--etherscan-api-key ${BSCSCAN_API_KEY} \
+		--verifier bscscan \
+		-vvv
+
 # Deploy dry-run commands (simulate without broadcasting)
 deploy-dry-run-local:
 	forge clean
@@ -157,6 +171,15 @@ deploy-dry-run-polygon:
 		--private-key ${PRIVATE_KEY} \
 		-vvv
 
+deploy-dry-run-bsc:
+	forge clean
+	@echo "Simulating deployment to BSC network..."
+	WETH_ADDRESS=${WETH_ADDRESS_BSC} TOKEN_SUPPORT_ADDRESS=${TOKEN_SUPPORT_ADDRESS_BSC} \
+	forge script ${DEPLOY_SCRIPT} \
+		--rpc-url ${BSC_RPC} \
+		--private-key ${PRIVATE_KEY} \
+		-vvv
+
 # Verify commands
 verify-sepolia:
 	@echo "Verifying contract on Sepolia..."
@@ -191,6 +214,17 @@ verify-polygon:
 		--etherscan-api-key ${ETHERSCAN_API_KEY}
 	@echo "Verification completed!"
 
+verify-bsc:
+	@echo "Verifying contract on BSC..."
+	@if [ -z "$(CONTRACT_ADDRESS)" ]; then \
+		echo "Error: CONTRACT_ADDRESS not set"; \
+		exit 1; \
+	fi
+	forge verify-contract $(CONTRACT_ADDRESS) src/ProofOfCapital.sol:ProofOfCapital \
+		--chain-id $$(cast chain-id --rpc-url ${BSC_RPC}) \
+		--etherscan-api-key ${BSCSCAN_API_KEY}
+	@echo "Verification completed!"
+
 # Development helpers
 dev-setup: install setup-env build test
 	@echo "Development environment setup completed!"
@@ -217,22 +251,26 @@ help:
 	@echo "  make deploy-sepolia           - Deploy to Sepolia with verification"
 	@echo "  make deploy-mainnet           - Deploy to Mainnet with verification (use with caution!)"
 	@echo "  make deploy-polygon           - Deploy to Polygon with verification"
+	@echo "  make deploy-bsc               - Deploy to BSC with verification"
 	@echo ""
 	@echo "Deploy dry-run commands (simulate without broadcasting):"
 	@echo "  make deploy-dry-run-local     - Simulate deployment to local network"
 	@echo "  make deploy-dry-run-sepolia   - Simulate deployment to Sepolia"
 	@echo "  make deploy-dry-run-mainnet   - Simulate deployment to Mainnet"
 	@echo "  make deploy-dry-run-polygon   - Simulate deployment to Polygon"
+	@echo "  make deploy-dry-run-bsc       - Simulate deployment to BSC"
 	@echo ""
 	@echo "Verify commands:"
 	@echo "  make verify-sepolia           - Verify contract on Sepolia (requires CONTRACT_ADDRESS)"
 	@echo "  make verify-mainnet           - Verify contract on Mainnet (requires CONTRACT_ADDRESS)"
 	@echo "  make verify-polygon           - Verify contract on Polygon (requires CONTRACT_ADDRESS)"
+	@echo "  make verify-bsc               - Verify contract on BSC (requires CONTRACT_ADDRESS)"
 	@echo ""
 	@echo "Before deploying, make sure to set up the required environment variables in .env file:"
 	@echo "  - PRIVATE_KEY: Your private key for deployment"
-	@echo "  - RPC_URL_SEPOLIA, RPC_URL_MAINNET, RPC_URL_POLYGON: RPC URLs for the networks"
-	@echo "  - WETH_ADDRESS_SEPOLIA, WETH_ADDRESS_MAINNET, WETH_ADDRESS_POLYGON: WETH token addresses"
-	@echo "  - TOKEN_SUPPORT_ADDRESS_SEPOLIA, TOKEN_SUPPORT_ADDRESS_MAINNET, TOKEN_SUPPORT_ADDRESS_POLYGON: Token support addresses"
-	@echo "  - ETHERSCAN_API_KEY: Etherscan API key (unified for all networks)"
+	@echo "  - RPC_URL_SEPOLIA, RPC_URL_MAINNET, RPC_URL_POLYGON, RPC_URL_BSC: RPC URLs for the networks"
+	@echo "  - WETH_ADDRESS_SEPOLIA, WETH_ADDRESS_MAINNET, WETH_ADDRESS_POLYGON, WETH_ADDRESS_BSC: WETH token addresses"
+	@echo "  - TOKEN_SUPPORT_ADDRESS_SEPOLIA, TOKEN_SUPPORT_ADDRESS_MAINNET, TOKEN_SUPPORT_ADDRESS_POLYGON, TOKEN_SUPPORT_ADDRESS_BSC: Token support addresses"
+	@echo "  - ETHERSCAN_API_KEY: Etherscan API key (for Ethereum networks)"
+	@echo "  - BSCSCAN_API_KEY: BscScan API key (for BSC network)"
 	@echo "  - CONTRACT_ADDRESS: Contract address (for verification)"

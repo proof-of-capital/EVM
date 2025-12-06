@@ -131,7 +131,7 @@ deploy-bsc:
 		--broadcast \
 		--verify \
 		--etherscan-api-key ${BSCSCAN_API_KEY} \
-		--verifier bscscan \
+		--verifier etherscan \
 		-vvv
 
 # Deploy dry-run commands (simulate without broadcasting)

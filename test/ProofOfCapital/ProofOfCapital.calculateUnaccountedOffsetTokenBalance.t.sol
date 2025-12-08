@@ -574,9 +574,7 @@ contract ProofOfCapitalCalculateUnaccountedOffsetTokenBalanceTest is BaseTest {
         assertGt(
             testContract.offsetStep(), testContract.currentStepEarned(), "offsetStep should be > currentStepEarned"
         );
-        assertGt(
-            testContract.offsetStep(), testContract.trendChangeStep(), "offsetStep should be > trendChangeStep"
-        );
+        assertGt(testContract.offsetStep(), testContract.trendChangeStep(), "offsetStep should be > trendChangeStep");
 
         // Now call calculateUnaccountedOffsetLaunchBalance - this should trigger the offset_trend_change_branch
         uint256 processAmount = 1000e18; // Amount to process that will trigger the branch

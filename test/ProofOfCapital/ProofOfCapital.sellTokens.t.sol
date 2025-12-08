@@ -226,14 +226,14 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // First, approve tokens for owner
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
-        
+
         // Set totalLaunchSold to equal offsetLaunch to create unaccountedOffsetLaunchBalance
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         customContract.depositLaunch(2000e18); // This should create unaccountedOffsetLaunchBalance
-        
+
         // After deposit, totalLaunchSold will be offsetLaunch + 2000e18, which is > offsetLaunch
 
         // Now create unaccountedCollateralBalance to trigger _calculateChangeOffsetCollateral
@@ -332,7 +332,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 offsetLaunch = customContract.offsetLaunch();
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
@@ -388,14 +388,14 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 offsetLaunch = customContract.offsetLaunch();
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
-        
+
         // First deposit to set isFirstLaunchDeposit flag
         vm.prank(owner);
         customContract.depositLaunch(100e18);
-        
+
         // Second deposit to create unaccountedOffsetLaunchBalance
         vm.prank(owner);
         customContract.depositLaunch(2000e18);
@@ -452,14 +452,14 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 offsetLaunch = customContract.offsetLaunch();
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
-        
+
         // First deposit to set isFirstLaunchDeposit flag
         vm.prank(owner);
         customContract.depositLaunch(100e18);
-        
+
         // Second deposit to create unaccountedOffsetLaunchBalance
         vm.prank(owner);
         customContract.depositLaunch(2000e18);
@@ -517,14 +517,14 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 offsetLaunch = customContract.offsetLaunch();
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
-        
+
         // First deposit to set isFirstLaunchDeposit flag
         vm.prank(owner);
         customContract.depositLaunch(100e18);
-        
+
         // Second deposit to create unaccountedOffsetLaunchBalance
         vm.prank(owner);
         customContract.depositLaunch(2000e18);
@@ -578,12 +578,12 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 offsetLaunch = customContract.offsetLaunch();
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
         customContract.depositLaunch(2000e18);
-        
+
         // Process unaccountedOffsetLaunchBalance to set offsetStep > 0
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(1000e18);
@@ -638,12 +638,12 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 offsetLaunch = customContract.offsetLaunch();
         uint256 slotTotalSold = _stdstore.target(address(customContract)).sig("totalLaunchSold()").find();
         vm.store(address(customContract), bytes32(slotTotalSold), bytes32(offsetLaunch));
-        
+
         vm.prank(owner);
         token.approve(address(customContract), type(uint256).max);
         vm.prank(owner);
         customContract.depositLaunch(2000e18);
-        
+
         // Process unaccountedOffsetLaunchBalance to set offsetStep > 0
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(1000e18);

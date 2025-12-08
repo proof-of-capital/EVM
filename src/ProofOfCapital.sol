@@ -32,7 +32,6 @@
 
 pragma solidity 0.8.29;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -45,7 +44,7 @@ import {Constants} from "./utils/Constant.sol";
  * @dev Proof of Capital contract
  * @notice This contract allows locking desired part of token issuance for selected period with guaranteed buyback
  */
-contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
+contract ProofOfCapital is Ownable, IProofOfCapital {
     using SafeERC20 for IERC20;
 
     // Contract state
@@ -496,7 +495,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Buy tokens with collateral tokens
      */
-    function buyLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract whenInitialized {
+    function buyLaunchTokens(uint256 amount) external override onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
         require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
@@ -510,7 +509,6 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     function depositCollateral(uint256 amount)
         external
         override
-        nonReentrant
         onlyActiveContract
         onlyOwnerOrOldContract
         whenInitialized
@@ -526,7 +524,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Deposit launch tokens back to contract (for owners and old contracts)
      * Used when owner needs to return tokens and potentially trigger offset reduction
      */
-    function depositLaunch(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract whenInitialized {
+    function depositLaunch(uint256 amount) external override onlyActiveContract onlyOwnerOrOldContract whenInitialized {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -551,7 +549,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Sell tokens back to contract (for regular users and market makers)
      */
-    function sellLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract whenInitialized {
+    function sellLaunchTokens(uint256 amount) external override onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
         require(!returnWalletAddresses[msg.sender], UseReturnWalletFunction());
 
@@ -562,7 +560,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Sell tokens back to contract (for return wallet only)
      */
-    function sellLaunchTokensReturnWallet(uint256 amount) external override nonReentrant onlyActiveContract whenInitialized {
+    function sellLaunchTokensReturnWallet(uint256 amount) external override onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
         require(returnWalletAddresses[msg.sender], OnlyReturnWallet());
 
@@ -574,7 +572,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Withdraw all tokens after lock period
      * @notice Only DAO can withdraw all tokens after lock period ends
      */
-    function withdrawAllLaunchTokens() external override onlyDao nonReentrant {
+    function withdrawAllLaunchTokens() external override onlyDao {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
         uint256 _launchBalance = launchToken.balanceOf(address(this));
         require(_launchBalance > 0, NoTokensToWithdraw());
@@ -590,7 +588,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Withdraw all collateral tokens after lock period
      * @notice Only DAO can withdraw all collateral tokens after lock period ends
      */
-    function withdrawAllCollateralTokens() external override onlyDao nonReentrant {
+    function withdrawAllCollateralTokens() external override onlyDao {
         require(block.timestamp >= lockEndTime, LockPeriodNotEnded());
         uint256 _collateralBalance = collateralToken.balanceOf(address(this));
         require(_collateralBalance > 0, NoCollateralTokensToWithdraw());
@@ -635,7 +633,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted collateral balance gradually
      * @param amount Amount of collateral to process
      */
-    function calculateUnaccountedCollateralBalance(uint256 amount) external override nonReentrant {
+    function calculateUnaccountedCollateralBalance(uint256 amount) external override {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();
@@ -659,7 +657,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted offset balance gradually
      * @param amount Amount of offset tokens to process
      */
-    function calculateUnaccountedOffsetBalance(uint256 amount) external override nonReentrant {
+    function calculateUnaccountedOffsetBalance(uint256 amount) external override {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();
@@ -682,7 +680,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Calculate unaccounted offset token balance gradually (for reducing offset when tokens are returned)
      * @param amount Amount of tokens to process
      */
-    function calculateUnaccountedOffsetLaunchBalance(uint256 amount) external override nonReentrant {
+    function calculateUnaccountedOffsetLaunchBalance(uint256 amount) external override {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             _checkOwner();
@@ -699,7 +697,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Get profit on request
      */
-    function claimProfitOnRequest() external override nonReentrant {
+    function claimProfitOnRequest() external override {
         if (msg.sender == owner()) {
             require(ownerCollateralBalance > 0, NoProfitAvailable());
             uint256 profitAmount = ownerCollateralBalance;

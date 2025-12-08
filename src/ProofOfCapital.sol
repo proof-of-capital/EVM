@@ -541,6 +541,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     uint256 remainingCapacity = availableCapacity - unaccountedOffsetLaunchBalance;
                     uint256 newAmount = amount < remainingCapacity ? amount : remainingCapacity;
                     unaccountedOffsetLaunchBalance += newAmount;
+                    isInitialized = false;
                 }
             }
         }
@@ -690,6 +691,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         _calculateChangeOffsetLaunch(amount);
         unaccountedOffsetLaunchBalance -= amount;
+        if (unaccountedOffsetLaunchBalance == 0) {
+            isInitialized = true;
+        }
 
         emit UnaccountedOffsetTokenBalanceProcessed(amount);
     }

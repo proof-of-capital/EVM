@@ -410,11 +410,29 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(1000e18);
 
+        // Process remaining unaccountedOffsetLaunchBalance to re-initialize contract
+        uint256 remainingUnaccountedOffsetLaunchBalance = customContract.unaccountedOffsetLaunchBalance();
+        if (remainingUnaccountedOffsetLaunchBalance > 0) {
+            vm.prank(owner);
+            customContract.calculateUnaccountedOffsetLaunchBalance(remainingUnaccountedOffsetLaunchBalance);
+        }
+
         // Now create more unaccountedOffsetLaunchBalance to trigger the condition check
         vm.prank(owner);
         customContract.depositLaunch(1000e18);
 
+        // Process the newly created unaccountedOffsetLaunchBalance to re-initialize contract
+        uint256 newUnaccountedOffsetLaunchBalance = customContract.unaccountedOffsetLaunchBalance();
+        if (newUnaccountedOffsetLaunchBalance > 0) {
+            vm.prank(owner);
+            customContract.calculateUnaccountedOffsetLaunchBalance(newUnaccountedOffsetLaunchBalance);
+        }
+
         // Second call - this should trigger _calculateChangeOffsetLaunch
+        // Create more unaccountedOffsetLaunchBalance again
+        vm.prank(owner);
+        customContract.depositLaunch(1000e18);
+
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(500e18);
     }
@@ -474,11 +492,29 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(1000e18);
 
+        // Process remaining unaccountedOffsetLaunchBalance to re-initialize contract
+        uint256 remainingUnaccountedOffsetLaunchBalance = customContract.unaccountedOffsetLaunchBalance();
+        if (remainingUnaccountedOffsetLaunchBalance > 0) {
+            vm.prank(owner);
+            customContract.calculateUnaccountedOffsetLaunchBalance(remainingUnaccountedOffsetLaunchBalance);
+        }
+
         // Now create more unaccountedOffsetLaunchBalance to trigger the condition check
         vm.prank(owner);
         customContract.depositLaunch(1000e18);
 
+        // Process the newly created unaccountedOffsetLaunchBalance to re-initialize contract
+        uint256 newUnaccountedOffsetLaunchBalance = customContract.unaccountedOffsetLaunchBalance();
+        if (newUnaccountedOffsetLaunchBalance > 0) {
+            vm.prank(owner);
+            customContract.calculateUnaccountedOffsetLaunchBalance(newUnaccountedOffsetLaunchBalance);
+        }
+
         // Second call - this should trigger _calculateChangeOffsetLaunch
+        // Create more unaccountedOffsetLaunchBalance again
+        vm.prank(owner);
+        customContract.depositLaunch(1000e18);
+
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(500e18);
     }
@@ -533,7 +569,25 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         customContract.calculateUnaccountedOffsetLaunchBalance(1000e18);
 
+        // Process remaining unaccountedOffsetLaunchBalance to re-initialize contract
+        uint256 remainingUnaccountedOffsetLaunchBalance = customContract.unaccountedOffsetLaunchBalance();
+        if (remainingUnaccountedOffsetLaunchBalance > 0) {
+            vm.prank(owner);
+            customContract.calculateUnaccountedOffsetLaunchBalance(remainingUnaccountedOffsetLaunchBalance);
+        }
+
         // Create additional unaccountedOffsetLaunchBalance
+        vm.prank(owner);
+        customContract.depositLaunch(1000e18);
+
+        // Process the newly created unaccountedOffsetLaunchBalance to re-initialize contract
+        uint256 newUnaccountedOffsetLaunchBalance = customContract.unaccountedOffsetLaunchBalance();
+        if (newUnaccountedOffsetLaunchBalance > 0) {
+            vm.prank(owner);
+            customContract.calculateUnaccountedOffsetLaunchBalance(newUnaccountedOffsetLaunchBalance);
+        }
+
+        // Create more unaccountedOffsetLaunchBalance again to trigger the condition check
         vm.prank(owner);
         customContract.depositLaunch(1000e18);
 

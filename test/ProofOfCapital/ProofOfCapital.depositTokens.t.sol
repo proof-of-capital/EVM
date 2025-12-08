@@ -279,7 +279,21 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
 
         vm.startPrank(owner);
         proofOfCapital.depositLaunch(depositAmount1);
+
+        // Check if unaccountedOffsetLaunchBalance was created and process it if needed
+        uint256 unaccountedOffsetLaunchBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
+        if (unaccountedOffsetLaunchBalance > 0) {
+            proofOfCapital.calculateUnaccountedOffsetLaunchBalance(unaccountedOffsetLaunchBalance);
+        }
+
         proofOfCapital.depositLaunch(depositAmount2);
+
+        // Check if unaccountedOffsetLaunchBalance was created and process it if needed
+        unaccountedOffsetLaunchBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
+        if (unaccountedOffsetLaunchBalance > 0) {
+            proofOfCapital.calculateUnaccountedOffsetLaunchBalance(unaccountedOffsetLaunchBalance);
+        }
+
         proofOfCapital.depositLaunch(depositAmount3);
         vm.stopPrank();
 

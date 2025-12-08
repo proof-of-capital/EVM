@@ -43,6 +43,9 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
     address public user = address(0x5);
 
     function testHandleReturnWalletSaleConsoleLog() public {
+        // Initialize contract if needed
+        initializeContract();
+
         // when offsetLaunch > launchTokensEarned and effectiveAmount > offsetAmount
 
         // Step 1: Owner deposits tokens to create launchBalance
@@ -104,7 +107,19 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
         assertTrue(currentTotalTokensSold > currentTokensEarned, "totalLaunchSold should be > launchTokensEarned");
 
         // Step 5: Create collateral balance to ensure contractCollateralBalance > 0
-        createCollateralBalance(10000e18);
+        // First, give tokens to returnWallet and create collateral by buying tokens
+        vm.startPrank(owner);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 50000e18);
+        vm.stopPrank();
+
+        vm.startPrank(marketMaker);
+        weth.approve(address(proofOfCapital), 50000e18);
+        proofOfCapital.buyLaunchTokens(20000e18); // This creates collateral balance
+        vm.stopPrank();
+
+        // Verify we have collateral balance
+        uint256 collateralBalance = proofOfCapital.contractCollateralBalance();
+        assertGt(collateralBalance, 0, "Should have collateral balance");
 
         // Step 6: Give returnWallet more tokens and try to sell again
         vm.startPrank(owner);

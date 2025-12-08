@@ -111,6 +111,9 @@ contract ProofOfCapitalViewTest is BaseTest {
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
+        // Initialize contract if needed
+        initializeContract();
+
         // This tests edge case where launchTokensEarned equals totalLaunchSold
         // In initial state: totalLaunchSold = 10000e18, launchTokensEarned = 0
 

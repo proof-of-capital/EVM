@@ -45,6 +45,9 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
     address public user = address(0x5);
 
     function testInsufficientCollateralBalanceInTokenSale() public {
+        // Initialize contract if needed
+        initializeContract();
+
         // This test verifies that _handleLaucnhTokenSale reverts with InsufficientCollateralBalance
         // when contractCollateralBalance is less than collateralAmountToPay
 

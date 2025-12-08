@@ -75,6 +75,9 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         vm.startPrank(oldContract);
         token.approve(address(proofOfCapital), type(uint256).max);
         vm.stopPrank();
+
+        // Initialize contract if needed
+        initializeContract();
     }
 
     // Test successful depositCollateral by owner - goes to launchBalance

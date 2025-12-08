@@ -45,6 +45,9 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
     address public user = address(0x5);
 
     function testInsufficientCollateralBalanceInReturnWalletSale() public {
+        // Initialize contract if needed
+        initializeContract();
+
         // This test verifies that _handleReturnWalletSale reverts with InsufficientCollateralBalance
         // when contractCollateralBalance is less than collateralAmountToPay
 

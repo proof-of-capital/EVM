@@ -134,6 +134,11 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     // First deposit tracking
     bool public isFirstLaunchDeposit; // Flag to track if this is the first launch deposit
 
+    modifier whenInitialized() {
+        _isInitialized();
+        _;
+    }
+
     modifier onlyOwnerOrOldContract() {
         _onlyOwnerOrOldContract();
         _;
@@ -491,7 +496,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Buy tokens with collateral tokens
      */
-    function buyLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract {
+    function buyLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
         require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
@@ -508,6 +513,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
         nonReentrant
         onlyActiveContract
         onlyOwnerOrOldContract
+        whenInitialized
     {
         require(amount > 0, InvalidAmount());
 
@@ -520,7 +526,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
      * @dev Deposit launch tokens back to contract (for owners and old contracts)
      * Used when owner needs to return tokens and potentially trigger offset reduction
      */
-    function depositLaunch(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract {
+    function depositLaunch(uint256 amount) external override nonReentrant onlyActiveContract onlyOwnerOrOldContract whenInitialized {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -545,7 +551,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Sell tokens back to contract (for regular users and market makers)
      */
-    function sellLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract {
+    function sellLaunchTokens(uint256 amount) external override nonReentrant onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
         require(!returnWalletAddresses[msg.sender], UseReturnWalletFunction());
 
@@ -556,7 +562,7 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
     /**
      * @dev Sell tokens back to contract (for return wallet only)
      */
-    function sellLaunchTokensReturnWallet(uint256 amount) external override nonReentrant onlyActiveContract {
+    function sellLaunchTokensReturnWallet(uint256 amount) external override nonReentrant onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
         require(returnWalletAddresses[msg.sender], OnlyReturnWallet());
 
@@ -1266,5 +1272,9 @@ contract ProofOfCapital is ReentrancyGuard, Ownable, IProofOfCapital {
 
     function _onlyDao() internal view {
         require(msg.sender == daoAddress, AccessDenied());
+    }
+
+    function _isInitialized() internal view {
+        require(isInitialized, ContractNotInitialized());
     }
 }

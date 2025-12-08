@@ -92,6 +92,7 @@ interface IProofOfCapital {
     error InsufficientUnaccountedOffsetTokenBalance();
     error UnaccountedOffsetBalanceNotSet();
     error ContractAlreadyInitialized();
+    error ContractNotInitialized();
     error ProfitBeforeTrendChangeMustBePositive();
     error UseReturnWalletFunction();
     error OnlyReturnWallet();

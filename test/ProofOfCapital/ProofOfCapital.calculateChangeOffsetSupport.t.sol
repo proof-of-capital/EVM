@@ -96,6 +96,9 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
 
         vm.prank(user);
         token.approve(address(proofOfCapital), type(uint256).max);
+
+        // Initialize contract if needed
+        initializeContract();
     }
 
     /**

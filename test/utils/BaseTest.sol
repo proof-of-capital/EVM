@@ -31,6 +31,7 @@
 pragma solidity 0.8.29;
 
 import {Test} from "forge-std/Test.sol";
+import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 import {ProofOfCapital} from "../../src/ProofOfCapital.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";
 import {Constants} from "../../src/utils/Constant.sol";
@@ -41,6 +42,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BaseTest is Test {
     using SafeERC20 for IERC20;
+    using stdStorage for StdStorage;
 
     ProofOfCapital public proofOfCapital;
     MockERC20 public token;
@@ -51,6 +53,8 @@ contract BaseTest is Test {
     address public royalty;
     address public returnWallet = address(0x3);
     address public marketMaker = address(0x4);
+
+    StdStorage private _stdStore;
 
     function setUp() public virtual {
         // Set realistic timestamp to avoid underflow issues
@@ -163,5 +167,21 @@ contract BaseTest is Test {
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0) // Will default to owner
         });
+    }
+
+    // Helper function to initialize contract by processing all unaccounted offset
+    // This sets isInitialized to true
+    function initializeContract() internal {
+        uint256 unaccountedOffset = proofOfCapital.unaccountedOffset();
+        if (unaccountedOffset > 0) {
+            // Setup trading access by manipulating controlDay to be in the past
+            uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
+            vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
+
+            vm.prank(owner);
+            proofOfCapital.calculateUnaccountedOffsetBalance(unaccountedOffset);
+
+            assertTrue(proofOfCapital.isInitialized(), "Contract should be initialized after processing offset");
+        }
     }
 }

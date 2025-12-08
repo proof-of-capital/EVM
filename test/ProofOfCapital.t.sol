@@ -122,7 +122,30 @@ contract ProofOfCapitalTest is Test {
         // Deploy contract directly (no proxy needed)
         proofOfCapital = new ProofOfCapital(params);
 
+        // Initialize contract if it has offset
+        uint256 unaccountedOffset = proofOfCapital.unaccountedOffset();
+        if (unaccountedOffset > 0) {
+            // Setup trading access by manipulating controlDay to be in the past
+            uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
+            vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
+
+            proofOfCapital.calculateUnaccountedOffsetBalance(unaccountedOffset);
+        }
+
         vm.stopPrank();
+    }
+
+    // Helper function to ensure contract is initialized
+    function _ensureInitialized() internal {
+        if (!proofOfCapital.isInitialized()) {
+            uint256 unaccountedOffset = proofOfCapital.unaccountedOffset();
+            if (unaccountedOffset > 0) {
+                uint256 slotControlDay = _stdStore.target(address(proofOfCapital)).sig("controlDay()").find();
+                vm.store(address(proofOfCapital), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
+                vm.prank(owner);
+                proofOfCapital.calculateUnaccountedOffsetBalance(unaccountedOffset);
+            }
+        }
     }
 
     // Tests for extendLock function
@@ -573,6 +596,8 @@ contract ProofOfCapitalTest is Test {
         // Test require: block.timestamp <= launchDeferredWithdrawalDate + Constants.SEVEN_DAYS
         // This test verifies that withdrawal cannot be confirmed after 7 days from the withdrawal date
 
+        _ensureInitialized();
+
         address recipient = address(0x123);
         uint256 withdrawalAmount = 1000e18;
 
@@ -668,6 +693,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testConfirmTokenDeferredWithdrawalRequire5_InsufficientAmount() public {
+        _ensureInitialized();
+
         // Create scenario where:
         // 1. launchBalance > totalLaunchSold (to pass require 4)
         // 2. launchBalance - totalLaunchSold < launchDeferredWithdrawalAmount (to fail require 5)
@@ -777,6 +804,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testConfirmTokenDeferredWithdrawalSuccess() public {
+        _ensureInitialized();
+
         // Test successful execution of confirmLaunchDeferredWithdrawal
         // Need to create state where all require conditions pass:
         // 1. canWithdrawal = true (default)
@@ -2213,19 +2242,19 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testTokenAvailableInitialState() public view {
-        // Initially: offsetLaunch go to unaccountedOffset, not totalLaunchSold
-        // So totalLaunchSold = 0, launchTokensEarned = 0
+        // After initialization: offsetLaunch was processed, so totalLaunchSold = offsetLaunch (10000e18)
+        // launchTokensEarned = 0
         uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
 
-        // Verify initial state
-        assertEq(totalSold, 0); // offsetLaunch are in unaccountedOffset, not totalLaunchSold
-        assertEq(launchTokensEarned, 0);
+        // Verify state after initialization
+        assertGt(totalSold, 0, "totalLaunchSold should be > 0 after initialization");
+        assertEq(launchTokensEarned, 0, "launchTokensEarned should be 0 initially");
 
         // launchAvailable should be totalLaunchSold - launchTokensEarned
         uint256 expectedAvailable = totalSold - launchTokensEarned;
         assertEq(proofOfCapital.launchAvailable(), expectedAvailable);
-        assertEq(proofOfCapital.launchAvailable(), 0); // No tokens available until offset is processed
+        assertGt(proofOfCapital.launchAvailable(), 0, "Tokens should be available after initialization");
     }
 
     function testTokenAvailableWhenEarnedEqualsTotal() public {
@@ -2310,6 +2339,8 @@ contract ProofOfCapitalTest is Test {
 
     // Tests for withdrawAllLaunchTokens function
     function testWithdrawAllTokensSuccess() public {
+        _ensureInitialized();
+
         // The key insight: launchBalance is only increased by returnWallet selling tokens back
         // We need to create a scenario where returnWallet sells tokens to increase launchBalance
 
@@ -2372,6 +2403,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawAllTokensStateResetComplete() public {
+        _ensureInitialized();
+
         // Setup tokens in contract using returnWallet selling tokens back
         vm.startPrank(owner);
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
@@ -2396,6 +2429,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawAllTokensAtExactLockEnd() public {
+        _ensureInitialized();
+
         // Setup tokens in contract using returnWallet selling tokens back
         vm.startPrank(owner);
         SafeERC20.safeTransfer(IERC20(address(token)), returnWallet, 50000e18);
@@ -2419,6 +2454,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawAllTokensCalculatesAvailableCorrectly() public {
+        _ensureInitialized();
+
         // Add tokens and simulate some trading to test calculation
         vm.startPrank(owner);
         SafeERC20.safeTransfer(IERC20(address(token)), address(proofOfCapital), 100000e18);
@@ -2477,6 +2514,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawAllCollateralTokensOnlyDAO() public {
+        _ensureInitialized();
+
         // Set a different DAO address (not owner)
         address daoAddr = address(0x777);
         vm.prank(owner);
@@ -2523,6 +2562,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawBothTypesOfTokens() public {
+        _ensureInitialized();
+
         // Test withdrawing both main tokens and collateral tokens separately
         // This test validates that both withdrawal functions work independently
 
@@ -2794,6 +2835,8 @@ contract ProofOfCapitalTest is Test {
 
     // Tests for trading functions require statements
     function testBuyTokensInvalidAmountZero() public {
+        _ensureInitialized();
+
         // Try to buy tokens with zero amount
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
@@ -2801,6 +2844,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testBuyTokensUseDepositFunctionForOwners() public {
+        _ensureInitialized();
+
         // Owner tries to use buyLaunchTokens instead of depositCollateral
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.UseDepositFunctionForOwners.selector);
@@ -2808,6 +2853,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testDepositInvalidAmountZero() public {
+        _ensureInitialized();
+
         // Try to depositCollateral zero amount
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
@@ -2815,6 +2862,8 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testSellTokensInvalidAmountZero() public {
+        _ensureInitialized();
+
         // Try to sell zero tokens
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);

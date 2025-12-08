@@ -1054,7 +1054,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                 } else {
                     uint256 launchToBuyBasedOnCollateral =
                         (uint256(remainingAddCollateral) * Constants.PRICE_PRECISION) / adjustedPrice;
-                    
+
                     if (uint256(remainingAddTokens) < launchToBuyBasedOnCollateral) {
                         launchToBuyInThisStep = uint256(remainingAddTokens);
                         collateralToPayForStep = (launchToBuyInThisStep * adjustedPrice) / Constants.PRICE_PRECISION;

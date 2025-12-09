@@ -916,7 +916,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
             int256 launchAvailableInStep = remainderOfStepLocal;
 
             if (remainingOffset >= launchAvailableInStep) {
-                remainingOffset -= int256(launchAvailableInStep);
+                remainingOffset -= launchAvailableInStep;
                 localCurrentStep += 1;
 
                 launchPerLevel = _calculateLaunchPerLevel(launchPerLevel, localCurrentStep);
@@ -1012,7 +1012,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         while (remainingAddCollateral > 0 && remainingAddLaunchTokens > 0) {
             uint256 launchAvailableInStep = launchPerLevel - remainderOfStepLocal;
             uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-            uint256 collateralInStep = (uint256(launchAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
+            uint256 collateralInStep = (launchAvailableInStep * currentPriceLocal) / Constants.PRICE_PRECISION;
             uint256 collateralRealInStep = (collateralInStep * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                 / Constants.PERCENTAGE_DIVISOR;
 
@@ -1093,7 +1093,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         while (remainingCollateralAmount > 0 && remainderOfLaunch > launchToGive) {
             int256 launchAvailableInStep = remainderOfStepLocal;
             int256 collateralRequiredForStep =
-                (int256(launchAvailableInStep) * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
+                (launchAvailableInStep * int256(currentPriceLocal)) / int256(Constants.PRICE_PRECISION);
 
             if (remainingCollateralAmount >= collateralRequiredForStep) {
                 launchToGive += uint256(launchAvailableInStep);
@@ -1150,7 +1150,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         while (remainingLaunchAmount > 0) {
             int256 launchAvailableInStep = int256(launchPerLevel) - remainderOfStepLocal;
 
-            if (remainingLaunchAmount >= int256(launchAvailableInStep)) {
+            if (remainingLaunchAmount >= launchAvailableInStep) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
@@ -1158,7 +1158,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     (uint256(launchAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
-                remainingLaunchAmount -= int256(launchAvailableInStep);
+                remainingLaunchAmount -= launchAvailableInStep;
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
@@ -1184,7 +1184,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     (uint256(remainingLaunchAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
 
-                remainderOfStepLocal += int256(remainingLaunchAmount);
+                remainderOfStepLocal += remainingLaunchAmount;
                 remainingLaunchAmount = 0;
             }
         }
@@ -1209,7 +1209,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         while (remainingLaunchAmount > 0 && localCurrentStep <= currentStep) {
             int256 launchAvailableInStep = remainderOfStepLocal;
 
-            if (remainingLaunchAmount >= int256(launchAvailableInStep)) {
+            if (remainingLaunchAmount >= launchAvailableInStep) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
                     / Constants.PERCENTAGE_DIVISOR;
@@ -1220,7 +1220,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                 localCurrentStep += 1;
                 launchPerLevel = _calculateLaunchPerLevel(launchPerLevel, localCurrentStep);
                 remainderOfStepLocal = int256(launchPerLevel);
-                remainingLaunchAmount -= int256(launchAvailableInStep);
+                remainingLaunchAmount -= launchAvailableInStep;
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {

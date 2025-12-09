@@ -905,19 +905,18 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         }
     }
 
-    // Full implementation of calculation functions based on Tact contract
-    function _calculateOffset(uint256 amountLaunch) internal {
-        int256 remainingOffsetTokens = int256(amountLaunch);
+    function _calculateOffset(uint256 offsetAmount) internal {
+        int256 remainingOffset = int256(offsetAmount);
         uint256 localCurrentStep = offsetStep;
         int256 remainderOfStepLocal = int256(remainderOfStepOffset);
         uint256 launchPerLevel = quantityLaunchPerLevelOffset;
         uint256 currentPriceLocal = currentPrice;
 
-        while (remainingOffsetTokens > 0) {
+        while (remainingOffset > 0) {
             int256 launchAvailableInStep = remainderOfStepLocal;
 
-            if (remainingOffsetTokens >= launchAvailableInStep) {
-                remainingOffsetTokens -= int256(launchAvailableInStep);
+            if (remainingOffset >= launchAvailableInStep) {
+                remainingOffset -= int256(launchAvailableInStep);
                 localCurrentStep += 1;
 
                 launchPerLevel = _calculateLaunchPerLevel(launchPerLevel, localCurrentStep);
@@ -925,8 +924,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                 currentPriceLocal = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR + priceIncrementMultiplier))
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
-                remainderOfStepLocal -= int256(remainingOffsetTokens);
-                remainingOffsetTokens = 0;
+                remainderOfStepLocal -= remainingOffset;
+                remainingOffset = 0;
             }
         }
 
@@ -940,8 +939,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         currentPrice = currentPriceLocal;
 
         remainderOfStep = uint256(remainderOfStepLocal);
-        launchBalance += amountLaunch;
-        totalLaunchSold += amountLaunch;
+        launchBalance += offsetAmount;
+        totalLaunchSold += offsetAmount;
     }
 
     /**
@@ -950,17 +949,17 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      * @return Current step after recalculation
      */
     function _calculateChangeOffsetLaunch(uint256 amountLaunch) internal returns (uint256) {
-        int256 remainingAddTokens = int256(amountLaunch);
+        int256 remainingAddLaunchTokens = int256(amountLaunch);
         uint256 localCurrentStep = offsetStep;
         int256 remainderOfStepLocal = int256(remainderOfStepOffset);
         uint256 launchPerLevel = quantityLaunchPerLevelOffset;
         uint256 currentPriceLocal = offsetPrice;
 
-        while (remainingAddTokens > 0) {
+        while (remainingAddLaunchTokens > 0) {
             int256 launchAvailableInStep = int256(launchPerLevel) - remainderOfStepLocal;
 
-            if (remainingAddTokens >= launchAvailableInStep) {
-                remainingAddTokens -= launchAvailableInStep;
+            if (remainingAddLaunchTokens >= launchAvailableInStep) {
+                remainingAddLaunchTokens -= launchAvailableInStep;
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
@@ -976,11 +975,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     remainderOfStepLocal = 0;
                 } else {
                     remainderOfStepLocal = int256(launchPerLevel);
-                    remainingAddTokens = 0;
+                    remainingAddLaunchTokens = 0;
                 }
             } else {
-                remainderOfStepLocal += remainingAddTokens;
-                remainingAddTokens = 0;
+                remainderOfStepLocal += remainingAddLaunchTokens;
+                remainingAddLaunchTokens = 0;
             }
         }
 
@@ -1003,14 +1002,14 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     function _calculateChangeOffsetCollateral(uint256 amountCollateral) internal returns (uint256) {
         int256 remainingAddCollateral = int256(amountCollateral);
-        uint256 remainingOffsetTokensLocal = offsetLaunch;
-        int256 remainingAddTokens = int256(offsetLaunch) - int256(launchTokensEarned);
+        uint256 remainingOffsetLaunchTokensLocal = offsetLaunch;
+        int256 remainingAddLaunchTokens = int256(offsetLaunch) - int256(launchTokensEarned);
         uint256 localCurrentStep = offsetStep;
         uint256 remainderOfStepLocal = remainderOfStepOffset;
         uint256 launchPerLevel = quantityLaunchPerLevelOffset;
         uint256 currentPriceLocal = offsetPrice;
 
-        while (remainingAddCollateral > 0 && remainingAddTokens > 0) {
+        while (remainingAddCollateral > 0 && remainingAddLaunchTokens > 0) {
             uint256 launchAvailableInStep = launchPerLevel - remainderOfStepLocal;
             uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
             uint256 collateralInStep = (uint256(launchAvailableInStep) * currentPriceLocal) / Constants.PRICE_PRECISION;
@@ -1019,11 +1018,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
             if (
                 remainingAddCollateral >= int256(collateralRealInStep)
-                    && remainingAddTokens >= int256(launchAvailableInStep)
+                    && remainingAddLaunchTokens >= int256(launchAvailableInStep)
             ) {
                 remainingAddCollateral -= int256(collateralRealInStep);
-                remainingOffsetTokensLocal -= launchAvailableInStep;
-                remainingAddTokens -= int256(launchAvailableInStep);
+                remainingOffsetLaunchTokensLocal -= launchAvailableInStep;
+                remainingAddLaunchTokens -= int256(launchAvailableInStep);
 
                 if (localCurrentStep > currentStepEarned) {
                     if (localCurrentStep > trendChangeStep) {
@@ -1039,7 +1038,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     remainderOfStepLocal = 0;
                 } else {
                     remainderOfStepLocal = launchPerLevel;
-                    remainingAddTokens = 0;
+                    remainingAddLaunchTokens = 0;
                 }
             } else {
                 uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
@@ -1049,14 +1048,15 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                 uint256 launchToBuyInThisStep = 0;
 
                 if (remainingAddCollateral >= int256(collateralRealInStep)) {
-                    collateralToPayForStep = (uint256(remainingAddTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
-                    launchToBuyInThisStep = uint256(remainingAddTokens);
+                    collateralToPayForStep =
+                        (uint256(remainingAddLaunchTokens) * adjustedPrice) / Constants.PRICE_PRECISION;
+                    launchToBuyInThisStep = uint256(remainingAddLaunchTokens);
                 } else {
                     uint256 launchToBuyBasedOnCollateral =
                         (uint256(remainingAddCollateral) * Constants.PRICE_PRECISION) / adjustedPrice;
 
-                    if (uint256(remainingAddTokens) < launchToBuyBasedOnCollateral) {
-                        launchToBuyInThisStep = uint256(remainingAddTokens);
+                    if (uint256(remainingAddLaunchTokens) < launchToBuyBasedOnCollateral) {
+                        launchToBuyInThisStep = uint256(remainingAddLaunchTokens);
                         collateralToPayForStep = (launchToBuyInThisStep * adjustedPrice) / Constants.PRICE_PRECISION;
                     } else {
                         launchToBuyInThisStep = launchToBuyBasedOnCollateral;
@@ -1066,8 +1066,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
                 remainderOfStepLocal += launchToBuyInThisStep;
                 remainingAddCollateral -= int256(collateralToPayForStep);
-                remainingOffsetTokensLocal -= launchToBuyInThisStep;
-                remainingAddTokens = 0;
+                remainingOffsetLaunchTokensLocal -= launchToBuyInThisStep;
+                remainingAddLaunchTokens = 0;
             }
         }
 
@@ -1075,7 +1075,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         remainderOfStepOffset = remainderOfStepLocal;
         offsetPrice = currentPriceLocal;
         quantityLaunchPerLevelOffset = launchPerLevel;
-        offsetLaunch = remainingOffsetTokensLocal;
+        offsetLaunch = remainingOffsetLaunchTokensLocal;
 
         return (amountCollateral - uint256(remainingAddCollateral));
     }

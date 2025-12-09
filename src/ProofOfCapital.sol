@@ -131,7 +131,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     bool public override isInitialized; // Flag indicating whether the contract's initialization is complete
 
     // First deposit tracking
-    bool public isFirstLaunchDeposit; // Flag to track if this is the first launch deposit
+    bool public override isFirstLaunchDeposit; // Flag to track if this is the first launch deposit
 
     modifier whenInitialized() {
         _isInitialized();

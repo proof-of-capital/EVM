@@ -38,6 +38,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IProofOfCapital} from "./interfaces/IProofOfCapital.sol";
 import {IRoyalty} from "./interfaces/IRoyalty.sol";
 import {Constants} from "./utils/Constant.sol";
+import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
+import {AggregatorInterface} from "./interfaces/AggregatorInterface.sol";
 
 /**
  * @title ProofOfCapital
@@ -133,6 +135,10 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     // First deposit tracking
     bool public override isFirstLaunchDeposit; // Flag to track if this is the first launch deposit
 
+    // Collateral token oracle
+    address public override collateralTokenOracle;
+    int256 public override collateralTokenMinOracleValue;
+
     modifier whenInitialized() {
         _isInitialized();
         _;
@@ -160,6 +166,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     modifier onlyDao() {
         _onlyDao();
+        _;
+    }
+
+    modifier whenCollateralTokenOracleValid() {
+        _validateCollateralTokenOracle();
         _;
     }
 
@@ -231,6 +242,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         profitInTime = true;
         canWithdrawal = true;
+
+        collateralTokenOracle = params.collateralTokenOracle;
+        collateralTokenMinOracleValue = params.collateralTokenMinOracleValue;
 
         if (params.offsetLaunch > 0) {
             unaccountedOffset = params.offsetLaunch;
@@ -495,7 +509,13 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     /**
      * @dev Buy tokens with collateral tokens
      */
-    function buyLaunchTokens(uint256 amount) external override onlyActiveContract whenInitialized {
+    function buyLaunchTokens(uint256 amount)
+        external
+        override
+        onlyActiveContract
+        whenInitialized
+        whenCollateralTokenOracleValid
+    {
         require(amount > 0, InvalidAmount());
         require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
@@ -1243,6 +1263,16 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         remainderOfStepEarned = uint256(remainderOfStepLocal);
 
         return collateralAmountToPay;
+    }
+
+    function _validateCollateralTokenOracle() internal view {
+        if (collateralTokenOracle != address(0)) {
+            int256 collateralTokenValue = AggregatorInterface(collateralTokenOracle).latestAnswer();
+            require(
+                collateralTokenValue >= collateralTokenMinOracleValue || collateralTokenValue == 0,
+                InsufficientCollateralTokenValue()
+            );
+        }
     }
 
     /**

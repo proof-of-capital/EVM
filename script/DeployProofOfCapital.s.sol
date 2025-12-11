@@ -172,7 +172,9 @@ contract DeployProofOfCapital is Script {
             royaltyProfitPercent: royaltyProfitPercent,
             oldContractAddresses: oldContractAddresses,
             profitBeforeTrendChange: profitBeforeTrendChange,
-            daoAddress: daoAddress
+            daoAddress: daoAddress,
+            collateralTokenOracle: address(0),
+            collateralTokenMinOracleValue: 0
         });
     }
 

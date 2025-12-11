@@ -83,7 +83,9 @@ contract BaseTestWithoutOffset is Test {
             royaltyProfitPercent: 500, // 50%
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
+            daoAddress: address(0), // Will default to owner
+            collateralTokenOracle: address(0),
+            collateralTokenMinOracleValue: 0
         });
 
         // Deploy contract directly (no proxy needed)

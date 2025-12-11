@@ -99,7 +99,7 @@ interface IProofOfCapital {
     error InvalidTokenForWithdrawal();
     error InsufficientLaunchAvailable();
     error ExcessCollateralAmount();
-
+    error InsufficientCollateralTokenValue();
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
@@ -147,6 +147,8 @@ interface IProofOfCapital {
         address[] oldContractAddresses; // Array of old contract addresses
         uint256 profitBeforeTrendChange; // Profit percentage before trend change
         address daoAddress; // DAO address for governance
+        address collateralTokenOracle;
+        int256 collateralTokenMinOracleValue;
     }
 
     // Management functions
@@ -254,4 +256,6 @@ interface IProofOfCapital {
     function unaccountedReturnBuybackBalance() external view returns (uint256);
     function isInitialized() external view returns (bool);
     function isFirstLaunchDeposit() external view returns (bool);
+    function collateralTokenOracle() external view returns (address);
+    function collateralTokenMinOracleValue() external view returns (int256);
 }

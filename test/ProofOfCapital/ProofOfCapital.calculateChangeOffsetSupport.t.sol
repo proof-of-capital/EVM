@@ -74,7 +74,9 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
             royaltyProfitPercent: 500,
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
-            daoAddress: address(0) // Will default to owner
+            daoAddress: address(0), // Will default to owner
+            collateralTokenOracle: address(0),
+            collateralTokenMinOracleValue: 0
         });
 
         proofOfCapital = deployWithParams(params);

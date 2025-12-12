@@ -469,18 +469,6 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         new ProofOfCapital(params);
     }
 
-    // Test CannotBeSelf error - returnWalletAddress equals royaltyWalletAddress
-    function testInitializeReturnWalletEqualsRoyaltyWallet() public {
-        address sameAddress = address(0x999);
-
-        IProofOfCapital.InitParams memory params = getValidParams();
-        params.returnWalletAddress = sameAddress; // Invalid: same as royalty wallet
-        params.royaltyWalletAddress = sameAddress; // Invalid: same as return wallet
-
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
-        new ProofOfCapital(params);
-    }
-
     // Test multiple old contracts - returnWallet matches one of them
     function testInitializeReturnWalletMatchesMultipleOldContracts() public {
         address oldContract1 = address(0x123);
@@ -567,9 +555,8 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         IProofOfCapital.InitParams memory params = getValidParams();
         // Multiple violations:
         // 1. returnWalletAddress matches old contract (checked first)
-        // 2. returnWalletAddress equals royaltyWalletAddress (checked third)
         params.returnWalletAddress = sameAddress; // Invalid: matches old contract
-        params.royaltyWalletAddress = sameAddress; // Also invalid but won't be reached
+        params.royaltyWalletAddress = sameAddress; // Same address but no longer checked
         params.oldContractAddresses = oldContracts;
 
         // Should fail with first error encountered (returnWallet matches old contract)

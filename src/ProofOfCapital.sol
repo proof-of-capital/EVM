@@ -193,6 +193,19 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         );
         require(params.profitBeforeTrendChange > 0, ProfitBeforeTrendChangeMustBePositive());
 
+        // Validate addresses
+        require(params.initialOwner != address(0), InvalidInitialOwner());
+        require(params.launchToken != address(0), InvalidLaunchTokenAddress());
+        require(params.marketMakerAddress != address(0), InvalidMarketMakerAddress());
+        require(params.returnWalletAddress != address(0), InvalidReturnWalletAddress());
+        require(params.royaltyWalletAddress != address(0), InvalidRoyaltyWalletAddress());
+        require(params.collateralToken != address(0), InvalidCollateralTokenAddress());
+
+        // Validate numeric values
+        require(params.lockEndTime > block.timestamp, InvalidLockEndTime());
+        require(params.firstLevelLaunchTokenQuantity > 0, InvalidFirstLevelTokenQuantity());
+        require(params.profitPercentage > 0, InvalidProfitPercentage());
+
         isActive = true;
         launchToken = IERC20(params.launchToken);
 

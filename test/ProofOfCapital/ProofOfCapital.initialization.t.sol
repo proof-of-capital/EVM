@@ -40,16 +40,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
     ProofOfCapital public implementation;
 
     function setUp() public override {
-        // Set realistic timestamp to avoid underflow issues
-        vm.warp(1672531200); // January 1, 2023
-
-        vm.startPrank(owner);
-
-        // Deploy mock tokens
-        token = new MockERC20("TestToken", "TT");
-        weth = new MockERC20("WETH", "WETH");
-
-        vm.stopPrank();
+        super.setUp(); // Initialize royalty and other base variables
     }
 
     // Test InitialPriceMustBePositive error
@@ -583,17 +574,17 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         assertEq(proofOfCapitalValid.royaltyWalletAddress(), address(0x888));
     }
 
-    // Test zero address scenario (should pass address validation but may fail other checks)
+    // Test zero address scenario (should fail address validation before old contract check)
     function testInitializeZeroAddressInOldContracts() public {
         address[] memory oldContracts = new address[](2);
         oldContracts[0] = address(0);
         oldContracts[1] = address(0x123);
 
         IProofOfCapital.InitParams memory params = getValidParams();
-        params.returnWalletAddress = address(0); // Zero address - matches old contract
+        params.returnWalletAddress = address(0); // Zero address - should fail address validation first
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(IProofOfCapital.ReturnWalletCannotBeOldContract.selector);
+        vm.expectRevert(IProofOfCapital.InvalidReturnWalletAddress.selector);
         new ProofOfCapital(params);
     }
 

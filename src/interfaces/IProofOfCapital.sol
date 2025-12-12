@@ -102,6 +102,15 @@ interface IProofOfCapital {
     error InsufficientLaunchAvailable();
     error ExcessCollateralAmount();
     error InsufficientCollateralTokenValue();
+    error InvalidLaunchTokenAddress();
+    error InvalidMarketMakerAddress();
+    error InvalidReturnWalletAddress();
+    error InvalidRoyaltyWalletAddress();
+    error InvalidCollateralTokenAddress();
+    error InvalidInitialOwner();
+    error InvalidLockEndTime();
+    error InvalidFirstLevelTokenQuantity();
+    error InvalidProfitPercentage();
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);

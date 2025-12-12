@@ -43,14 +43,9 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
     address public user = address(0x5);
 
     function setUp() public override {
-        // Set realistic timestamp to avoid underflow issues
-        vm.warp(1672531200); // January 1, 2023
+        super.setUp(); // Initialize royalty and other base variables
 
         vm.startPrank(owner);
-
-        // Deploy mock tokens
-        token = new MockERC20("TestToken", "TT");
-        weth = new MockERC20("WETH", "WETH");
 
         // Create special parameters to hit the specific branch in _calculateChangeOffsetCollateral
         // We need to ensure localCurrentStep > currentStepEarned and localCurrentStep <= trendChangeStep

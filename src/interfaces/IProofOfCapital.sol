@@ -71,6 +71,8 @@ interface IProofOfCapital {
     error CannotDecreaseRoyalty();
     error CannotIncreaseRoyalty();
     error CannotBeSelf();
+    error ReturnWalletCannotBeOldContract();
+    error RoyaltyWalletCannotBeOldContract();
     error InvalidAmount();
     error UseDepositFunctionForOwners();
     error LockPeriodNotEnded();

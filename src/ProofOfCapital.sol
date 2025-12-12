@@ -259,8 +259,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         }
 
         // Check that return wallet and royalty wallet addresses don't match old contracts
-        require(!oldContractAddress[params.returnWalletAddress], CannotBeSelf());
-        require(!oldContractAddress[params.royaltyWalletAddress], CannotBeSelf());
+        require(!oldContractAddress[params.returnWalletAddress], ReturnWalletCannotBeOldContract());
+        require(!oldContractAddress[params.royaltyWalletAddress], RoyaltyWalletCannotBeOldContract());
     }
 
     /**

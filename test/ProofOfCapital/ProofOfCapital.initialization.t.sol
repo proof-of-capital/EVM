@@ -441,7 +441,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
 
     // Tests for address validation requirements
 
-    // Test CannotBeSelf error - returnWalletAddress matches old contract
+    // Test ReturnWalletCannotBeOldContract error - returnWalletAddress matches old contract
     function testInitializeReturnWalletMatchesOldContract() public {
         address oldContract = address(0x123);
         address[] memory oldContracts = new address[](1);
@@ -451,11 +451,11 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.returnWalletAddress = oldContract; // Invalid: matches old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletCannotBeOldContract.selector);
         new ProofOfCapital(params);
     }
 
-    // Test CannotBeSelf error - royaltyWalletAddress matches old contract
+    // Test RoyaltyWalletCannotBeOldContract error - royaltyWalletAddress matches old contract
     function testInitializeRoyaltyWalletMatchesOldContract() public {
         address oldContract = address(0x123);
         address[] memory oldContracts = new address[](1);
@@ -465,7 +465,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.royaltyWalletAddress = oldContract; // Invalid: matches old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.RoyaltyWalletCannotBeOldContract.selector);
         new ProofOfCapital(params);
     }
 
@@ -484,7 +484,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.returnWalletAddress = oldContract2; // Invalid: matches middle old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletCannotBeOldContract.selector);
         new ProofOfCapital(params);
     }
 
@@ -503,7 +503,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.royaltyWalletAddress = oldContract3; // Invalid: matches last old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.RoyaltyWalletCannotBeOldContract.selector);
         new ProofOfCapital(params);
     }
 
@@ -560,7 +560,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.oldContractAddresses = oldContracts;
 
         // Should fail with first error encountered (returnWallet matches old contract)
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletCannotBeOldContract.selector);
         new ProofOfCapital(params);
     }
 
@@ -593,7 +593,7 @@ contract ProofOfCapitalInitializationTest is BaseTest {
         params.returnWalletAddress = address(0); // Zero address - matches old contract
         params.oldContractAddresses = oldContracts;
 
-        vm.expectRevert(IProofOfCapital.CannotBeSelf.selector);
+        vm.expectRevert(IProofOfCapital.ReturnWalletCannotBeOldContract.selector);
         new ProofOfCapital(params);
     }
 

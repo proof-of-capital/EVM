@@ -103,8 +103,8 @@ contract ProofOfCapitalTest is Test {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
@@ -3009,8 +3009,8 @@ contract ProofOfCapitalProfitTest is Test {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
@@ -3142,8 +3142,8 @@ contract ProofOfCapitalInitializationTest is Test {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
@@ -3164,7 +3164,7 @@ contract ProofOfCapitalInitializationTest is Test {
     // Test InitialPriceMustBePositive error
     function testInitializeInitialPriceMustBePositiveZero() public {
         IProofOfCapital.InitParams memory params = getValidParams();
-        params.initialPricePerToken = 0; // Invalid: zero price
+        params.initialPricePerLaunchToken = 0; // Invalid: zero price
 
         vm.expectRevert(IProofOfCapital.InitialPriceMustBePositive.selector);
         new ProofOfCapital(params);
@@ -3172,13 +3172,13 @@ contract ProofOfCapitalInitializationTest is Test {
 
     function testInitializeInitialPriceMustBePositiveValid() public {
         IProofOfCapital.InitParams memory params = getValidParams();
-        params.initialPricePerToken = 1; // Valid: minimum positive price
+        params.initialPricePerLaunchToken = 1; // Valid: minimum positive price
 
         // Should not revert
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify price was set
-        assertEq(proofOfCapital.initialPricePerToken(), 1);
+        assertEq(proofOfCapital.initialPricePerLaunchToken(), 1);
     }
 
     // Test InvalidLevelDecreaseMultiplierAfterTrend error
@@ -3312,7 +3312,7 @@ contract ProofOfCapitalInitializationTest is Test {
         IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set all parameters to their boundary values with smaller offsetLaunch
-        params.initialPricePerToken = 1; // Minimum valid
+        params.initialPricePerLaunchToken = 1; // Minimum valid
         params.levelDecreaseMultiplierAfterTrend = 500; // Safe value below divisor
         params.levelIncreaseMultiplier = 1; // Minimum valid
         params.priceIncrementMultiplier = 1; // Minimum valid
@@ -3323,7 +3323,7 @@ contract ProofOfCapitalInitializationTest is Test {
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify all parameters were set correctly
-        assertEq(proofOfCapital.initialPricePerToken(), 1);
+        assertEq(proofOfCapital.initialPricePerLaunchToken(), 1);
         assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), 500);
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 1);
         assertEq(proofOfCapital.priceIncrementMultiplier(), 1);
@@ -3334,8 +3334,8 @@ contract ProofOfCapitalInitializationTest is Test {
     function testInitializeMultipleInvalidParameters() public {
         IProofOfCapital.InitParams memory params = getValidParams();
 
-        // Set multiple invalid parameters - should fail on first one (initialPricePerToken)
-        params.initialPricePerToken = 0; // Invalid
+        // Set multiple invalid parameters - should fail on first one (initialPricePerLaunchToken)
+        params.initialPricePerLaunchToken = 0; // Invalid
         params.levelIncreaseMultiplier = 0; // Also invalid, but won't be reached
 
         // Should fail with the first error it encounters
@@ -3348,7 +3348,7 @@ contract ProofOfCapitalInitializationTest is Test {
         IProofOfCapital.InitParams memory params = getValidParams();
 
         // Set to reasonable maximum values to avoid overflow
-        params.initialPricePerToken = 1000e18; // Large but reasonable price
+        params.initialPricePerLaunchToken = 1000e18; // Large but reasonable price
         params.levelDecreaseMultiplierAfterTrend = 999; // Just below PERCENTAGE_DIVISOR
         params.levelIncreaseMultiplier = 999; // Just below PERCENTAGE_DIVISOR
         params.priceIncrementMultiplier = 10000; // Large but reasonable multiplier
@@ -3359,7 +3359,7 @@ contract ProofOfCapitalInitializationTest is Test {
         ProofOfCapital proofOfCapital = new ProofOfCapital(params);
 
         // Verify values were set
-        assertEq(proofOfCapital.initialPricePerToken(), 1000e18);
+        assertEq(proofOfCapital.initialPricePerLaunchToken(), 1000e18);
         assertEq(proofOfCapital.levelDecreaseMultiplierAfterTrend(), 999);
         assertEq(proofOfCapital.levelIncreaseMultiplier(), 999);
         assertEq(proofOfCapital.priceIncrementMultiplier(), 10000);
@@ -3377,8 +3377,8 @@ contract ProofOfCapitalInitializationTest is Test {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
@@ -3413,8 +3413,8 @@ contract ProofOfCapitalInitializationTest is Test {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
@@ -3452,8 +3452,8 @@ contract ProofOfCapitalInitializationTest is Test {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 1000e18,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5,
@@ -3490,8 +3490,8 @@ contract ProofOfCapitalInitializationTest is Test {
                 returnWalletAddress: returnWallet,
                 royaltyWalletAddress: royalty,
                 lockEndTime: block.timestamp + 365 days,
-                initialPricePerToken: 1e18,
-                firstLevelTokenQuantity: 1000e18,
+                initialPricePerLaunchToken: 1e18,
+                firstLevelLaunchTokenQuantity: 1000e18,
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,
@@ -3522,8 +3522,8 @@ contract ProofOfCapitalInitializationTest is Test {
                 returnWalletAddress: returnWallet,
                 royaltyWalletAddress: royalty,
                 lockEndTime: block.timestamp + 365 days,
-                initialPricePerToken: 1e18,
-                firstLevelTokenQuantity: 1000e18,
+                initialPricePerLaunchToken: 1e18,
+                firstLevelLaunchTokenQuantity: 1000e18,
                 priceIncrementMultiplier: 50,
                 levelIncreaseMultiplier: 100,
                 trendChangeStep: 5,

@@ -61,8 +61,8 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
             returnWalletAddress: returnWallet,
             royaltyWalletAddress: royalty,
             lockEndTime: block.timestamp + 365 days,
-            initialPricePerToken: 1e18,
-            firstLevelTokenQuantity: 500e18, // Smaller level to make it easier to trigger conditions
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 500e18, // Smaller level to make it easier to trigger conditions
             priceIncrementMultiplier: 50,
             levelIncreaseMultiplier: 100,
             trendChangeStep: 5, // Critical: lines 939-940 execute when localCurrentStep <= 5

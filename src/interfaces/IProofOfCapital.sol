@@ -133,8 +133,8 @@ interface IProofOfCapital {
         address returnWalletAddress;
         address royaltyWalletAddress;
         uint256 lockEndTime;
-        uint256 initialPricePerToken;
-        uint256 firstLevelTokenQuantity;
+        uint256 initialPricePerLaunchToken;
+        uint256 firstLevelLaunchTokenQuantity;
         uint256 priceIncrementMultiplier;
         int256 levelIncreaseMultiplier;
         uint256 trendChangeStep;
@@ -212,8 +212,8 @@ interface IProofOfCapital {
     function lockEndTime() external view returns (uint256);
     function controlDay() external view returns (uint256);
     function controlPeriod() external view returns (uint256);
-    function initialPricePerToken() external view returns (uint256);
-    function firstLevelTokenQuantity() external view returns (uint256);
+    function initialPricePerLaunchToken() external view returns (uint256);
+    function firstLevelLaunchTokenQuantity() external view returns (uint256);
     function currentPrice() external view returns (uint256);
     function quantityLaunchPerLevel() external view returns (uint256);
     function remainderOfStep() external view returns (uint256);

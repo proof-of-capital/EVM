@@ -21,8 +21,8 @@ contract DeployProofOfCapital is Script {
     address public returnWalletAddress;
     address public royaltyWalletAddress;
     uint256 public lockEndTime;
-    uint256 public initialPricePerToken;
-    uint256 public firstLevelTokenQuantity;
+    uint256 public initialPricePerLaunchToken;
+    uint256 public firstLevelLaunchTokenQuantity;
     uint256 public priceIncrementMultiplier;
     uint256 public levelIncreaseMultiplier;
     uint256 public trendChangeStep;
@@ -62,8 +62,8 @@ contract DeployProofOfCapital is Script {
         collateralToken = vm.envAddress("TOKEN_SUPPORT_ADDRESS");
 
         lockEndTime = vm.envUint("LOCK_END_TIME");
-        initialPricePerToken = vm.envUint("INITIAL_PRICE_PER_TOKEN");
-        firstLevelTokenQuantity = vm.envUint("FIRST_LEVEL_TOKEN_QUANTITY");
+        initialPricePerLaunchToken = vm.envUint("INITIAL_PRICE_PER_TOKEN");
+        firstLevelLaunchTokenQuantity = vm.envUint("FIRST_LEVEL_TOKEN_QUANTITY");
         priceIncrementMultiplier = vm.envUint("PRICE_INCREMENT_MULTIPLIER");
         levelIncreaseMultiplier = vm.envUint("LEVEL_INCREASE_MULTIPLIER");
         trendChangeStep = vm.envUint("TREND_CHANGE_STEP");
@@ -107,7 +107,7 @@ contract DeployProofOfCapital is Script {
         require(collateralToken != address(0), "Invalid token support address");
         require(lockEndTime > block.timestamp, "Lock end time must be in the future");
         require(lockEndTime - block.timestamp <= 365 days * 2, "Lock period cannot exceed 2 years");
-        require(initialPricePerToken > 0, "Initial price must be positive");
+        require(initialPricePerLaunchToken > 0, "Initial price must be positive");
         require(royaltyProfitPercent > 0 && royaltyProfitPercent <= 1000, "Invalid royalty percentage");
 
         console.log("All parameters validated successfully");
@@ -155,8 +155,8 @@ contract DeployProofOfCapital is Script {
             returnWalletAddress: returnWalletAddress,
             royaltyWalletAddress: royaltyWalletAddress,
             lockEndTime: lockEndTime,
-            initialPricePerToken: initialPricePerToken,
-            firstLevelTokenQuantity: firstLevelTokenQuantity,
+            initialPricePerLaunchToken: initialPricePerLaunchToken,
+            firstLevelLaunchTokenQuantity: firstLevelLaunchTokenQuantity,
             priceIncrementMultiplier: priceIncrementMultiplier,
             // casting to int256 is safe because levelIncreaseMultiplier is validated to be > 0
             // forge-lint: disable-next-line(unsafe-typecast)

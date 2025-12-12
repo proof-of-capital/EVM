@@ -66,8 +66,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     uint256 public override controlPeriod;
 
     // Pricing and level variables
-    uint256 public override initialPricePerToken;
-    uint256 public override firstLevelTokenQuantity;
+    uint256 public override initialPricePerLaunchToken;
+    uint256 public override firstLevelLaunchTokenQuantity;
     uint256 public override currentPrice;
     uint256 public override quantityLaunchPerLevel;
     uint256 public override remainderOfStep;
@@ -175,7 +175,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     }
 
     constructor(IProofOfCapital.InitParams memory params) Ownable(params.initialOwner) {
-        require(params.initialPricePerToken > 0, InitialPriceMustBePositive());
+        require(params.initialPricePerLaunchToken > 0, InitialPriceMustBePositive());
         require(
             params.levelDecreaseMultiplierAfterTrend < int256(Constants.PERCENTAGE_DIVISOR)
                 && params.levelDecreaseMultiplierAfterTrend > -int256(Constants.PERCENTAGE_DIVISOR),
@@ -199,8 +199,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         returnWalletAddresses[params.returnWalletAddress] = true;
         royaltyWalletAddress = params.royaltyWalletAddress;
         lockEndTime = params.lockEndTime;
-        initialPricePerToken = params.initialPricePerToken;
-        firstLevelTokenQuantity = params.firstLevelTokenQuantity;
+        initialPricePerLaunchToken = params.initialPricePerLaunchToken;
+        firstLevelLaunchTokenQuantity = params.firstLevelLaunchTokenQuantity;
         priceIncrementMultiplier = params.priceIncrementMultiplier;
         levelIncreaseMultiplier = params.levelIncreaseMultiplier;
         trendChangeStep = params.trendChangeStep;
@@ -216,9 +216,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         // Initialize state variables
         currentStep = 0;
-        remainderOfStep = params.firstLevelTokenQuantity;
-        quantityLaunchPerLevel = params.firstLevelTokenQuantity;
-        currentPrice = params.initialPricePerToken;
+        remainderOfStep = params.firstLevelLaunchTokenQuantity;
+        quantityLaunchPerLevel = params.firstLevelLaunchTokenQuantity;
+        currentPrice = params.initialPricePerLaunchToken;
         controlDay = block.timestamp + Constants.THIRTY_DAYS;
         reserveOwner = params.initialOwner;
 
@@ -227,15 +227,15 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         // Initialize offset variables
         offsetStep = 0;
-        offsetPrice = params.initialPricePerToken;
-        remainderOfStepOffset = params.firstLevelTokenQuantity;
-        quantityLaunchPerLevelOffset = params.firstLevelTokenQuantity;
+        offsetPrice = params.initialPricePerLaunchToken;
+        remainderOfStepOffset = params.firstLevelLaunchTokenQuantity;
+        quantityLaunchPerLevelOffset = params.firstLevelLaunchTokenQuantity;
 
         // Initialize earned tracking
         currentStepEarned = 0;
-        remainderOfStepEarned = params.firstLevelTokenQuantity;
-        quantityLaunchPerLevelEarned = params.firstLevelTokenQuantity;
-        currentPriceEarned = params.initialPricePerToken;
+        remainderOfStepEarned = params.firstLevelLaunchTokenQuantity;
+        quantityLaunchPerLevelEarned = params.firstLevelLaunchTokenQuantity;
+        currentPriceEarned = params.initialPricePerLaunchToken;
 
         recipientDeferredWithdrawalLaunch = params.initialOwner;
         recipientDeferredWithdrawalCollateralToken = params.initialOwner;

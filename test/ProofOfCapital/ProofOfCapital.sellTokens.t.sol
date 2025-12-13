@@ -731,6 +731,10 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         vm.prank(owner);
         ProofOfCapital customContract = new ProofOfCapital(customParams);
 
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        customContract.setDao(owner);
+
         // Initialize custom contract
         _initializeCustomContract(customContract);
 

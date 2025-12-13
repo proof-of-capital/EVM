@@ -989,9 +989,9 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testAssignNewOwnerDoesNotUpdateDaoAddressWhenNewOwnerEqualsDao() public {
-        // Set daoAddress to a specific address
+        // Set daoAddress to a specific address (owner can set it since daoAddress is zero by default)
         address daoAddr = address(0x777);
-        vm.prank(owner); // owner is also daoAddress initially
+        vm.prank(owner);
         proofOfCapital.setDao(daoAddr);
 
         // Verify initial state
@@ -1011,9 +1011,9 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testAssignNewOwnerDoesNotUpdateDaoAddressWhenNewOwnerNotEqualsDao() public {
-        // First, set daoAddress to a different address
+        // First, set daoAddress to a different address (owner can set it since daoAddress is zero by default)
         address differentDao = address(0x777);
-        vm.prank(owner); // owner is also daoAddress initially
+        vm.prank(owner);
         proofOfCapital.setDao(differentDao);
 
         // Verify owner != daoAddress
@@ -1034,7 +1034,11 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testAssignNewOwnerDoesNotUpdateDaoAddressWhenInitialOwnerEqualsDao() public {
-        // In BaseTest, daoAddress defaults to owner, so owner == daoAddress initially
+        // Set DAO to owner first (since daoAddress is zero by default now)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
+        // In BaseTest, daoAddress is now set to owner
         address initialDao = proofOfCapital.daoAddress();
         assertEq(proofOfCapital.owner(), owner);
         assertEq(proofOfCapital.daoAddress(), owner);
@@ -2449,11 +2453,15 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.sellLaunchTokensReturnWallet(50000e18);
         vm.stopPrank();
 
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         // Move time to exact lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime);
 
-        // Should work at exact lock end time
+        // Should work at exact lock end time (only DAO can call this)
         vm.prank(owner);
         proofOfCapital.withdrawAllLaunchTokens();
 
@@ -2612,6 +2620,10 @@ contract ProofOfCapitalTest is Test {
 
     // Tests for withdrawToken function
     function testWithdrawTokenSuccess() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         // Create a new ERC20 token (not launch or collateral)
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
 
@@ -2651,6 +2663,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenInvalidTokenLaunchToken() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         address dao = proofOfCapital.daoAddress();
 
         // Try to withdraw launch token (should fail)
@@ -2660,6 +2676,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenInvalidTokenCollateralToken() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         address dao = proofOfCapital.daoAddress();
 
         // Try to withdraw collateral token (should fail)
@@ -2669,6 +2689,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenInvalidAddress() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         address dao = proofOfCapital.daoAddress();
 
         // Try to withdraw with zero address (should fail)
@@ -2678,6 +2702,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenInvalidAmount() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         address dao = proofOfCapital.daoAddress();
 
@@ -2688,6 +2716,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenWorksBeforeLockEnd() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         // Create a new ERC20 token
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         uint256 amount = 5000e18;
@@ -2709,6 +2741,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenWorksAfterLockEnd() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         // Create a new ERC20 token
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         uint256 amount = 5000e18;
@@ -2730,6 +2766,10 @@ contract ProofOfCapitalTest is Test {
     }
 
     function testWithdrawTokenEmitsEvent() public {
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         uint256 amount = 3000e18;
         otherToken.transfer(address(proofOfCapital), amount);

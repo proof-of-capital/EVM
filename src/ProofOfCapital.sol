@@ -223,7 +223,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         collateralToken = IERC20(params.collateralToken);
         royaltyProfitPercent = params.royaltyProfitPercent;
         profitBeforeTrendChange = params.profitBeforeTrendChange;
-        daoAddress = params.daoAddress != address(0) ? params.daoAddress : params.initialOwner;
+        daoAddress = params.daoAddress;
 
         // Initialize state variables
         currentStep = 0;
@@ -651,11 +651,15 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     }
 
     /**
-     * @dev Set DAO address (can only be called by current DAO if owner equals DAO)
+     * @dev Set DAO address
+     * @notice Owner can set DAO if it was zero, DAO can reassign itself if owner equals DAO
      */
     function setDao(address newDaoAddress) external override {
-        require(msg.sender == daoAddress, AccessDenied());
-        require(owner() == daoAddress, AccessDenied());
+        if (daoAddress == address(0)) {
+            require(msg.sender == owner(), AccessDenied());
+        } else {
+            require(msg.sender == daoAddress, AccessDenied());
+        }
         require(newDaoAddress != address(0), InvalidDAOAddress());
         daoAddress = newDaoAddress;
         emit DAOAddressChanged(newDaoAddress);

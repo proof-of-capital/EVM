@@ -97,8 +97,12 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1 days);
 
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         // Deactivate contract by withdrawing all collateral tokens
-        vm.prank(owner); // owner is DAO by default
+        vm.prank(owner);
         proofOfCapital.withdrawAllCollateralTokens();
 
         // Verify contract is now inactive
@@ -139,8 +143,12 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1 days);
 
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
         // Deactivate contract by withdrawing all collateral tokens
-        vm.prank(owner); // owner is DAO by default
+        vm.prank(owner);
         proofOfCapital.withdrawAllCollateralTokens();
 
         // Verify contract is now inactive

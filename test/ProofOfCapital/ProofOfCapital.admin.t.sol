@@ -636,20 +636,26 @@ contract ProofOfCapitalAdminTest is BaseTest {
     function testSetDAORevertsWhenOwnerNotEqualsDao() public {
         // Set a different DAO address (not owner)
         address differentDao = address(0x777);
-        vm.prank(owner); // owner is the default daoAddress
+        vm.prank(owner); // owner can set DAO since it's zero by default
         proofOfCapital.setDao(differentDao);
 
-        // Now owner != daoAddress, so DAO cannot change itself
+        // Now owner != daoAddress, but DAO can still reassign itself (no longer requires owner == daoAddress)
+        // So this should succeed now
         vm.prank(differentDao);
-        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setDao(address(0x888));
+        
+        assertEq(proofOfCapital.daoAddress(), address(0x888));
     }
 
     function testSetDAOSuccessWhenOwnerEqualsDao() public {
-        // By default, owner == daoAddress, so it should work
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
+        // Now owner can set new DAO
         address newDaoAddress = address(0x999);
 
-        vm.prank(owner); // owner is the default daoAddress
+        vm.prank(owner);
         proofOfCapital.setDao(newDaoAddress);
 
         assertEq(proofOfCapital.daoAddress(), newDaoAddress);

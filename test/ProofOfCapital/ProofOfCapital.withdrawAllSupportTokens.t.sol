@@ -74,10 +74,18 @@ contract ProofOfCapitalWithdrawAllCollateralTokensTest is BaseTest {
         address dao = proofOfCapital.daoAddress();
         uint256 daoBalanceBefore = weth.balanceOf(dao);
 
+        // Set DAO first (since daoAddress is zero by default)
+        vm.prank(owner);
+        proofOfCapital.setDao(owner);
+        
+        // Update dao variable after setting it
+        dao = proofOfCapital.daoAddress();
+        daoBalanceBefore = weth.balanceOf(dao);
+        
         // Verify preconditions
         assertTrue(contractBalance > 0, "Should have collateral balance");
         assertTrue(initialIsActive, "Contract should be active initially");
-        assertEq(dao, owner, "DAO should be owner by default");
+        assertEq(dao, owner, "DAO should be set to owner");
 
         // Step 4: Withdraw all collateral tokens (only DAO can call this)
         vm.expectEmit(true, false, false, true);

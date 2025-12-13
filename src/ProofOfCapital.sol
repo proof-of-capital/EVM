@@ -187,7 +187,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         );
         require(params.priceIncrementMultiplier > 0, PriceIncrementTooLow());
         require(
-            params.royaltyProfitPercent > 1 && params.royaltyProfitPercent <= Constants.MAX_ROYALTY_PERCENT,
+            params.royaltyProfitPercent > Constants.MIN_ROYALTY_PERCENT
+                && params.royaltyProfitPercent <= Constants.MAX_ROYALTY_PERCENT,
             InvalidRoyaltyProfitPercentage()
         );
         require(params.profitBeforeTrendChange > 0, ProfitBeforeTrendChangeMustBePositive());

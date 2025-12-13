@@ -988,7 +988,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.reserveOwner(), newOwner);
     }
 
-    function testAssignNewOwnerUpdatesDaoAddressWhenNewOwnerEqualsDao() public {
+    function testAssignNewOwnerDoesNotUpdateDaoAddressWhenNewOwnerEqualsDao() public {
         // Set daoAddress to a specific address
         address daoAddr = address(0x777);
         vm.prank(owner); // owner is also daoAddress initially
@@ -999,13 +999,13 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.daoAddress(), daoAddr);
 
         // Assign new owner to the same address as daoAddress
-        // After _transferOwnership, owner() will return daoAddr
-        // Then the check if (owner() == daoAddress) will be true (daoAddr == daoAddr)
-        // So daoAddress should be updated to newOwner (which is daoAddr)
+        // After removing the automatic update condition, daoAddress should NOT be automatically updated
+        // even if the new owner equals daoAddress
         vm.prank(owner);
         proofOfCapital.transferOwnership(daoAddr);
 
-        // Verify that daoAddress was updated to newOwner since newOwner equals daoAddress
+        // Verify that owner was updated, but daoAddress remains unchanged
+        // (In this case, daoAddress happens to equal the new owner, but it wasn't updated)
         assertEq(proofOfCapital.owner(), daoAddr);
         assertEq(proofOfCapital.daoAddress(), daoAddr);
     }

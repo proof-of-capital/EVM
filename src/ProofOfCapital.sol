@@ -442,10 +442,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         } else {
             _transferOwnership(newOwner);
         }
-
-        if (owner() == daoAddress) {
-            daoAddress = newOwner;
-        }
     }
 
     /**

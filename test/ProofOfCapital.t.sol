@@ -2372,7 +2372,7 @@ contract ProofOfCapitalTest is Test {
         uint256 totalSold = proofOfCapital.totalLaunchSold();
         uint256 availableTokens = contractBalance - totalSold;
         address dao = proofOfCapital.daoAddress();
-        uint256 daoBalanceBefore = token.balanceOf(dao);
+        uint256 ownerBalanceBefore = token.balanceOf(owner);
 
         // Ensure there are tokens available for withdrawal
         assertTrue(availableTokens > 0);
@@ -2381,8 +2381,8 @@ contract ProofOfCapitalTest is Test {
         vm.prank(dao);
         proofOfCapital.withdrawAllLaunchTokens();
 
-        // Verify tokens transferred to DAO
-        assertEq(token.balanceOf(dao), daoBalanceBefore + availableTokens);
+        // Verify tokens transferred to owner
+        assertEq(token.balanceOf(owner), ownerBalanceBefore + availableTokens);
 
         // Verify contract is inactive
         assertEq(proofOfCapital.isActive(), false);
@@ -2487,14 +2487,14 @@ contract ProofOfCapitalTest is Test {
         uint256 expectedAvailable = token.balanceOf(address(proofOfCapital));
 
         address dao = proofOfCapital.daoAddress();
-        uint256 daoBalanceBefore = token.balanceOf(dao);
+        uint256 ownerBalanceBefore = token.balanceOf(owner);
 
         // Withdraw (only DAO can call this)
         vm.prank(dao);
         proofOfCapital.withdrawAllLaunchTokens();
 
-        // Verify correct amount transferred to DAO
-        assertEq(token.balanceOf(dao), daoBalanceBefore + expectedAvailable);
+        // Verify correct amount transferred to owner
+        assertEq(token.balanceOf(owner), ownerBalanceBefore + expectedAvailable);
     }
 
     // Tests for withdrawAllCollateralTokens function
@@ -2592,13 +2592,13 @@ contract ProofOfCapitalTest is Test {
         // Test main token withdrawal
         uint256 contractBalance = token.balanceOf(address(proofOfCapital));
         address dao = proofOfCapital.daoAddress();
-        uint256 daoMainBalanceBefore = token.balanceOf(dao);
+        uint256 ownerMainBalanceBefore = token.balanceOf(owner);
 
         vm.prank(dao);
         proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify main tokens withdrawn and contract is inactive
-        assertEq(token.balanceOf(dao), daoMainBalanceBefore + contractBalance);
+        assertEq(token.balanceOf(owner), ownerMainBalanceBefore + contractBalance);
         assertEq(proofOfCapital.isActive(), false);
 
         // Second test: test collateral token withdrawal with zero balance (expected to fail)

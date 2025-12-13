@@ -611,11 +611,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         uint256 _launchBalance = launchToken.balanceOf(address(this));
         require(_launchBalance > 0, NoTokensToWithdraw());
 
-        launchToken.safeTransfer(daoAddress, _launchBalance);
+        launchToken.safeTransfer(owner(), _launchBalance);
 
         isActive = false;
 
-        emit AllTokensWithdrawn(daoAddress, _launchBalance);
+        emit AllTokensWithdrawn(owner(), _launchBalance);
     }
 
     /**

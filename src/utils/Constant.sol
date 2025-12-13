@@ -37,17 +37,11 @@ pragma solidity 0.8.29;
 library Constants {
     // Time constants (in seconds)
     uint256 public constant FIVE_YEARS = 1825 days; // 1825 days (5 years, maximum lock extension period)
-    uint256 public constant HALF_YEAR = 365 days / 2; // half year
-    uint256 public constant THREE_MONTHS = 30 days * 3; // 3 months
     uint256 public constant MIN_CONTROL_PERIOD = 6 hours; // 6 hours minimum control period
     uint256 public constant MAX_CONTROL_PERIOD = 30 days; // 30 days maximum control period
-    uint256 public constant TEN_MINUTES = 10 minutes; // 10 minutes for testing
-    uint256 public constant THREE_WEEKS = 3 weeks; // 3 weeks
     uint256 public constant THIRTY_DAYS = 30 days; // 30 days
     uint256 public constant SIXTY_DAYS = 60 days; // 60 days
     uint256 public constant SEVEN_DAYS = 7 days; // 7 days
-    uint256 public constant ONE_DAY = 1 days; // 1 day for return wallet change delay
-    uint256 public constant FORTY_DAYS = 40 days; // 40 days minimum period between old contract address updates
 
     // Percentage constants
     uint256 public constant PERCENTAGE_DIVISOR = 1000; // For percentage calculations (0.1% precision)

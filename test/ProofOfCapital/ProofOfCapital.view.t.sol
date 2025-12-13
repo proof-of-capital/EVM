@@ -88,7 +88,7 @@ contract ProofOfCapitalViewTest is BaseTest {
 
         // Extend lock to current lockEndTime + 3 months
         vm.prank(owner);
-        proofOfCapital.extendLock(lockEndTime + Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(lockEndTime + 90 days);
 
         // After extension, we should no longer be in trading period
         assertFalse(proofOfCapital.tradingOpportunity());

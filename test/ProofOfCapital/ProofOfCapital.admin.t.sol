@@ -40,34 +40,34 @@ contract ProofOfCapitalAdminTest is BaseTest {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.HALF_YEAR);
+        proofOfCapital.extendLock(initialLockEndTime + 182 days);
 
-        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.HALF_YEAR);
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + 182 days);
     }
 
     function testExtendLockWithThreeMonths() public {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(initialLockEndTime + 90 days);
 
-        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.THREE_MONTHS);
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + 90 days);
     }
 
     function testExtendLockWithTenMinutes() public {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(initialLockEndTime + 10 minutes);
 
-        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.TEN_MINUTES);
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + 10 minutes);
     }
 
     function testExtendLockUnauthorized() public {
         // Non-owner tries to extend lock
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.extendLock(block.timestamp + Constants.HALF_YEAR);
+        proofOfCapital.extendLock(block.timestamp + 182 days);
     }
 
     function testExtendLockExceedsFiveYears() public {
@@ -87,7 +87,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
     function testExtendLockEvent() public {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
-        uint256 newLockEndTime = initialLockEndTime + Constants.THREE_MONTHS;
+        uint256 newLockEndTime = initialLockEndTime + 90 days;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
@@ -101,16 +101,16 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // First extension
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(initialLockEndTime + 90 days);
 
         uint256 afterFirstExtension = proofOfCapital.lockEndTime();
-        assertEq(afterFirstExtension, initialLockEndTime + Constants.THREE_MONTHS);
+        assertEq(afterFirstExtension, initialLockEndTime + 90 days);
 
         // Second extension (extending further)
         vm.prank(owner);
-        proofOfCapital.extendLock(afterFirstExtension + Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(afterFirstExtension + 10 minutes);
 
-        assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
+        assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + 10 minutes);
     }
 
     // COMMENTED: Test was failing
@@ -121,23 +121,23 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // Extend by THREE_MONTHS multiple times to get close to the limit
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        proofOfCapital.extendLock(90 days); // +90 days
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        proofOfCapital.extendLock(90 days); // +90 days
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        proofOfCapital.extendLock(90 days); // +90 days
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.THREE_MONTHS); // +90 days
+        proofOfCapital.extendLock(90 days); // +90 days
         // Now we have 365 + 360 = 725 days, close to 730 limit
 
-        // TEN_MINUTES should still work (it's very small)
+        // 10 minutes should still work (it's very small)
         vm.prank(owner);
-        proofOfCapital.extendLock(Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(10 minutes);
 
-        // But HALF_YEAR should fail now
+        // But 182 days should fail now
         vm.prank(owner);
         vm.expectRevert(IProofOfCapital.LockCannotExceedFiveYears.selector);
-        proofOfCapital.extendLock(Constants.HALF_YEAR);
+        proofOfCapital.extendLock(182 days);
     }
     */
 

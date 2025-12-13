@@ -155,34 +155,34 @@ contract ProofOfCapitalTest is Test {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.HALF_YEAR);
+        proofOfCapital.extendLock(initialLockEndTime + 365 days / 2);
 
-        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.HALF_YEAR);
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + 365 days / 2);
     }
 
     function testExtendLockWithThreeMonths() public {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(initialLockEndTime + 30 days * 3);
 
-        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.THREE_MONTHS);
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + 30 days * 3);
     }
 
     function testExtendLockWithTenMinutes() public {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
 
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(initialLockEndTime + 10 minutes);
 
-        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + Constants.TEN_MINUTES);
+        assertEq(proofOfCapital.lockEndTime(), initialLockEndTime + 10 minutes);
     }
 
     function testExtendLockUnauthorized() public {
         // Non-owner tries to extend lock
         vm.prank(royalty);
         vm.expectRevert();
-        proofOfCapital.extendLock(block.timestamp + Constants.HALF_YEAR);
+        proofOfCapital.extendLock(block.timestamp + 365 days / 2);
     }
 
     function testExtendLockExceedsFiveYears() public {
@@ -202,7 +202,7 @@ contract ProofOfCapitalTest is Test {
 
     function testExtendLockEvent() public {
         uint256 initialLockEndTime = proofOfCapital.lockEndTime();
-        uint256 newLockEndTime = initialLockEndTime + Constants.THREE_MONTHS;
+        uint256 newLockEndTime = initialLockEndTime + 90 days;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
@@ -216,16 +216,16 @@ contract ProofOfCapitalTest is Test {
 
         // First extension
         vm.prank(owner);
-        proofOfCapital.extendLock(initialLockEndTime + Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(initialLockEndTime + 90 days);
 
         uint256 afterFirstExtension = proofOfCapital.lockEndTime();
-        assertEq(afterFirstExtension, initialLockEndTime + Constants.THREE_MONTHS);
+        assertEq(afterFirstExtension, initialLockEndTime + 90 days);
 
         // Second extension (extending further)
         vm.prank(owner);
-        proofOfCapital.extendLock(afterFirstExtension + Constants.TEN_MINUTES);
+        proofOfCapital.extendLock(afterFirstExtension + 10 minutes);
 
-        assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + Constants.TEN_MINUTES);
+        assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + 10 minutes);
     }
 
     // Tests for toggleDeferredWithdrawal function
@@ -2243,7 +2243,7 @@ contract ProofOfCapitalTest is Test {
 
         // Extend lock to current lockEndTime + 3 months
         vm.prank(owner);
-        proofOfCapital.extendLock(lockEndTime + Constants.THREE_MONTHS);
+        proofOfCapital.extendLock(lockEndTime + 90 days);
 
         // After extension, we should no longer be in trading period
         assertFalse(proofOfCapital.tradingOpportunity());

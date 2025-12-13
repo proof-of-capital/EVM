@@ -39,7 +39,6 @@ import {IProofOfCapital} from "./interfaces/IProofOfCapital.sol";
 import {IRoyalty} from "./interfaces/IRoyalty.sol";
 import {Constants} from "./utils/Constant.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
-import {AggregatorInterface} from "./interfaces/AggregatorInterface.sol";
 
 /**
  * @title ProofOfCapital
@@ -1283,9 +1282,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     function _validateCollateralTokenOracle() internal view {
         if (collateralTokenOracle != address(0)) {
-            int256 collateralTokenValue = AggregatorInterface(collateralTokenOracle).latestAnswer();
+            (, int256 collateralTokenValue,, uint256 updatedAt,) =
+                IAggregatorV3(collateralTokenOracle).latestRoundData();
             require(
-                collateralTokenValue >= collateralTokenMinOracleValue || collateralTokenValue == 0,
+                collateralTokenValue >= collateralTokenMinOracleValue || collateralTokenValue == 0
+                    || updatedAt < block.timestamp - Constants.THIRTY_DAYS,
                 InsufficientCollateralTokenValue()
             );
         }

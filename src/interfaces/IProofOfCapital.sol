@@ -241,7 +241,6 @@ interface IProofOfCapital {
     function levelDecreaseMultiplierAfterTrend() external view returns (int256);
     function profitPercentage() external view returns (uint256);
     function royaltyProfitPercent() external view returns (uint256);
-    function creatorProfitPercent() external view returns (uint256);
     function profitBeforeTrendChange() external view returns (uint256);
     function totalLaunchSold() external view returns (uint256);
     function contractCollateralBalance() external view returns (uint256);

@@ -80,7 +80,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     int256 public override levelDecreaseMultiplierAfterTrend;
     uint256 public override profitPercentage;
     uint256 public override royaltyProfitPercent;
-    uint256 public override creatorProfitPercent;
     uint256 public override profitBeforeTrendChange; // Profit percentage before trend change
 
     // Balances and counters
@@ -223,7 +222,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         controlPeriod = _getPeriod(params.controlPeriod);
         collateralToken = IERC20(params.collateralToken);
         royaltyProfitPercent = params.royaltyProfitPercent;
-        creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - params.royaltyProfitPercent;
         profitBeforeTrendChange = params.profitBeforeTrendChange;
         daoAddress = params.daoAddress != address(0) ? params.daoAddress : params.initialOwner;
 
@@ -511,7 +509,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         }
 
         royaltyProfitPercent = newRoyaltyProfitPercentage;
-        creatorProfitPercent = Constants.PERCENTAGE_DIVISOR - newRoyaltyProfitPercentage;
         emit ProfitPercentageChanged(newRoyaltyProfitPercentage);
     }
 
@@ -798,8 +795,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
 
         (uint256 totalLaunch, uint256 actualProfit) = _calculateLaunchToGiveForCollateralAmount(collateralAmount);
-        uint256 creatorProfit = (actualProfit * creatorProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
+        uint256 creatorProfit = actualProfit - royaltyProfit;
 
         if (profitInTime) {
             collateralToken.safeTransfer(owner(), creatorProfit);

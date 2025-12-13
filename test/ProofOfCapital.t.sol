@@ -1973,7 +1973,7 @@ contract ProofOfCapitalTest is Test {
         // Owner can only increase royalty percentage (from 500 to higher)
         uint256 newPercentage = 600; // 60%
         uint256 initialRoyaltyPercent = proofOfCapital.royaltyProfitPercent(); // Should be 500
-        uint256 initialCreatorPercent = proofOfCapital.creatorProfitPercent(); // Should be 500
+        uint256 initialCreatorPercent = Constants.PERCENTAGE_DIVISOR - initialRoyaltyPercent; // Should be 500
 
         // Verify initial state
         assertEq(initialRoyaltyPercent, 500);
@@ -1985,7 +1985,10 @@ contract ProofOfCapitalTest is Test {
 
         // Verify changes
         assertEq(proofOfCapital.royaltyProfitPercent(), newPercentage);
-        assertEq(proofOfCapital.creatorProfitPercent(), Constants.PERCENTAGE_DIVISOR - newPercentage);
+        assertEq(
+            Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(),
+            Constants.PERCENTAGE_DIVISOR - newPercentage
+        );
     }
 
     function testChangeProfitPercentageRoyaltyDecrease() public {
@@ -2002,7 +2005,10 @@ contract ProofOfCapitalTest is Test {
 
         // Verify changes
         assertEq(proofOfCapital.royaltyProfitPercent(), newPercentage);
-        assertEq(proofOfCapital.creatorProfitPercent(), Constants.PERCENTAGE_DIVISOR - newPercentage);
+        assertEq(
+            Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(),
+            Constants.PERCENTAGE_DIVISOR - newPercentage
+        );
     }
 
     function testChangeProfitPercentageAccessDenied() public {
@@ -2095,13 +2101,13 @@ contract ProofOfCapitalTest is Test {
         vm.prank(royalty);
         proofOfCapital.changeProfitPercentage(1);
         assertEq(proofOfCapital.royaltyProfitPercent(), 1);
-        assertEq(proofOfCapital.creatorProfitPercent(), Constants.PERCENTAGE_DIVISOR - 1);
+        assertEq(Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(), Constants.PERCENTAGE_DIVISOR - 1);
 
         // Test with boundary value PERCENTAGE_DIVISOR (maximum valid)
         vm.prank(owner);
         proofOfCapital.changeProfitPercentage(Constants.PERCENTAGE_DIVISOR);
         assertEq(proofOfCapital.royaltyProfitPercent(), Constants.PERCENTAGE_DIVISOR);
-        assertEq(proofOfCapital.creatorProfitPercent(), 0);
+        assertEq(Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(), 0);
     }
 
     function testChangeProfitPercentageOwnerEqualToCurrent() public {
@@ -2129,19 +2135,19 @@ contract ProofOfCapitalTest is Test {
         vm.prank(owner);
         proofOfCapital.changeProfitPercentage(700);
         assertEq(proofOfCapital.royaltyProfitPercent(), 700);
-        assertEq(proofOfCapital.creatorProfitPercent(), 300);
+        assertEq(Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(), 300);
 
         // Step 2: Royalty decreases from 700 to 600
         vm.prank(royalty);
         proofOfCapital.changeProfitPercentage(600);
         assertEq(proofOfCapital.royaltyProfitPercent(), 600);
-        assertEq(proofOfCapital.creatorProfitPercent(), 400);
+        assertEq(Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(), 400);
 
         // Step 3: Owner increases from 600 to 800
         vm.prank(owner);
         proofOfCapital.changeProfitPercentage(800);
         assertEq(proofOfCapital.royaltyProfitPercent(), 800);
-        assertEq(proofOfCapital.creatorProfitPercent(), 200);
+        assertEq(Constants.PERCENTAGE_DIVISOR - proofOfCapital.royaltyProfitPercent(), 200);
     }
 
     function testChangeProfitPercentageStateConsistency() public {
@@ -2158,7 +2164,7 @@ contract ProofOfCapitalTest is Test {
             proofOfCapital.changeProfitPercentage(testPercentages[i]);
 
             uint256 royaltyPercent = proofOfCapital.royaltyProfitPercent();
-            uint256 creatorPercent = proofOfCapital.creatorProfitPercent();
+            uint256 creatorPercent = Constants.PERCENTAGE_DIVISOR - royaltyPercent;
 
             // Verify they sum to PERCENTAGE_DIVISOR
             assertEq(royaltyPercent + creatorPercent, Constants.PERCENTAGE_DIVISOR);

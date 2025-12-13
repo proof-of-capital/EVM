@@ -1789,7 +1789,7 @@ contract ProofOfCapitalTest is Test {
         // Expect ReturnWalletChanged event
         vm.prank(owner);
         vm.expectEmit(true, false, false, false);
-        emit IProofOfCapital.ReturnWalletChanged(newReturnWallet);
+        emit IProofOfCapital.ReturnWalletChanged(newReturnWallet, true);
         proofOfCapital.setReturnWallet(newReturnWallet, true);
     }
 

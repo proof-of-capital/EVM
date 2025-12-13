@@ -474,7 +474,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     function setReturnWallet(address returnWalletAddress, bool isReturnWallet) external override onlyOwner {
         require(returnWalletAddress != address(0), InvalidAddress());
         returnWalletAddresses[returnWalletAddress] = isReturnWallet;
-        emit ReturnWalletChanged(returnWalletAddress);
+        emit ReturnWalletChanged(returnWalletAddress, isReturnWallet);
     }
 
     /**

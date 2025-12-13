@@ -132,7 +132,7 @@ interface IProofOfCapital {
     event CommissionChanged(uint256 newCommission);
     event ReserveOwnerChanged(address indexed newReserveOwner);
     event RoyaltyWalletChanged(address indexed newRoyaltyWalletAddress);
-    event ReturnWalletChanged(address indexed newReturnWalletAddress);
+    event ReturnWalletChanged(address indexed newReturnWalletAddress, bool isReturnWallet);
     event ProfitPercentageChanged(uint256 newRoyaltyProfitPercentage);
     event CollateralDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
     event AllTokensWithdrawn(address indexed owner, uint256 amount);

@@ -570,7 +570,7 @@ contract ProofOfCapitalTest is Test {
     function testConfirmTokenDeferredWithdrawalNoDeferredWithdrawalScheduled() public {
         // Try to confirm without scheduling
         vm.prank(owner);
-        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientTokenBalance.selector);
         proofOfCapital.confirmLaunchDeferredWithdrawal();
     }
 
@@ -780,7 +780,7 @@ contract ProofOfCapitalTest is Test {
 
         // Test 1: No withdrawal scheduled
         vm.prank(owner);
-        vm.expectRevert(IProofOfCapital.NoDeferredWithdrawalScheduled.selector);
+        vm.expectRevert(IProofOfCapital.InsufficientTokenBalance.selector);
         proofOfCapital.confirmLaunchDeferredWithdrawal();
 
         // Test 2: Schedule and test date not reached

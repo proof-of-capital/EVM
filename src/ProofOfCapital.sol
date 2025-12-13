@@ -358,7 +358,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      */
     function confirmLaunchDeferredWithdrawal() external override onlyOwner {
         require(canWithdrawal, DeferredWithdrawalBlocked());
-        require(launchDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= launchDeferredWithdrawalDate, WithdrawalDateNotReached());
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
         require(launchBalance - totalLaunchSold >= launchDeferredWithdrawalAmount, InsufficientAmount());

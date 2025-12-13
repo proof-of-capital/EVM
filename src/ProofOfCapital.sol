@@ -627,9 +627,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         uint256 _collateralBalance = collateralToken.balanceOf(address(this));
         require(_collateralBalance > 0, NoCollateralTokensToWithdraw());
 
-        isActive = false;
-
         collateralToken.safeTransfer(daoAddress, _collateralBalance);
+
+        isActive = false;
 
         emit AllCollateralTokensWithdrawn(daoAddress, _collateralBalance);
     }

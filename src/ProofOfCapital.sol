@@ -711,9 +711,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         unaccountedOffset -= amount;
 
         // Check if all offset has been processed
-        if (unaccountedOffset == 0) {
-            isInitialized = true;
-        }
+        _checkAndSetInitialized();
 
         emit UnaccountedOffsetBalanceProcessed(amount);
     }
@@ -732,9 +730,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         _calculateChangeOffsetLaunch(amount);
         unaccountedOffsetLaunchBalance -= amount;
-        if (unaccountedOffsetLaunchBalance == 0) {
-            isInitialized = true;
-        }
+        _checkAndSetInitialized();
 
         emit UnaccountedOffsetTokenBalanceProcessed(amount);
     }
@@ -1338,5 +1334,14 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     function _isInitialized() internal view {
         require(isInitialized, ContractNotInitialized());
+    }
+
+    /**
+     * @dev Check if all unaccounted balances are processed and set isInitialized to true
+     */
+    function _checkAndSetInitialized() internal {
+        if (unaccountedOffset == 0 && unaccountedOffsetLaunchBalance == 0) {
+            isInitialized = true;
+        }
     }
 }

@@ -642,9 +642,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      */
     function withdrawToken(address token, uint256 amount) external override onlyDao {
         require(token != address(0), InvalidAddress());
-        if (token == address(launchToken) || token == address(collateralToken)) {
-            revert InvalidTokenForWithdrawal();
-        }
+        require(token != address(launchToken) && token != address(collateralToken), InvalidTokenForWithdrawal());
         require(amount > 0, InvalidAmount());
 
         IERC20(token).safeTransfer(daoAddress, amount);

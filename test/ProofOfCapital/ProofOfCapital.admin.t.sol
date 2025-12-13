@@ -643,7 +643,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // So this should succeed now
         vm.prank(differentDao);
         proofOfCapital.setDao(address(0x888));
-        
+
         assertEq(proofOfCapital.daoAddress(), address(0x888));
     }
 
@@ -651,7 +651,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Now owner can set new DAO
         address newDaoAddress = address(0x999);
 

@@ -1037,7 +1037,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO to owner first (since daoAddress is zero by default now)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // In BaseTest, daoAddress is now set to owner
         address initialDao = proofOfCapital.daoAddress();
         assertEq(proofOfCapital.owner(), owner);
@@ -2456,7 +2456,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Move time to exact lock end
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime);
@@ -2623,7 +2623,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Create a new ERC20 token (not launch or collateral)
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
 
@@ -2666,7 +2666,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         address dao = proofOfCapital.daoAddress();
 
         // Try to withdraw launch token (should fail)
@@ -2679,7 +2679,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         address dao = proofOfCapital.daoAddress();
 
         // Try to withdraw collateral token (should fail)
@@ -2692,7 +2692,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         address dao = proofOfCapital.daoAddress();
 
         // Try to withdraw with zero address (should fail)
@@ -2705,7 +2705,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         address dao = proofOfCapital.daoAddress();
 
@@ -2719,7 +2719,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Create a new ERC20 token
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         uint256 amount = 5000e18;
@@ -2744,7 +2744,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Create a new ERC20 token
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         uint256 amount = 5000e18;
@@ -2769,7 +2769,7 @@ contract ProofOfCapitalTest is Test {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         MockERC20 otherToken = new MockERC20("OtherToken", "OT");
         uint256 amount = 3000e18;
         otherToken.transfer(address(proofOfCapital), amount);

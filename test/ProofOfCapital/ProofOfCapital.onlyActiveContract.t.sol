@@ -100,7 +100,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Deactivate contract by withdrawing all collateral tokens
         vm.prank(owner);
         proofOfCapital.withdrawAllCollateralTokens();
@@ -146,7 +146,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // Set DAO first (since daoAddress is zero by default)
         vm.prank(owner);
         proofOfCapital.setDao(owner);
-        
+
         // Deactivate contract by withdrawing all collateral tokens
         vm.prank(owner);
         proofOfCapital.withdrawAllCollateralTokens();

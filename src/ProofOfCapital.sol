@@ -565,10 +565,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        if (!isFirstLaunchDeposit) {
-            launchBalance += amount;
-            isFirstLaunchDeposit = true;
-        } else {
+        if (isFirstLaunchDeposit) {
             launchBalance += amount;
 
             if (totalLaunchSold == offsetLaunch) {
@@ -580,6 +577,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     isInitialized = false;
                 }
             }
+        } else {
+            launchBalance += amount;
+            isFirstLaunchDeposit = true;
         }
 
         emit LaunchDeposited(msg.sender, amount);

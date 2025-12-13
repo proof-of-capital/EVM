@@ -300,6 +300,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
             require(lockEndTime - block.timestamp < Constants.SIXTY_DAYS, CannotActivateWithdrawalTooCloseToLockEnd());
             canWithdrawal = true;
         }
+        emit DeferredWithdrawalToggled(canWithdrawal);
     }
 
     /**
@@ -349,6 +350,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         launchDeferredWithdrawalDate = 0;
         launchDeferredWithdrawalAmount = 0;
         recipientDeferredWithdrawalLaunch = owner();
+
+        emit LaunchDeferredWithdrawalCancelled(msg.sender);
     }
 
     /**
@@ -368,6 +371,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         launchDeferredWithdrawalDate = 0;
         launchDeferredWithdrawalAmount = 0;
         recipientDeferredWithdrawalLaunch = owner();
+
+        emit LaunchDeferredWithdrawalConfirmed(recipient, withdrawalAmount);
 
         launchToken.safeIncreaseAllowance(recipient, withdrawalAmount);
         IProofOfCapital(recipient).depositLaunch(withdrawalAmount);
@@ -398,6 +403,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         collateralTokenDeferredWithdrawalDate = 0;
         recipientDeferredWithdrawalCollateralToken = owner();
+
+        emit CollateralDeferredWithdrawalCancelled(msg.sender);
     }
 
     /**
@@ -577,6 +584,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                 }
             }
         }
+
+        emit LaunchDeposited(msg.sender, amount);
     }
 
     /**
@@ -859,6 +868,8 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         if (collateralAmountToPay > 0) {
             collateralToken.safeTransfer(daoAddress, collateralAmountToPay);
         }
+
+        emit TokensSoldReturnWallet(msg.sender, amount, collateralAmountToPay);
     }
 
     function _handleLaucnhTokenSale(uint256 amount) internal {

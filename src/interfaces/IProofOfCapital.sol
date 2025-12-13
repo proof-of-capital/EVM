@@ -122,6 +122,12 @@ interface IProofOfCapital {
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 cost);
     event TokensSold(address indexed seller, uint256 amount, uint256 payout);
     event DeferredWithdrawalScheduled(address indexed recipient, uint256 amount, uint256 executeTime);
+    event DeferredWithdrawalToggled(bool canWithdrawal);
+    event LaunchDeferredWithdrawalCancelled(address indexed cancelledBy);
+    event LaunchDeferredWithdrawalConfirmed(address indexed recipient, uint256 amount);
+    event CollateralDeferredWithdrawalCancelled(address indexed cancelledBy);
+    event LaunchDeposited(address indexed depositor, uint256 amount);
+    event TokensSoldReturnWallet(address indexed seller, uint256 amount, uint256 collateralPaid);
     event ProfitModeChanged(bool profitInTime);
     event CommissionChanged(uint256 newCommission);
     event ReserveOwnerChanged(address indexed newReserveOwner);

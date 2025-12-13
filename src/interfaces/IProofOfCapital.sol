@@ -85,7 +85,7 @@ interface IProofOfCapital {
     error NoTokensAvailableForBuyback();
     error InsufficientTokensForBuyback();
     error InsufficientSoldTokens();
-    error LockIsActive();
+    error TradingIsActive();
     error OldContractAddressZero();
     error OldContractAddressConflict();
     error InvalidDAOAddress();

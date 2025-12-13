@@ -64,7 +64,7 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime - Constants.SIXTY_DAYS + 1); // Within 60 days
         vm.prank(owner);
-        vm.expectRevert(IProofOfCapital.LockIsActive.selector);
+        vm.expectRevert(IProofOfCapital.TradingIsActive.selector);
         proofOfCapital.registerOldContract(MOCK_OLD_CONTRACT);
     }
 

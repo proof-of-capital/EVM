@@ -309,7 +309,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      * @param oldContractAddr Address of the old contract to register
      */
     function registerOldContract(address oldContractAddr) external override onlyOwner {
-        require(!_checkTradingAccess(), LockIsActive());
+        require(!_checkTradingAccess(), TradingIsActive());
         require(oldContractAddr != address(0), OldContractAddressZero());
         require(
             oldContractAddr != owner() && oldContractAddr != reserveOwner && oldContractAddr != address(launchToken)

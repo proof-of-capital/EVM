@@ -605,10 +605,10 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
     // Tests for setDao function
     function testSetDAOAccessDenied() public {
-        // By default, daoAddress is set to owner (from BaseTest)
+        // By default, daoAddress is address(0) (from BaseTest)
         address newDaoAddress = address(0x999);
 
-        // Non-DAO address tries to set DAO
+        // Non-owner address tries to set DAO (only owner can set when daoAddress is zero)
         vm.prank(royalty);
         vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setDao(newDaoAddress);
@@ -628,7 +628,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
     function testSetDAOInvalidDAOAddress() public {
         // Try to set zero address as new DAO
-        vm.prank(owner); // owner is the default daoAddress
+        vm.prank(owner); // owner can set DAO since daoAddress is zero by default
         vm.expectRevert(IProofOfCapital.InvalidDAOAddress.selector);
         proofOfCapital.setDao(address(0));
     }
@@ -639,12 +639,13 @@ contract ProofOfCapitalAdminTest is BaseTest {
         vm.prank(owner); // owner can set DAO since it's zero by default
         proofOfCapital.setDao(differentDao);
 
-        // Now owner != daoAddress, but DAO can still reassign itself (no longer requires owner == daoAddress)
-        // So this should succeed now
-        vm.prank(differentDao);
-        proofOfCapital.setDao(address(0x888));
+        // Verify DAO was set
+        assertEq(proofOfCapital.daoAddress(), differentDao);
 
-        assertEq(proofOfCapital.daoAddress(), address(0x888));
+        // Now try to reassign DAO - this should fail because DAO can only be set once
+        vm.prank(differentDao);
+        vm.expectRevert(IProofOfCapital.DAOAlreadySet.selector);
+        proofOfCapital.setDao(address(0x888));
     }
 
     function testSetDAOSuccessWhenOwnerEqualsDao() public {
@@ -652,12 +653,13 @@ contract ProofOfCapitalAdminTest is BaseTest {
         vm.prank(owner);
         proofOfCapital.setDao(owner);
 
-        // Now owner can set new DAO
+        // Verify DAO was set
+        assertEq(proofOfCapital.daoAddress(), owner);
+
+        // Now try to reassign DAO - this should fail because DAO can only be set once
         address newDaoAddress = address(0x999);
-
         vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.DAOAlreadySet.selector);
         proofOfCapital.setDao(newDaoAddress);
-
-        assertEq(proofOfCapital.daoAddress(), newDaoAddress);
     }
 }

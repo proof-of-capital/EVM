@@ -89,6 +89,7 @@ interface IProofOfCapital {
     error OldContractAddressZero();
     error OldContractAddressConflict();
     error InvalidDAOAddress();
+    error DAOAlreadySet();
     error InsufficientUnaccountedCollateralBalance();
     error InsufficientUnaccountedOffsetBalance();
     error InsufficientUnaccountedOffsetTokenBalance();

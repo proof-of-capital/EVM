@@ -677,14 +677,12 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     /**
      * @dev Set DAO address
-     * @notice Owner can set DAO if it was zero, DAO can reassign itself if owner equals DAO
+     * @notice Owner can set DAO only if it was zero. Once set, DAO cannot be reassigned
+     * @param newDaoAddress New DAO address to set
      */
     function setDao(address newDaoAddress) external override {
-        if (daoAddress == address(0)) {
-            require(msg.sender == owner(), AccessDenied());
-        } else {
-            require(msg.sender == daoAddress, AccessDenied());
-        }
+        require(daoAddress == address(0), DAOAlreadySet());
+        require(msg.sender == owner(), AccessDenied());
         require(newDaoAddress != address(0), InvalidDAOAddress());
         daoAddress = newDaoAddress;
         emit DAOAddressChanged(newDaoAddress);

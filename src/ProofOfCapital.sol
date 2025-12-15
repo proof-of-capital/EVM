@@ -938,6 +938,10 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         }
     }
 
+    function _calculateAdjustedPrice(uint256 price, uint256 profitPercent) internal pure returns (uint256) {
+        return (price * (Constants.PERCENTAGE_DIVISOR - profitPercent)) / Constants.PERCENTAGE_DIVISOR;
+    }
+
     function _calculateOffset(uint256 offsetAmount) internal {
         int256 remainingOffset = int256(offsetAmount);
         uint256 localCurrentStep = offsetStep;
@@ -1074,8 +1078,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     remainingAddLaunchTokens = 0;
                 }
             } else {
-                uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
-                    / Constants.PERCENTAGE_DIVISOR;
+                uint256 adjustedPrice = _calculateAdjustedPrice(currentPriceLocal, profitPercentageLocal);
 
                 uint256 collateralToPayForStep = 0;
                 uint256 launchToBuyInThisStep = 0;
@@ -1185,8 +1188,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
             if (remainingLaunchAmount >= launchAvailableInStep) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-                uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
-                    / Constants.PERCENTAGE_DIVISOR;
+                uint256 adjustedPrice = _calculateAdjustedPrice(currentPriceLocal, profitPercentageLocal);
                 uint256 collateralToPayForStep =
                     (uint256(launchAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
@@ -1211,8 +1213,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                 }
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-                uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
-                    / Constants.PERCENTAGE_DIVISOR;
+                uint256 adjustedPrice = _calculateAdjustedPrice(currentPriceLocal, profitPercentageLocal);
                 uint256 collateralToPayForStep =
                     (uint256(remainingLaunchAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
@@ -1244,8 +1245,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
             if (remainingLaunchAmount >= launchAvailableInStep) {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-                uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
-                    / Constants.PERCENTAGE_DIVISOR;
+                uint256 adjustedPrice = _calculateAdjustedPrice(currentPriceLocal, profitPercentageLocal);
                 uint256 collateralToPayForStep =
                     (uint256(launchAvailableInStep) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;
@@ -1258,8 +1258,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
                     / Constants.PERCENTAGE_DIVISOR;
             } else {
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
-                uint256 adjustedPrice = (currentPriceLocal * (Constants.PERCENTAGE_DIVISOR - profitPercentageLocal))
-                    / Constants.PERCENTAGE_DIVISOR;
+                uint256 adjustedPrice = _calculateAdjustedPrice(currentPriceLocal, profitPercentageLocal);
                 uint256 collateralToPayForStep =
                     (uint256(remainingLaunchAmount) * adjustedPrice) / Constants.PRICE_PRECISION;
                 collateralAmountToPay += collateralToPayForStep;

@@ -586,7 +586,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
-        _handleLaucnhTokenSale(amount);
+        _handleLaunchTokenSale(amount);
     }
 
     /**
@@ -860,7 +860,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         emit TokensSoldReturnWallet(msg.sender, amount, collateralAmountToPay);
     }
 
-    function _handleLaucnhTokenSale(uint256 amount) internal {
+    function _handleLaunchTokenSale(uint256 amount) internal {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());

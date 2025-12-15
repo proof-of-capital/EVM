@@ -191,6 +191,7 @@ interface IProofOfCapital {
     function depositLaunch(uint256 amount) external;
     function sellLaunchTokens(uint256 amount) external;
     function sellLaunchTokensReturnWallet(uint256 amount) external;
+    function sellLaunchTokensDao(uint256 amount) external;
 
     // Deferred withdrawals
     function launchDeferredWithdrawal(address recipientAddress, uint256 amount) external;
@@ -247,6 +248,7 @@ interface IProofOfCapital {
     function contractCollateralBalance() external view returns (uint256);
     function launchBalance() external view returns (uint256);
     function launchTokensEarned() external view returns (uint256);
+    function ownerEarnedLaunchTokens() external view returns (uint256);
     function currentStepEarned() external view returns (uint256);
     function remainderOfStepEarned() external view returns (uint256);
     function quantityLaunchPerLevelEarned() external view returns (uint256);

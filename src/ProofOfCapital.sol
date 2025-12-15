@@ -86,6 +86,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     uint256 public override contractCollateralBalance; // WETH balance for backing
     uint256 public override launchBalance; // Main token balance
     uint256 public override launchTokensEarned;
+    uint256 public override ownerEarnedLaunchTokens; // EOL: launch tokens earned for owner from return wallet sales
 
     // Return tracking variables
     uint256 public override currentStepEarned;
@@ -594,7 +595,19 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      */
     function sellLaunchTokensReturnWallet(uint256 amount) external override onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
+        require(msg.sender != daoAddress, AccessDenied());
         require(returnWalletAddresses[msg.sender], OnlyReturnWallet());
+
+        launchToken.safeTransferFrom(msg.sender, address(this), amount);
+        ownerEarnedLaunchTokens += amount;
+        _handleReturnWalletSale(amount);
+    }
+
+    /**
+     * @dev Sell tokens back to contract (for DAO only). Owner earned counter is intentionally untouched.
+     */
+    function sellLaunchTokensDao(uint256 amount) external override onlyActiveContract whenInitialized onlyDao {
+        require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleReturnWalletSale(amount);

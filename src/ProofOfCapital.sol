@@ -1240,10 +1240,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         uint256 launchPerLevel = quantityLaunchPerLevelEarned;
         uint256 currentPriceLocal = currentPriceEarned;
 
-        while (remainingLaunchAmount > 0 && localCurrentStep <= currentStep) {
+        while (remainingLaunchAmount > 0) {
             int256 launchAvailableInStep = remainderOfStepLocal;
 
             if (remainingLaunchAmount >= launchAvailableInStep) {
+                require(localCurrentStep <= currentStep, CurrentStepEarnedExceedsCurrentStep());
                 uint256 profitPercentageLocal = _calculateProfit(localCurrentStep);
                 uint256 adjustedPrice = _calculateAdjustedPrice(currentPriceLocal, profitPercentageLocal);
                 uint256 collateralToPayForStep =

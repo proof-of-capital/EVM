@@ -111,6 +111,7 @@ interface IProofOfCapital {
     error InvalidLockEndTime();
     error InvalidFirstLevelTokenQuantity();
     error InvalidProfitPercentage();
+    error CurrentStepEarnedExceedsCurrentStep();
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);

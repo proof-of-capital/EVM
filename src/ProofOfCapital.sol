@@ -794,8 +794,12 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         uint256 creatorProfit = actualProfit - royaltyProfit;
 
         if (profitInTime) {
-            collateralToken.safeTransfer(owner(), creatorProfit);
-            collateralToken.safeTransfer(royaltyWalletAddress, royaltyProfit);
+            if (creatorProfit > 0) {
+                collateralToken.safeTransfer(owner(), creatorProfit);
+            }
+            if (royaltyProfit > 0) {
+                collateralToken.safeTransfer(royaltyWalletAddress, royaltyProfit);
+            }
         } else {
             ownerCollateralBalance += creatorProfit;
             royaltyCollateralBalance += royaltyProfit;

@@ -1131,9 +1131,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         while (remainingCollateralAmount > 0 && remainderOfLaunch > launchToGive) {
             int256 launchAvailableInStep = remainderOfStepLocal;
             // Ceil division to ensure any remainder rounds up the required collateral
-            int256 collateralRequiredForStep = (
-                (launchAvailableInStep * int256(currentPriceLocal)) + int256(Constants.PRICE_PRECISION) - 1
-            ) / int256(Constants.PRICE_PRECISION);
+            int256 collateralRequiredForStep =
+                ((launchAvailableInStep * int256(currentPriceLocal)) + int256(Constants.PRICE_PRECISION) - 1)
+                    / int256(Constants.PRICE_PRECISION);
 
             if (remainingCollateralAmount >= collateralRequiredForStep) {
                 launchToGive += uint256(launchAvailableInStep);

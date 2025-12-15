@@ -39,6 +39,7 @@ import {IProofOfCapital} from "./interfaces/IProofOfCapital.sol";
 import {IRoyalty} from "./interfaces/IRoyalty.sol";
 import {Constants} from "./utils/Constant.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
+import {IDaoUpgradeOwnerShare} from "./interfaces/IDaoUpgradeOwnerShare.sol";
 
 /**
  * @title ProofOfCapital
@@ -611,6 +612,19 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleReturnWalletSale(amount);
+    }
+
+    /**
+     * @dev Upgrade owner share in DAO by sending accumulated earned launch tokens.
+     */
+    function upgradeOwnerShare() external override onlyDao {
+        uint256 amount = ownerEarnedLaunchTokens;
+        require(amount > 0, InvalidAmount());
+
+        IDaoUpgradeOwnerShare(daoAddress).upgradeOwnerShare(amount);
+        ownerEarnedLaunchTokens = 0;
+
+        emit OwnerShareUpgraded(amount);
     }
 
     /**

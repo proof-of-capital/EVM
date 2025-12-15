@@ -142,6 +142,7 @@ interface IProofOfCapital {
     event RoyaltyNotificationFailed(address indexed royaltyAddress, bytes reason);
     event TokenWithdrawn(address indexed token, address indexed recipient, uint256 amount);
     event CollateralDeposited(uint256 amount);
+    event OwnerShareUpgraded(uint256 amount);
 
     // Struct for initialization parameters to avoid "Stack too deep" error
     struct InitParams {
@@ -192,6 +193,7 @@ interface IProofOfCapital {
     function sellLaunchTokens(uint256 amount) external;
     function sellLaunchTokensReturnWallet(uint256 amount) external;
     function sellLaunchTokensDao(uint256 amount) external;
+    function upgradeOwnerShare() external;
 
     // Deferred withdrawals
     function launchDeferredWithdrawal(address recipientAddress, uint256 amount) external;

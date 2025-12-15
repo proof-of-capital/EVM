@@ -528,7 +528,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         whenCollateralTokenOracleValid
     {
         require(amount > 0, InvalidAmount());
-        require(!(msg.sender == owner() || oldContractAddress[msg.sender]), UseDepositFunctionForOwners());
 
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleLaunchTokenPurchaseCommon(amount);
@@ -585,7 +584,6 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      */
     function sellLaunchTokens(uint256 amount) external override onlyActiveContract whenInitialized {
         require(amount > 0, InvalidAmount());
-        require(!returnWalletAddresses[msg.sender], UseReturnWalletFunction());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
         _handleLaucnhTokenSale(amount);

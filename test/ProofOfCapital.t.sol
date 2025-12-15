@@ -2891,15 +2891,6 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.buyLaunchTokens(0);
     }
 
-    function testBuyTokensUseDepositFunctionForOwners() public {
-        _ensureInitialized();
-
-        // Owner tries to use buyLaunchTokens instead of depositCollateral
-        vm.prank(owner);
-        vm.expectRevert(IProofOfCapital.UseDepositFunctionForOwners.selector);
-        proofOfCapital.buyLaunchTokens(1000e18);
-    }
-
     function testDepositInvalidAmountZero() public {
         _ensureInitialized();
 

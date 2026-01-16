@@ -469,20 +469,30 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
     // Tests for setMarketMaker function
     function testSetMarketMakerInvalidAddress() public {
-        // Try to set market maker with zero address
+        // Set DAO first
+        address dao = address(0xDA0);
         vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
+        // Try to set market maker with zero address
+        vm.prank(dao);
         vm.expectRevert(IProofOfCapital.InvalidAddress.selector);
         proofOfCapital.setMarketMaker(address(0), true);
     }
 
     function testSetMarketMakerSuccess() public {
+        // Set DAO first
+        address dao = address(0xDA0);
+        vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
         address newMarketMaker = address(0x999);
 
         // Initially should not be market maker
         assertFalse(proofOfCapital.marketMakerAddresses(newMarketMaker));
 
         // Set as market maker
-        vm.prank(owner);
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(newMarketMaker, true);
 
         // Should now be market maker
@@ -490,11 +500,16 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
 
     function testSetMarketMakerRemove() public {
+        // Set DAO first
+        address dao = address(0xDA0);
+        vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
         // Initially marketMaker should be set
         assertTrue(proofOfCapital.marketMakerAddresses(marketMaker));
 
         // Remove market maker status
-        vm.prank(owner);
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(marketMaker, false);
 
         // Should no longer be market maker
@@ -502,33 +517,47 @@ contract ProofOfCapitalAdminTest is BaseTest {
     }
 
     function testSetMarketMakerOnlyOwner() public {
+        // Set DAO first
+        address dao = address(0xDA0);
+        vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
         address newMarketMaker = address(0x999);
 
-        // Non-owner tries to set market maker
+        // Non-DAO tries to set market maker
         vm.prank(royalty);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setMarketMaker(newMarketMaker, true);
 
         vm.prank(returnWallet);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setMarketMaker(newMarketMaker, true);
 
         vm.prank(marketMaker);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
+        proofOfCapital.setMarketMaker(newMarketMaker, true);
+
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.setMarketMaker(newMarketMaker, true);
     }
 
     function testSetMarketMakerEvent() public {
+        // Set DAO first
+        address dao = address(0xDA0);
+        vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
         address newMarketMaker = address(0x999);
 
         // Test event emission when setting market maker
-        vm.prank(owner);
+        vm.prank(dao);
         vm.expectEmit(true, false, false, true);
         emit IProofOfCapital.MarketMakerStatusChanged(newMarketMaker, true);
         proofOfCapital.setMarketMaker(newMarketMaker, true);
 
         // Test event emission when removing market maker
-        vm.prank(owner);
+        vm.prank(dao);
         vm.expectEmit(true, false, false, true);
         emit IProofOfCapital.MarketMakerStatusChanged(newMarketMaker, false);
         proofOfCapital.setMarketMaker(newMarketMaker, false);

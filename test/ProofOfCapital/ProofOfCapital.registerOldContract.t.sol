@@ -165,8 +165,13 @@ contract ProofOfCapitalRegisterOldContractTest is BaseTest {
         vm.warp(targetTime);
         address marketMaker = address(0x9999);
 
-        // First register a market maker
+        // Set DAO first (required for setMarketMaker)
+        address dao = address(0xDA0);
         vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
+        // First register a market maker (must be called by DAO)
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(marketMaker, true);
 
         // Try to register the same address as old contract

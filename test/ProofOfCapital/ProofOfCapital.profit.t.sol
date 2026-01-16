@@ -54,8 +54,15 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         SafeERC20.safeTransfer(IERC20(address(weth)), user, 100000e18);
         SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 100000e18);
 
+        // Set DAO first (required for setMarketMaker)
+        address dao = address(0xDA0);
+        proofOfCapital.setDao(dao);
+
         // Enable market maker for user to allow trading
+        vm.stopPrank();
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, true);
+        vm.startPrank(owner);
 
         vm.stopPrank();
 

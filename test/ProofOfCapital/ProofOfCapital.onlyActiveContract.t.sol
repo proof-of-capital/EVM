@@ -55,8 +55,15 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         SafeERC20.safeTransfer(IERC20(address(weth)), user, 50000e18);
         SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 50000e18);
 
+        // Set DAO first (required for setMarketMaker)
+        address dao = address(0xDA0);
+        proofOfCapital.setDao(dao);
+
         // Enable market maker for user to allow trading
+        vm.stopPrank();
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, true);
+        vm.startPrank(owner);
 
         vm.stopPrank();
 
@@ -97,12 +104,12 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1 days);
 
-        // Set DAO first (since daoAddress is zero by default)
-        vm.prank(owner);
-        proofOfCapital.setDao(owner);
+        // Get DAO address (should be set in setUp)
+        address dao = proofOfCapital.daoAddress();
+        require(dao != address(0), "DAO should be set in setUp");
 
-        // Deactivate contract by withdrawing all collateral tokens
-        vm.prank(owner);
+        // Deactivate contract by withdrawing all collateral tokens (must use DAO)
+        vm.prank(dao);
         proofOfCapital.withdrawAllCollateralTokens();
 
         // Verify contract is now inactive
@@ -143,12 +150,12 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1 days);
 
-        // Set DAO first (since daoAddress is zero by default)
-        vm.prank(owner);
-        proofOfCapital.setDao(owner);
+        // Get DAO address (should be set in setUp)
+        address dao = proofOfCapital.daoAddress();
+        require(dao != address(0), "DAO should be set in setUp");
 
-        // Deactivate contract by withdrawing all collateral tokens
-        vm.prank(owner);
+        // Deactivate contract by withdrawing all collateral tokens (must use DAO)
+        vm.prank(dao);
         proofOfCapital.withdrawAllCollateralTokens();
 
         // Verify contract is now inactive

@@ -193,12 +193,17 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialContractBalance = proofOfCapital.launchBalance();
 
+        // Calculate how much goes to unaccounted (newAmount)
+        uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+        uint256 remainingCapacity = availableCapacity - initialUnaccounted;
+        uint256 newAmount = depositAmount < remainingCapacity ? depositAmount : remainingCapacity;
+
         vm.prank(owner);
         proofOfCapital.depositLaunch(depositAmount);
 
         // Should add to BOTH balances
-        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + depositAmount);
-        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + newAmount);
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + (depositAmount - newAmount));
     }
 
     // Test depositCollateral to launchBalance when totalLaunchSold != offsetLaunch
@@ -260,13 +265,17 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 initialContractBalance = proofOfCapital.launchBalance();
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
+        // Calculate how much goes to unaccounted (newAmount)
+        uint256 remainingCapacity = availableCapacity - initialUnaccounted;
+        uint256 newAmount = depositAmount < remainingCapacity ? depositAmount : remainingCapacity;
+
         vm.prank(owner);
         proofOfCapital.depositLaunch(depositAmount);
 
-        // Always goes to launchBalance
-        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
-        // Only available capacity goes to unaccountedOffsetLaunchBalance (first deposit doesn't affect this)
-        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + availableCapacity);
+        // Only (amount - newAmount) goes to launchBalance
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + (depositAmount - newAmount));
+        // Only available capacity goes to unaccountedOffsetLaunchBalance
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + newAmount);
     }
 
     // Test multiple deposits accumulate correctly
@@ -276,9 +285,14 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 depositAmount3 = 500e18;
 
         uint256 initialBalance = proofOfCapital.launchBalance();
+        uint256 offsetLaunch = proofOfCapital.offsetLaunch();
+        uint256 totalLaunchSold = proofOfCapital.totalLaunchSold();
 
         vm.startPrank(owner);
+        // First deposit: isFirstLaunchDeposit == false, so entire amount goes to launchBalance
         proofOfCapital.depositLaunch(depositAmount1);
+        uint256 balanceAfterFirst = proofOfCapital.launchBalance();
+        assertEq(balanceAfterFirst, initialBalance + depositAmount1);
 
         // Check if unaccountedOffsetLaunchBalance was created and process it if needed
         uint256 unaccountedOffsetLaunchBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
@@ -286,7 +300,22 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
             proofOfCapital.calculateUnaccountedOffsetLaunchBalance(unaccountedOffsetLaunchBalance);
         }
 
+        // Second deposit: isFirstLaunchDeposit == true now
+        uint256 balanceBeforeSecond = proofOfCapital.launchBalance();
+        uint256 unaccountedBeforeSecond = proofOfCapital.unaccountedOffsetLaunchBalance();
         proofOfCapital.depositLaunch(depositAmount2);
+
+        // Calculate expected balance for second deposit
+        uint256 newAmount2 = 0;
+        if (totalLaunchSold == offsetLaunch) {
+            uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
+            uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+            if (availableCapacity > unaccountedBeforeSecond) {
+                uint256 remainingCapacity = availableCapacity - unaccountedBeforeSecond;
+                newAmount2 = depositAmount2 < remainingCapacity ? depositAmount2 : remainingCapacity;
+            }
+        }
+        assertEq(proofOfCapital.launchBalance(), balanceBeforeSecond + (depositAmount2 - newAmount2));
 
         // Check if unaccountedOffsetLaunchBalance was created and process it if needed
         unaccountedOffsetLaunchBalance = proofOfCapital.unaccountedOffsetLaunchBalance();
@@ -294,11 +323,23 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
             proofOfCapital.calculateUnaccountedOffsetLaunchBalance(unaccountedOffsetLaunchBalance);
         }
 
+        // Third deposit: isFirstLaunchDeposit == true
+        uint256 balanceBeforeThird = proofOfCapital.launchBalance();
+        uint256 unaccountedBeforeThird = proofOfCapital.unaccountedOffsetLaunchBalance();
         proofOfCapital.depositLaunch(depositAmount3);
-        vm.stopPrank();
 
-        uint256 expectedBalance = initialBalance + depositAmount1 + depositAmount2 + depositAmount3;
-        assertEq(proofOfCapital.launchBalance(), expectedBalance);
+        // Calculate expected balance for third deposit
+        uint256 newAmount3 = 0;
+        if (totalLaunchSold == offsetLaunch) {
+            uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
+            uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+            if (availableCapacity > unaccountedBeforeThird) {
+                uint256 remainingCapacity = availableCapacity - unaccountedBeforeThird;
+                newAmount3 = depositAmount3 < remainingCapacity ? depositAmount3 : remainingCapacity;
+            }
+        }
+        assertEq(proofOfCapital.launchBalance(), balanceBeforeThird + (depositAmount3 - newAmount3));
+        vm.stopPrank();
     }
 
     // Test depositCollateral with large amount
@@ -352,12 +393,17 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
         uint256 initialBalance = proofOfCapital.launchBalance();
 
+        // Calculate how much goes to unaccounted (newAmount)
+        uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+        uint256 remainingCapacity = availableCapacity - initialUnaccounted;
+        uint256 newAmount = exactAmount < remainingCapacity ? exactAmount : remainingCapacity;
+
         vm.prank(owner);
         proofOfCapital.depositLaunch(exactAmount);
 
         // Should add to both balances
-        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + exactAmount);
-        assertEq(proofOfCapital.launchBalance(), initialBalance + exactAmount);
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + newAmount);
+        assertEq(proofOfCapital.launchBalance(), initialBalance + (exactAmount - newAmount));
     }
 
     // Test depositCollateral boundary: one more than (offsetLaunch - launchTokensEarned)
@@ -386,19 +432,18 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 initialContractBalance = proofOfCapital.launchBalance();
         uint256 initialUnaccounted = proofOfCapital.unaccountedOffsetLaunchBalance();
 
-        // Full capacity is still available for unaccounted since first deposit didn't use it
-        uint256 availableForUnaccounted = maxAmount;
-        // But depositAmount is less than maxAmount, so all of depositAmount goes to unaccounted
-        uint256 expectedUnaccountedIncrease =
-            depositAmount < availableForUnaccounted ? depositAmount : availableForUnaccounted;
+        // Calculate how much goes to unaccounted (newAmount)
+        uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+        uint256 remainingCapacity = availableCapacity - initialUnaccounted;
+        uint256 newAmount = depositAmount < remainingCapacity ? depositAmount : remainingCapacity;
 
         vm.prank(owner);
         proofOfCapital.depositLaunch(depositAmount);
 
-        // Always goes to launchBalance
-        assertEq(proofOfCapital.launchBalance(), initialContractBalance + depositAmount);
-        // Full maxAmount goes to unaccountedOffsetLaunchBalance (not affected by first deposit)
-        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + expectedUnaccountedIncrease);
+        // Only (amount - newAmount) goes to launchBalance
+        assertEq(proofOfCapital.launchBalance(), initialContractBalance + (depositAmount - newAmount));
+        // newAmount goes to unaccountedOffsetLaunchBalance
+        assertEq(proofOfCapital.unaccountedOffsetLaunchBalance(), initialUnaccounted + newAmount);
     }
 
     // Test depositCollateral when launchTokensEarned equals offsetLaunch (edge case)
@@ -472,14 +517,31 @@ contract ProofOfCapitalDepositTokensTest is BaseTest {
         uint256 ownerDeposit = 1000e18;
         uint256 oldContractDeposit = 2000e18;
         uint256 initialBalance = proofOfCapital.launchBalance();
+        uint256 offsetLaunch = proofOfCapital.offsetLaunch();
+        uint256 totalLaunchSold = proofOfCapital.totalLaunchSold();
 
+        // First deposit by owner: isFirstLaunchDeposit == false, so entire amount goes to launchBalance
         vm.prank(owner);
         proofOfCapital.depositLaunch(ownerDeposit);
+        uint256 balanceAfterOwner = proofOfCapital.launchBalance();
+        assertEq(balanceAfterOwner, initialBalance + ownerDeposit);
 
+        // Second deposit by oldContract: isFirstLaunchDeposit == true now
+        uint256 unaccountedBefore = proofOfCapital.unaccountedOffsetLaunchBalance();
         vm.prank(oldContract);
         proofOfCapital.depositLaunch(oldContractDeposit);
 
-        assertEq(proofOfCapital.launchBalance(), initialBalance + ownerDeposit + oldContractDeposit);
+        // Calculate expected balance for second deposit
+        uint256 newAmount = 0;
+        if (totalLaunchSold == offsetLaunch) {
+            uint256 launchTokensEarned = proofOfCapital.launchTokensEarned();
+            uint256 availableCapacity = offsetLaunch - launchTokensEarned;
+            if (availableCapacity > unaccountedBefore) {
+                uint256 remainingCapacity = availableCapacity - unaccountedBefore;
+                newAmount = oldContractDeposit < remainingCapacity ? oldContractDeposit : remainingCapacity;
+            }
+        }
+        assertEq(proofOfCapital.launchBalance(), balanceAfterOwner + (oldContractDeposit - newAmount));
     }
 }
 

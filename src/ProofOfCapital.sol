@@ -562,17 +562,19 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
 
         if (isFirstLaunchDeposit) {
-            launchBalance += amount;
+            uint256 newAmount = 0;
 
             if (totalLaunchSold == offsetLaunch) {
                 uint256 availableCapacity = offsetLaunch - launchTokensEarned;
                 if (availableCapacity > unaccountedOffsetLaunchBalance) {
                     uint256 remainingCapacity = availableCapacity - unaccountedOffsetLaunchBalance;
-                    uint256 newAmount = amount < remainingCapacity ? amount : remainingCapacity;
+                    newAmount = amount < remainingCapacity ? amount : remainingCapacity;
                     unaccountedOffsetLaunchBalance += newAmount;
                     isInitialized = false;
                 }
             }
+
+            launchBalance += (amount - newAmount);
         } else {
             launchBalance += amount;
             isFirstLaunchDeposit = true;

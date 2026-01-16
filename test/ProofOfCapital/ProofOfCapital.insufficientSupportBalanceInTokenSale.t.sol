@@ -110,7 +110,12 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
         assertEq(proofOfCapital.contractCollateralBalance(), 0, "Collateral balance should be zero");
 
         // Step 8: Make user a market maker and give tokens to sell
+        // Set DAO first (required for setMarketMaker)
+        address dao = address(0xDA0);
         vm.prank(owner);
+        proofOfCapital.setDao(dao);
+
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, true);
 
         vm.startPrank(owner);

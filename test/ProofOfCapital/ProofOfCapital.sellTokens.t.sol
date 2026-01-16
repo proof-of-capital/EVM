@@ -59,8 +59,15 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         SafeERC20.safeTransfer(IERC20(address(weth)), user, 50000e18);
         SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 50000e18);
 
+        // Set DAO first (required for setMarketMaker)
+        address dao = address(0xDA0);
+        proofOfCapital.setDao(dao);
+
         // Enable market maker for user to allow trading
+        vm.stopPrank();
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, true);
+        vm.startPrank(owner);
 
         vm.stopPrank();
 
@@ -112,8 +119,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
     // Test 4: TradingNotAllowedOnlyMarketMakers error when user is not market maker
     function testSellTokensUserWithoutTradingAccessNotMarketMaker() public {
-        // Remove market maker status from user
-        vm.prank(owner);
+        // Remove market maker status from user (must use DAO)
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, false);
 
         uint256 lockEndTime = proofOfCapital.lockEndTime();
@@ -127,8 +135,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
     // Test 5: Trading access during control period
     function testSellTokensUserWithTradingAccessControlPeriod() public {
-        // Remove market maker status from user first
-        vm.prank(owner);
+        // Remove market maker status from user first (must use DAO)
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, false);
 
         // Move to control period
@@ -144,8 +153,9 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
     // Test 6: Trading access when deferred withdrawal is scheduled
     function testSellTokensUserWithTradingAccessDeferredWithdrawalScheduled() public {
-        // Remove market maker status from user first
-        vm.prank(owner);
+        // Remove market maker status from user first (must use DAO)
+        address dao = proofOfCapital.daoAddress();
+        vm.prank(dao);
         proofOfCapital.setMarketMaker(user, false);
 
         // Schedule main token deferred withdrawal

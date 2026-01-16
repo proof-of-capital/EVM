@@ -512,7 +512,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     /**
      * @dev Set market maker status for an address
      */
-    function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external override onlyOwner {
+    function setMarketMaker(address marketMakerAddress, bool isMarketMaker) external override onlyDao {
         require(marketMakerAddress != address(0), InvalidAddress());
 
         marketMakerAddresses[marketMakerAddress] = isMarketMaker;

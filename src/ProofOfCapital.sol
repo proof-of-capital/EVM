@@ -1356,7 +1356,11 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     }
 
     function _onlyDao() internal view {
-        require(msg.sender == daoAddress, AccessDenied());
+        if (daoAddress == address(0)) {
+            require(msg.sender == owner(), AccessDenied());
+        } else {
+            require(msg.sender == daoAddress, AccessDenied());
+        }
     }
 
     function _isInitialized() internal view {

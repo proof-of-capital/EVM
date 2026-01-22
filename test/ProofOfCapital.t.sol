@@ -2381,8 +2381,9 @@ contract ProofOfCapitalTest is Test {
         // Ensure there are tokens available for withdrawal
         assertTrue(availableTokens > 0);
 
-        // Withdraw all tokens (only DAO can call this)
-        vm.prank(dao);
+        // Withdraw all tokens (only DAO can call this, or owner if DAO is not set)
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify tokens transferred to owner
@@ -2395,7 +2396,8 @@ contract ProofOfCapitalTest is Test {
     function testWithdrawAllTokensLockPeriodNotEnded() public {
         // Try to withdraw before lock period ends
         address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         vm.expectRevert(IProofOfCapital.LockPeriodNotEnded.selector);
         proofOfCapital.withdrawAllLaunchTokens();
     }
@@ -2409,7 +2411,8 @@ contract ProofOfCapitalTest is Test {
         // So availableTokens = 0 - 10000e18 = negative, but function checks > 0
 
         address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         vm.expectRevert(IProofOfCapital.NoTokensToWithdraw.selector);
         proofOfCapital.withdrawAllLaunchTokens();
     }
@@ -2431,9 +2434,10 @@ contract ProofOfCapitalTest is Test {
         uint256 lockEndTime = proofOfCapital.lockEndTime();
         vm.warp(lockEndTime + 1);
 
-        // Withdraw all tokens (only DAO can call this)
+        // Withdraw all tokens (only DAO can call this, or owner if DAO is not set)
         address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify contract is inactive
@@ -2495,10 +2499,11 @@ contract ProofOfCapitalTest is Test {
         uint256 expectedAvailable = token.balanceOf(address(proofOfCapital));
 
         address dao = proofOfCapital.daoAddress();
+        address caller = dao == address(0) ? owner : dao;
         uint256 ownerBalanceBefore = token.balanceOf(owner);
 
-        // Withdraw (only DAO can call this)
-        vm.prank(dao);
+        // Withdraw (only DAO can call this, or owner if DAO is not set)
+        vm.prank(caller);
         proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify correct amount transferred to owner
@@ -2510,7 +2515,8 @@ contract ProofOfCapitalTest is Test {
     function testWithdrawAllCollateralTokensLockPeriodNotEnded() public {
         // Try to withdraw before lock period ends
         address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         vm.expectRevert(IProofOfCapital.LockPeriodNotEnded.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
@@ -2524,7 +2530,8 @@ contract ProofOfCapitalTest is Test {
         assertEq(weth.balanceOf(address(proofOfCapital)), 0);
 
         address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         vm.expectRevert(IProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
@@ -2572,7 +2579,8 @@ contract ProofOfCapitalTest is Test {
 
         // Try to withdraw with zero balance
         address dao = proofOfCapital.daoAddress();
-        vm.prank(dao);
+        address caller = dao == address(0) ? owner : dao;
+        vm.prank(caller);
         vm.expectRevert(IProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
     }
@@ -2600,9 +2608,10 @@ contract ProofOfCapitalTest is Test {
         // Test main token withdrawal
         uint256 contractBalance = token.balanceOf(address(proofOfCapital));
         address dao = proofOfCapital.daoAddress();
+        address caller = dao == address(0) ? owner : dao;
         uint256 ownerMainBalanceBefore = token.balanceOf(owner);
 
-        vm.prank(dao);
+        vm.prank(caller);
         proofOfCapital.withdrawAllLaunchTokens();
 
         // Verify main tokens withdrawn and contract is inactive
@@ -2610,7 +2619,7 @@ contract ProofOfCapitalTest is Test {
         assertEq(proofOfCapital.isActive(), false);
 
         // Second test: test collateral token withdrawal with zero balance (expected to fail)
-        vm.prank(dao);
+        vm.prank(caller);
         vm.expectRevert(IProofOfCapital.NoCollateralTokensToWithdraw.selector);
         proofOfCapital.withdrawAllCollateralTokens();
 

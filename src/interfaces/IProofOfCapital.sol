@@ -222,6 +222,7 @@ interface IProofOfCapital {
     function remainingSeconds() external view returns (uint256);
     function tradingOpportunity() external view returns (bool);
     function launchAvailable() external view returns (uint256);
+    function isCollateralTokenOracleValid() external view returns (bool);
 
     // State variables getters
     function isActive() external view returns (bool);

@@ -791,6 +791,13 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         return totalLaunchSold - launchTokensEarned;
     }
 
+    /**
+     * @dev Returns whether the collateral token oracle price meets the minimum value requirement.
+     */
+    function isCollateralTokenOracleValid() external view returns (bool) {
+        return _isCollateralTokenOracleValid();
+    }
+
     // Internal functions for handling different types of transactions
 
     /**
@@ -1309,16 +1316,17 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         return collateralAmountToPay;
     }
 
-    function _validateCollateralTokenOracle() internal view {
-        if (collateralTokenOracle != address(0)) {
-            (, int256 collateralTokenValue,, uint256 updatedAt,) =
-                IAggregatorV3(collateralTokenOracle).latestRoundData();
-            require(
-                collateralTokenValue >= collateralTokenMinOracleValue || collateralTokenValue == 0
-                    || updatedAt < block.timestamp - Constants.THIRTY_DAYS,
-                InsufficientCollateralTokenValue()
-            );
+    function _isCollateralTokenOracleValid() internal view returns (bool) {
+        if (collateralTokenOracle == address(0)) {
+            return true;
         }
+        (, int256 collateralTokenValue,, uint256 updatedAt,) = IAggregatorV3(collateralTokenOracle).latestRoundData();
+        return collateralTokenValue >= collateralTokenMinOracleValue || collateralTokenValue == 0
+            || updatedAt < block.timestamp - Constants.THIRTY_DAYS;
+    }
+
+    function _validateCollateralTokenOracle() internal view {
+        require(_isCollateralTokenOracleValid(), InsufficientCollateralTokenValue());
     }
 
     /**

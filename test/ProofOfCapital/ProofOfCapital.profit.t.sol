@@ -182,7 +182,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // The issue is that remainderOfStepLocal can become negative in _calculateLaunchToGiveForCollateralAmount
         uint256 purchaseAmount = 3e18;
         vm.prank(testMarketMaker);
-        testContract.buyLaunchTokens(purchaseAmount);
+        testContract.buyLaunchTokens(purchaseAmount, 0);
 
         // Verify profit was accumulated
         uint256 ownerCollateralBalanceAfterPurchase = testContract.ownerCollateralBalance();
@@ -254,7 +254,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // The issue is that remainderOfStepLocal can become negative in _calculateLaunchToGiveForCollateralAmount
         uint256 purchaseAmount = 1e18;
         vm.prank(testMarketMaker);
-        testContract.buyLaunchTokens(purchaseAmount);
+        testContract.buyLaunchTokens(purchaseAmount, 0);
 
         // Verify profit was accumulated
         uint256 royaltyCollateralBalanceAfterPurchase = testContract.royaltyCollateralBalance();
@@ -534,7 +534,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         // Regular user (non-market maker) tries to buy tokens without trading access
         vm.prank(regularUser);
         vm.expectRevert(IProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
-        proofOfCapital.buyLaunchTokens(1000e18);
+        proofOfCapital.buyLaunchTokens(1000e18, 0);
     }
 
     function testBuyTokensWithTradingAccess() public {
@@ -568,7 +568,7 @@ contract ProofOfCapitalProfitTest is BaseTestWithoutOffset {
         uint256 initialTokenBalance = token.balanceOf(regularUser);
 
         vm.prank(regularUser);
-        proofOfCapital.buyLaunchTokens(1000e18); // Should not revert
+        proofOfCapital.buyLaunchTokens(1000e18, 0); // Should not revert
 
         // Verify tokens were purchased
         assertTrue(token.balanceOf(regularUser) > initialTokenBalance, "Regular user should receive tokens");

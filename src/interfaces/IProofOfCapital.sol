@@ -113,6 +113,7 @@ interface IProofOfCapital {
     error InvalidFirstLevelTokenQuantity();
     error InvalidProfitPercentage();
     error CurrentStepEarnedExceedsCurrentStep();
+    error BelowMinimumOutput();
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
@@ -188,10 +189,10 @@ interface IProofOfCapital {
     function registerOldContract(address oldContractAddr) external;
 
     // Trading functions
-    function buyLaunchTokens(uint256 amount) external;
+    function buyLaunchTokens(uint256 amount, uint256 minLaunchTokensOut) external;
     function depositCollateral(uint256 amount) external;
     function depositLaunch(uint256 amount) external;
-    function sellLaunchTokens(uint256 amount) external;
+    function sellLaunchTokens(uint256 amount, uint256 minCollateralOut) external;
     function sellLaunchTokensReturnWallet(uint256 amount) external;
     function sellLaunchTokensDao(uint256 amount) external;
     function upgradeOwnerShare() external;

@@ -114,7 +114,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
     function testSellTokensInvalidAmountZero() public {
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
-        proofOfCapital.sellLaunchTokens(0);
+        proofOfCapital.sellLaunchTokens(0, 0);
     }
 
     // Test 4: TradingNotAllowedOnlyMarketMakers error when user is not market maker
@@ -130,7 +130,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // User (not market maker) tries to sell without trading access
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.TradingNotAllowedOnlyMarketMakers.selector);
-        proofOfCapital.sellLaunchTokens(1000e18);
+        proofOfCapital.sellLaunchTokens(1000e18, 0);
     }
 
     // Test 5: Trading access during control period
@@ -148,7 +148,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // because no buyback tokens are available in initial state
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.NoTokensAvailableForBuyback.selector);
-        proofOfCapital.sellLaunchTokens(100e18);
+        proofOfCapital.sellLaunchTokens(100e18, 0);
     }
 
     // Test 6: Trading access when deferred withdrawal is scheduled
@@ -165,7 +165,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // User tries to sell - gets NoTokensAvailableForBuyback in initial state
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.NoTokensAvailableForBuyback.selector);
-        proofOfCapital.sellLaunchTokens(100e18);
+        proofOfCapital.sellLaunchTokens(100e18, 0);
     }
 
     // Test 7: Token transfer failure scenario
@@ -177,7 +177,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         // Try to sell more than approved amount
         vm.prank(user);
         vm.expectRevert(); // Should revert due to insufficient allowance
-        proofOfCapital.sellLaunchTokens(500e18);
+        proofOfCapital.sellLaunchTokens(500e18, 0);
     }
 
     // COMMENTED OUT: Test failing with error
@@ -225,7 +225,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Buy enough tokens to exceed offsetLaunch for buyback availability
         vm.prank(marketMaker);
-        customContract.buyLaunchTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetLaunch
+        customContract.buyLaunchTokens(15000e18, 0); // This should advance currentStep and make totalLaunchSold > offsetLaunch
 
         // Verify totalLaunchSold > offsetLaunch before proceeding
         uint256 offsetLaunch = customContract.offsetLaunch();
@@ -279,7 +279,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
         uint256 balanceBefore = token.balanceOf(marketMaker);
 
         vm.prank(marketMaker);
-        customContract.sellLaunchTokens(sellAmount);
+        customContract.sellLaunchTokens(sellAmount, 0);
 
         // Verify the sale was successful
         assertEq(token.balanceOf(marketMaker), balanceBefore - sellAmount, "Token balance should decrease after sell");
@@ -335,7 +335,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Buy enough tokens to exceed offsetLaunch for buyback availability
         vm.prank(marketMaker);
-        customContract.buyLaunchTokens(15000e18); // This should advance currentStep and make totalLaunchSold > offsetLaunch
+        customContract.buyLaunchTokens(15000e18, 0); // This should advance currentStep and make totalLaunchSold > offsetLaunch
 
         // Create unaccountedOffsetLaunchBalance by depositing tokens
         // Set totalLaunchSold to equal offsetLaunch to create unaccountedOffsetLaunchBalance
@@ -770,7 +770,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Buy tokens in small amounts first to stay within trendChangeStep
         vm.prank(marketMaker);
-        customContract.buyLaunchTokens(2000e18); // This triggers the "normal" branch (localCurrentStep <= trendChangeStep)
+        customContract.buyLaunchTokens(2000e18, 0); // This triggers the "normal" branch (localCurrentStep <= trendChangeStep)
 
         // Check currentStep after first buy
         uint256 currentStepAfterFirst = customContract.currentStep();
@@ -786,7 +786,7 @@ contract ProofOfCapitalSellTokensTest is BaseTest {
 
         // Buy more tokens to exceed trendChangeStep
         vm.prank(marketMaker);
-        customContract.buyLaunchTokens(15000e18); // This triggers the "trend change" branch (localCurrentStep > trendChangeStep)
+        customContract.buyLaunchTokens(15000e18, 0); // This triggers the "trend change" branch (localCurrentStep > trendChangeStep)
 
         // Check currentStep after second buy
         uint256 currentStepAfterSecond = customContract.currentStep();

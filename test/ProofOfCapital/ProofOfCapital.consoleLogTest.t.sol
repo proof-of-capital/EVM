@@ -61,7 +61,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyLaunchTokens(5000e18); // Buy many tokens to create large totalLaunchSold
+        proofOfCapital.buyLaunchTokens(5000e18, 0); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
         // Verify totalLaunchSold increased
@@ -114,7 +114,7 @@ contract ProofOfCapitalConsoleLogTest is BaseTest {
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 50000e18);
-        proofOfCapital.buyLaunchTokens(20000e18); // This creates collateral balance
+        proofOfCapital.buyLaunchTokens(20000e18, 0); // This creates collateral balance
         vm.stopPrank();
 
         // Verify we have collateral balance

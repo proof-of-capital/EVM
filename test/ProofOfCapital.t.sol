@@ -2926,7 +2926,7 @@ contract ProofOfCapitalTest is Test {
         // Try to buy tokens with zero amount
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
-        proofOfCapital.buyLaunchTokens(0);
+        proofOfCapital.buyLaunchTokens(0, 0);
     }
 
     function testDepositInvalidAmountZero() public {
@@ -2944,7 +2944,7 @@ contract ProofOfCapitalTest is Test {
         // Try to sell zero tokens
         vm.prank(marketMaker);
         vm.expectRevert(IProofOfCapital.InvalidAmount.selector);
-        proofOfCapital.sellLaunchTokens(0);
+        proofOfCapital.sellLaunchTokens(0, 0);
     }
 
     // // Tests for modifier requirements
@@ -2967,7 +2967,7 @@ contract ProofOfCapitalTest is Test {
     //     // Try to call functions that require active contract
     //     vm.prank(marketMaker);
     //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-    //     proofOfCapital.buyLaunchTokens(1000e18);
+    //     proofOfCapital.buyLaunchTokens(1000e18, 0);
 
     //     vm.prank(owner);
     //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
@@ -2975,7 +2975,7 @@ contract ProofOfCapitalTest is Test {
 
     //     vm.prank(marketMaker);
     //     vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-    //     proofOfCapital.sellLaunchTokens(1000e18);
+    //     proofOfCapital.sellLaunchTokens(1000e18, 0);
     // }
 
     // Tests for access control modifiers

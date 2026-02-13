@@ -64,7 +64,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyLaunchTokens(5000e18); // Buy many tokens to create large totalLaunchSold
+        proofOfCapital.buyLaunchTokens(5000e18, 0); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
         // Verify totalLaunchSold increased
@@ -128,7 +128,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInTokenSaleTest is BaseTest 
         // This should revert because contractCollateralBalance < collateralAmountToPay
         // This call goes to _handleLaucnhTokenSale since msg.sender is a market maker (not returnWallet)
         vm.expectRevert(IProofOfCapital.InsufficientCollateralBalance.selector);
-        proofOfCapital.sellLaunchTokens(1000e18);
+        proofOfCapital.sellLaunchTokens(1000e18, 0);
 
         vm.stopPrank();
     }

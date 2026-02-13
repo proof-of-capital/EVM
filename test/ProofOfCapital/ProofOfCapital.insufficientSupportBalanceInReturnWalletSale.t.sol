@@ -64,7 +64,7 @@ contract ProofOfCapitalInsufficientCollateralBalanceInReturnWalletSaleTest is Ba
 
         vm.startPrank(marketMaker);
         weth.approve(address(proofOfCapital), 10000e18);
-        proofOfCapital.buyLaunchTokens(5000e18); // Buy many tokens to create large totalLaunchSold
+        proofOfCapital.buyLaunchTokens(5000e18, 0); // Buy many tokens to create large totalLaunchSold
         vm.stopPrank();
 
         // Verify totalLaunchSold increased

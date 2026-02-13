@@ -128,7 +128,7 @@ contract ProofOfCapitalOnlyActiveContractTest is BaseTest {
         // This tests the require(isActive, ContractNotActive()) on line 251
         vm.prank(user);
         vm.expectRevert(IProofOfCapital.ContractNotActive.selector);
-        proofOfCapital.buyLaunchTokens(1000e18);
+        proofOfCapital.buyLaunchTokens(1000e18, 0);
     }
 
     // Test that depositLaunch reverts when contract is not active

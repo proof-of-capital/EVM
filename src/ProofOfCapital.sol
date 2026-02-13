@@ -521,8 +521,10 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     /**
      * @dev Buy tokens with collateral tokens
+     * @param amount Amount of collateral to spend
+     * @param minLaunchTokensOut Minimum launch tokens to receive (0 to skip check)
      */
-    function buyLaunchTokens(uint256 amount)
+    function buyLaunchTokens(uint256 amount, uint256 minLaunchTokensOut)
         external
         override
         onlyActiveContract
@@ -532,7 +534,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         require(amount > 0, InvalidAmount());
 
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
-        _handleLaunchTokenPurchaseCommon(amount);
+        _handleLaunchTokenPurchaseCommon(amount, minLaunchTokensOut);
     }
 
     /**
@@ -585,12 +587,19 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     /**
      * @dev Sell tokens back to contract (for regular users and market makers)
+     * @param amount Amount of launch tokens to sell
+     * @param minCollateralOut Minimum collateral to receive (0 to skip check)
      */
-    function sellLaunchTokens(uint256 amount) external override onlyActiveContract whenInitialized {
+    function sellLaunchTokens(uint256 amount, uint256 minCollateralOut)
+        external
+        override
+        onlyActiveContract
+        whenInitialized
+    {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
-        _handleLaunchTokenSale(amount);
+        _handleLaunchTokenSale(amount, minCollateralOut);
     }
 
     /**
@@ -815,8 +824,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     /**
      * @dev Common logic for handling token purchases with any collateral currency
      * @param collateralAmount Amount of collateral currency (ETH or collateral token)
+     * @param minLaunchTokensOut Minimum launch tokens to give (0 to skip check)
      */
-    function _handleLaunchTokenPurchaseCommon(uint256 collateralAmount) internal {
+    function _handleLaunchTokenPurchaseCommon(uint256 collateralAmount, uint256 minLaunchTokensOut) internal {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
@@ -824,6 +834,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
 
         (uint256 totalLaunch, uint256 actualProfit) = _calculateLaunchToGiveForCollateralAmount(collateralAmount);
+        require(minLaunchTokensOut == 0 || totalLaunch >= minLaunchTokensOut, BelowMinimumOutput());
         uint256 royaltyProfit = (actualProfit * royaltyProfitPercent) / Constants.PERCENTAGE_DIVISOR;
         uint256 creatorProfit = actualProfit - royaltyProfit;
 
@@ -898,7 +909,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         emit TokensSoldReturnWallet(msg.sender, amount, collateralAmountToPay);
     }
 
-    function _handleLaunchTokenSale(uint256 amount) internal {
+    function _handleLaunchTokenSale(uint256 amount, uint256 minCollateralOut) internal {
         if (!_checkTradingAccess()) {
             _updateUnlockWindow();
             require(marketMakerAddresses[msg.sender], TradingNotAllowedOnlyMarketMakers());
@@ -912,6 +923,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         require(launchAvailableForBuyback >= amount, InsufficientTokensForBuyback());
 
         uint256 collateralAmountToPay = _calculateCollateralToPayForTokenAmount(amount);
+        require(minCollateralOut == 0 || collateralAmountToPay >= minCollateralOut, BelowMinimumOutput());
         require(contractCollateralBalance >= collateralAmountToPay, InsufficientCollateralBalance());
 
         contractCollateralBalance -= collateralAmountToPay;

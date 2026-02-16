@@ -48,7 +48,7 @@ interface IProofOfCapital {
     error PriceIncrementTooLow();
     error InvalidRoyaltyProfitPercentage();
     error ETHTransferFailed();
-    error LockCannotExceedFiveYears();
+    error LockCannotExceedTenYears();
     error InvalidTimePeriod();
     error NewLockMustBeGreaterThanOld();
     error CannotActivateWithdrawalTooCloseToLockEnd();

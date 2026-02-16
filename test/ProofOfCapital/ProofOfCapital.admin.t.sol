@@ -70,10 +70,10 @@ contract ProofOfCapitalAdminTest is BaseTest {
         proofOfCapital.extendLock(block.timestamp + 182 days);
     }
 
-    function testExtendLockExceedsFiveYears() public {
+    function testExtendLockExceedsTenYears() public {
         vm.prank(owner);
-        vm.expectRevert(IProofOfCapital.LockCannotExceedFiveYears.selector);
-        proofOfCapital.extendLock(block.timestamp + Constants.FIVE_YEARS + 1);
+        vm.expectRevert(IProofOfCapital.LockCannotExceedTenYears.selector);
+        proofOfCapital.extendLock(block.timestamp + Constants.TEN_YEARS + 1);
     }
 
     function testExtendLockWithInvalidTimePeriod() public {
@@ -136,7 +136,7 @@ contract ProofOfCapitalAdminTest is BaseTest {
 
         // But 182 days should fail now
         vm.prank(owner);
-        vm.expectRevert(IProofOfCapital.LockCannotExceedFiveYears.selector);
+        vm.expectRevert(IProofOfCapital.LockCannotExceedTenYears.selector);
         proofOfCapital.extendLock(182 days);
     }
     */

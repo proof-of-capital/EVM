@@ -358,8 +358,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     /**
      * @dev Confirm and execute deferred withdrawal of main token
+     * @notice Only DAO can confirm; if DAO is not set, owner can confirm
      */
-    function confirmLaunchDeferredWithdrawal() external override onlyOwner {
+    function confirmLaunchDeferredWithdrawal() external override onlyDao {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(block.timestamp >= launchDeferredWithdrawalDate, WithdrawalDateNotReached());
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
@@ -410,8 +411,9 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
     /**
      * @dev Confirm and execute deferred withdrawal of collateral tokens
+     * @notice Only DAO can confirm; if DAO is not set, owner can confirm
      */
-    function confirmCollateralDeferredWithdrawal() external override onlyOwner {
+    function confirmCollateralDeferredWithdrawal() external override onlyDao {
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(collateralTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= collateralTokenDeferredWithdrawalDate, WithdrawalDateNotReached());

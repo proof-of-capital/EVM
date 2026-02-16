@@ -173,6 +173,7 @@ contract DeployProofOfCapital is Script {
             oldContractAddresses: oldContractAddresses,
             profitBeforeTrendChange: profitBeforeTrendChange,
             daoAddress: daoAddress,
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });

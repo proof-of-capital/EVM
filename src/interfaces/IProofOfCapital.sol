@@ -114,6 +114,7 @@ interface IProofOfCapital {
     error InvalidProfitPercentage();
     error CurrentStepEarnedExceedsCurrentStep();
     error BelowMinimumOutput();
+    error OnlyReturnBurnContract();
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
@@ -131,6 +132,7 @@ interface IProofOfCapital {
     event CollateralDeferredWithdrawalCancelled(address indexed cancelledBy);
     event LaunchDeposited(address indexed depositor, uint256 amount);
     event TokensSoldReturnWallet(address indexed seller, uint256 amount, uint256 collateralPaid);
+    event ReturnBurnAccounted(address indexed caller, uint256 amount, uint256 collateralPaid);
     event ProfitModeChanged(bool profitInTime);
     event CommissionChanged(uint256 newCommission);
     event ReserveOwnerChanged(address indexed newReserveOwner);
@@ -168,6 +170,7 @@ interface IProofOfCapital {
         address[] oldContractAddresses; // Array of old contract addresses
         uint256 profitBeforeTrendChange; // Profit percentage before trend change
         address daoAddress; // DAO address for governance
+        address RETURN_BURN_CONTRACT_ADDRESS; // Immutable return-burn contract (address(0) = not used)
         address collateralTokenOracle;
         int256 collateralTokenMinOracleValue;
     }
@@ -194,6 +197,7 @@ interface IProofOfCapital {
     function depositLaunch(uint256 amount) external;
     function sellLaunchTokens(uint256 amount, uint256 minCollateralOut) external;
     function sellLaunchTokensReturnWallet(uint256 amount) external;
+    function accountReturnBurn(uint256 amount) external;
     function sellLaunchTokensDao(uint256 amount) external;
     function upgradeOwnerShare() external;
 
@@ -233,6 +237,7 @@ interface IProofOfCapital {
     function returnWalletAddresses(address) external view returns (bool);
     function royaltyWalletAddress() external view returns (address);
     function daoAddress() external view returns (address);
+    function RETURN_BURN_CONTRACT_ADDRESS() external view returns (address);
     function lockEndTime() external view returns (uint256);
     function controlDay() external view returns (uint256);
     function controlPeriod() external view returns (uint256);

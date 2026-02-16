@@ -70,6 +70,7 @@ contract ProofOfCapitalCalculateChangeOffsetCollateralTest is BaseTest {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });

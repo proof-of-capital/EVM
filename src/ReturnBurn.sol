@@ -7,6 +7,7 @@
 pragma solidity 0.8.29;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Burnable} from "./interfaces/IERC20Burnable.sol";
 import {IProofOfCapital} from "./interfaces/IProofOfCapital.sol";
 import {IDaoBurnDistribution} from "./interfaces/IDaoBurnDistribution.sol";
 import {Constants} from "./utils/Constant.sol";
@@ -27,9 +28,11 @@ contract ReturnBurn {
     error InvalidDistributionLength();
     error InvalidPercentageSum();
     error InvalidLaunchTokenAddress();
+    error InvalidBurnAmount();
 
     event DaoSet(address indexed daoAddress);
     event ProcessedBurn(address indexed caller, uint256 amount, uint256 totalAccounted);
+    event BurnThrough(address indexed sender, uint256 amount, bytes extraData);
 
     IERC20 public immutable launchToken;
     uint256 public immutable initialTotalSupply;
@@ -110,5 +113,17 @@ contract ReturnBurn {
 
         totalAccounted += toProcess;
         emit ProcessedBurn(msg.sender, toProcess, totalAccounted);
+    }
+
+    /**
+     * @dev Burns `value` tokens from the caller via the launch token (ERC20Burnable).
+     * Caller must have approved this contract for `value`.
+     * @param value Amount to burn.
+     * @param extraData Optional data (e.g. memo, IPFS hash) emitted in BurnThrough event.
+     */
+    function burnThrough(uint256 value, bytes calldata extraData) external {
+        require(value > 0, InvalidBurnAmount());
+        IERC20Burnable(address(launchToken)).burnFrom(msg.sender, value);
+        emit BurnThrough(msg.sender, value, extraData);
     }
 }

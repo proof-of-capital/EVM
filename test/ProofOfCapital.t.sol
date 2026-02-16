@@ -117,6 +117,7 @@ contract ProofOfCapitalTest is Test {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });
@@ -1840,6 +1841,91 @@ contract ProofOfCapitalTest is Test {
         }
     }
 
+    // Tests for accountReturnBurn (return-burn contract: accounting only, no token transfer)
+    function testAccountReturnBurnRevertsWhenNotReturnBurnContract() public {
+        _ensureInitialized();
+        vm.prank(address(0x1));
+        vm.expectRevert(IProofOfCapital.OnlyReturnBurnContract.selector);
+        proofOfCapital.accountReturnBurn(100e18);
+    }
+
+    function testAccountReturnBurnRevertsWhenReturnBurnAddressZero() public {
+        _ensureInitialized();
+        // Default deployment has RETURN_BURN_CONTRACT_ADDRESS = address(0), so any caller gets OnlyReturnBurnContract
+        vm.prank(returnWallet);
+        vm.expectRevert(IProofOfCapital.OnlyReturnBurnContract.selector);
+        proofOfCapital.accountReturnBurn(100e18);
+    }
+
+    function testAccountReturnBurnSuccessOnlyAccountingNoTransfer() public {
+        address returnBurnAddr = address(0xB007);
+        IProofOfCapital.InitParams memory params = IProofOfCapital.InitParams({
+            initialOwner: owner,
+            launchToken: address(token),
+            marketMakerAddress: marketMaker,
+            returnWalletAddress: returnWallet,
+            royaltyWalletAddress: royalty,
+            lockEndTime: block.timestamp + 365 days,
+            initialPricePerLaunchToken: 1e18,
+            firstLevelLaunchTokenQuantity: 1000e18,
+            priceIncrementMultiplier: 50,
+            levelIncreaseMultiplier: 100,
+            trendChangeStep: 5,
+            levelDecreaseMultiplierAfterTrend: 50,
+            profitPercentage: 100,
+            offsetLaunch: 10000e18,
+            controlPeriod: Constants.MIN_CONTROL_PERIOD,
+            collateralToken: address(weth),
+            royaltyProfitPercent: 500,
+            oldContractAddresses: new address[](0),
+            profitBeforeTrendChange: 200,
+            daoAddress: address(0),
+            RETURN_BURN_CONTRACT_ADDRESS: returnBurnAddr,
+            collateralTokenOracle: address(0),
+            collateralTokenMinOracleValue: 0
+        });
+        ProofOfCapital poc = new ProofOfCapital(params);
+
+        vm.startPrank(owner);
+        SafeERC20.safeTransfer(IERC20(address(token)), address(poc), 500000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), owner, 50000e18);
+        SafeERC20.safeTransfer(IERC20(address(weth)), marketMaker, 50000e18);
+        address dao = address(0xDA0);
+        poc.setDao(dao);
+        vm.stopPrank();
+        vm.prank(dao);
+        poc.setMarketMaker(marketMaker, true);
+        vm.prank(marketMaker);
+        weth.approve(address(poc), type(uint256).max);
+
+        uint256 slotControlDay = _stdStore.target(address(poc)).sig("controlDay()").find();
+        vm.store(address(poc), bytes32(slotControlDay), bytes32(block.timestamp - 1 days));
+        vm.startPrank(owner);
+        poc.calculateUnaccountedOffsetBalance(poc.unaccountedOffset());
+        weth.approve(address(poc), 10000e18);
+        poc.depositCollateral(10000e18);
+        token.approve(address(poc), 50000e18);
+        poc.depositLaunch(50000e18);
+        vm.stopPrank();
+
+        vm.prank(marketMaker);
+        poc.buyLaunchTokens(1000e18, 0);
+
+        uint256 launchBalanceBefore = poc.launchBalance();
+        uint256 ownerEarnedBefore = poc.ownerEarnedLaunchTokens();
+        uint256 launchTokenBalanceBefore = token.balanceOf(address(poc));
+        uint256 amount = 500e18;
+
+        vm.prank(returnBurnAddr);
+        poc.accountReturnBurn(amount);
+
+        assertEq(poc.ownerEarnedLaunchTokens(), ownerEarnedBefore + amount, "ownerEarnedLaunchTokens should increase");
+        assertEq(poc.launchBalance(), launchBalanceBefore, "launchBalance must not change for return-burn");
+        assertEq(
+            token.balanceOf(address(poc)), launchTokenBalanceBefore, "contract launch token balance must not change"
+        );
+    }
+
     // Tests for changeRoyaltyWallet function
     function testChangeRoyaltyWalletSuccess() public {
         address newRoyaltyWallet = address(0x999);
@@ -3098,6 +3184,7 @@ contract ProofOfCapitalProfitTest is Test {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });
@@ -3238,6 +3325,7 @@ contract ProofOfCapitalInitializationTest is Test {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });
@@ -3473,6 +3561,7 @@ contract ProofOfCapitalInitializationTest is Test {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });
@@ -3509,6 +3598,7 @@ contract ProofOfCapitalInitializationTest is Test {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });
@@ -3548,6 +3638,7 @@ contract ProofOfCapitalInitializationTest is Test {
             oldContractAddresses: new address[](0),
             profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
             daoAddress: address(0), // Will default to owner
+            RETURN_BURN_CONTRACT_ADDRESS: address(0),
             collateralTokenOracle: address(0),
             collateralTokenMinOracleValue: 0
         });
@@ -3586,6 +3677,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
                 daoAddress: address(0), // Will default to owner
+                RETURN_BURN_CONTRACT_ADDRESS: address(0),
                 collateralTokenOracle: address(0),
                 collateralTokenMinOracleValue: 0
             });
@@ -3618,6 +3710,7 @@ contract ProofOfCapitalInitializationTest is Test {
                 oldContractAddresses: new address[](0),
                 profitBeforeTrendChange: 200, // 20% before trend change (double the profit)
                 daoAddress: address(0), // Will default to owner
+                RETURN_BURN_CONTRACT_ADDRESS: address(0),
                 collateralTokenOracle: address(0),
                 collateralTokenMinOracleValue: 0
             });

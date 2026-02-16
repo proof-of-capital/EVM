@@ -59,6 +59,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     mapping(address => bool) public override returnWalletAddresses;
     address public override royaltyWalletAddress;
     address public override daoAddress; // DAO address for governance
+    address public immutable override RETURN_BURN_CONTRACT_ADDRESS; // Immutable return-burn contract (accounting only, no token transfer)
 
     // Time and control variables
     uint256 public override lockEndTime;
@@ -226,6 +227,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         royaltyProfitPercent = params.royaltyProfitPercent;
         profitBeforeTrendChange = params.profitBeforeTrendChange;
         daoAddress = params.daoAddress;
+        RETURN_BURN_CONTRACT_ADDRESS = params.RETURN_BURN_CONTRACT_ADDRESS;
 
         // Initialize state variables
         currentStep = 0;
@@ -612,7 +614,22 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
         ownerEarnedLaunchTokens += amount;
-        _handleReturnWalletSale(amount);
+        _handleReturnWalletSale(amount, false);
+    }
+
+    /**
+     * @dev Account for return-burn: only update accounting (ownerEarnedLaunchTokens, earned, collateral to DAO).
+     * No token transfer; launchBalance is not increased. Callable only by RETURN_BURN_CONTRACT_ADDRESS.
+     */
+    function accountReturnBurn(uint256 amount) external override onlyActiveContract whenInitialized {
+        require(amount > 0, InvalidAmount());
+        require(
+            RETURN_BURN_CONTRACT_ADDRESS != address(0) && msg.sender == RETURN_BURN_CONTRACT_ADDRESS,
+            OnlyReturnBurnContract()
+        );
+
+        ownerEarnedLaunchTokens += amount;
+        _handleReturnWalletSale(amount, true);
     }
 
     /**
@@ -622,7 +639,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         require(amount > 0, InvalidAmount());
 
         launchToken.safeTransferFrom(msg.sender, address(this), amount);
-        _handleReturnWalletSale(amount);
+        _handleReturnWalletSale(amount, false);
     }
 
     /**
@@ -864,7 +881,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         emit TokensPurchased(msg.sender, totalLaunch, collateralAmount);
     }
 
-    function _handleReturnWalletSale(uint256 amount) internal {
+    function _handleReturnWalletSale(uint256 amount, bool isReturnBurn) internal {
         uint256 collateralAmountToPay = 0;
 
         // Check to prevent arithmetic underflow
@@ -900,13 +917,19 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
         launchTokensEarned += effectiveAmount;
         require(contractCollateralBalance >= collateralAmountToPay, InsufficientCollateralBalance());
         contractCollateralBalance -= collateralAmountToPay;
-        launchBalance += amount;
+        if (!isReturnBurn) {
+            launchBalance += amount;
+        }
 
         if (collateralAmountToPay > 0) {
             collateralToken.safeTransfer(daoAddress, collateralAmountToPay);
         }
 
-        emit TokensSoldReturnWallet(msg.sender, amount, collateralAmountToPay);
+        if (isReturnBurn) {
+            emit ReturnBurnAccounted(msg.sender, amount, collateralAmountToPay);
+        } else {
+            emit TokensSoldReturnWallet(msg.sender, amount, collateralAmountToPay);
+        }
     }
 
     function _handleLaunchTokenSale(uint256 amount, uint256 minCollateralOut) internal {

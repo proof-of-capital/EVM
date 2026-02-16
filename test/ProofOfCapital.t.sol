@@ -746,9 +746,14 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.confirmLaunchDeferredWithdrawal();
     }
 
-    function testConfirmTokenDeferredWithdrawalOnlyOwner() public {
+    function testConfirmTokenDeferredWithdrawalOnlyDao() public {
         address recipient = address(0x123);
         uint256 amount = 1000e18;
+        address dao = address(0xDA0);
+
+        // Set DAO to a different address so only DAO can confirm
+        vm.prank(owner);
+        proofOfCapital.setDao(dao);
 
         // Schedule withdrawal
         vm.prank(owner);
@@ -757,21 +762,25 @@ contract ProofOfCapitalTest is Test {
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
-        // Try to confirm with non-owner addresses
+        // Try to confirm with non-DAO addresses (all must revert with AccessDenied)
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
+        proofOfCapital.confirmLaunchDeferredWithdrawal();
+
         vm.prank(royalty);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmLaunchDeferredWithdrawal();
 
         vm.prank(returnWallet);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmLaunchDeferredWithdrawal();
 
         vm.prank(marketMaker);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmLaunchDeferredWithdrawal();
 
         vm.prank(recipient);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmLaunchDeferredWithdrawal();
     }
 
@@ -1595,8 +1604,13 @@ contract ProofOfCapitalTest is Test {
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 
-    function testConfirmCollateralDeferredWithdrawalOnlyOwner() public {
+    function testConfirmCollateralDeferredWithdrawalOnlyDao() public {
         address recipient = address(0x123);
+        address dao = address(0xDA0);
+
+        // Set DAO to a different address so only DAO can confirm
+        vm.prank(owner);
+        proofOfCapital.setDao(dao);
 
         // Schedule withdrawal
         vm.prank(owner);
@@ -1605,21 +1619,25 @@ contract ProofOfCapitalTest is Test {
         // Move time forward
         vm.warp(block.timestamp + Constants.THIRTY_DAYS);
 
-        // Try to confirm with non-owner addresses
+        // Try to confirm with non-DAO addresses (all must revert with AccessDenied)
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
+        proofOfCapital.confirmCollateralDeferredWithdrawal();
+
         vm.prank(royalty);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         vm.prank(returnWallet);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         vm.prank(marketMaker);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
 
         vm.prank(recipient);
-        vm.expectRevert();
+        vm.expectRevert(IProofOfCapital.AccessDenied.selector);
         proofOfCapital.confirmCollateralDeferredWithdrawal();
     }
 

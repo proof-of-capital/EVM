@@ -36,7 +36,8 @@ pragma solidity 0.8.29;
  */
 library Constants {
     // Time constants (in seconds)
-    uint256 public constant FIVE_YEARS = 1825 days; // 1825 days (5 years, maximum lock extension period)
+    uint256 public constant FIVE_YEARS = 1825 days; // 1825 days (5 years)
+    uint256 public constant TEN_YEARS = 3650 days; // 3650 days (10 years, maximum lock extension period)
     uint256 public constant MIN_CONTROL_PERIOD = 6 hours; // 6 hours minimum control period
     uint256 public constant MAX_CONTROL_PERIOD = 30 days; // 30 days maximum control period
     uint256 public constant THIRTY_DAYS = 30 days; // 30 days

@@ -282,7 +282,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     function extendLock(uint256 lockTimestamp) external override onlyOwner {
         require(lockTimestamp > block.timestamp, InvalidTimePeriod());
         require(lockTimestamp > lockEndTime, NewLockMustBeGreaterThanOld());
-        require(lockTimestamp <= block.timestamp + Constants.FIVE_YEARS, LockCannotExceedFiveYears());
+        require(lockTimestamp <= block.timestamp + Constants.TEN_YEARS, LockCannotExceedTenYears());
 
         lockEndTime = lockTimestamp;
         emit LockExtended(lockTimestamp);

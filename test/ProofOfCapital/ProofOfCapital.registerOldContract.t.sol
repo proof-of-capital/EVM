@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 // All rights reserved.
 
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 import {BaseTest} from "../utils/BaseTest.sol";
 import {IProofOfCapital} from "../../src/interfaces/IProofOfCapital.sol";

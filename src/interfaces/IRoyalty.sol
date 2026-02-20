@@ -8,7 +8,7 @@
 
 // https://github.com/proof-of-capital/EVM
 
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 /**
  * @title IRoyalty

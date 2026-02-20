@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 import {BaseTest} from "../utils/BaseTest.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";

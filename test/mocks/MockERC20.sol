@@ -7,7 +7,7 @@
 // (c) 2025 https://proofofcapital.org/
 
 // https://github.com/proof-of-capital/EVM
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 

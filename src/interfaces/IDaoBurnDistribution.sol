@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 /**
  * @dev DAO interface to provide PoC contract addresses and percentage allocation for burn distribution.

@@ -4,7 +4,7 @@
 // (c) 2025 https://proofofcapital.org/
 // https://github.com/proof-of-capital/EVM
 
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Burnable} from "./interfaces/IERC20Burnable.sol";

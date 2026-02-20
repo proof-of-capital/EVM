@@ -28,7 +28,7 @@
 
 // This is the third version of the contract. It introduces the following features: the ability to choose any jetton as collateral, build collateral with an offset,
 // perform delayed withdrawals (and restrict them if needed), assign multiple market makers, modify royalty conditions, and withdraw profit on request.
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 import {Test} from "forge-std/Test.sol";
 import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";

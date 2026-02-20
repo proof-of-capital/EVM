@@ -4,7 +4,7 @@
 // (c) 2025 https://proofofcapital.org/
 // https://github.com/proof-of-capital/EVM
 
-pragma solidity 0.8.29;
+pragma solidity 0.8.34;
 
 /**
  * @title IERC20Burnable

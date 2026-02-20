@@ -62,7 +62,7 @@ contract ReturnBurnTest is BaseTest {
         address[] memory pocs = new address[](1);
         pocs[0] = address(0x1);
         uint256[] memory pcts = new uint256[](1);
-        pcts[0] = Constants.PERCENTAGE_DIVISOR;
+        pcts[0] = Constants.BPS_DIVISOR;
         MockDaoBurnDistribution mockDao = new MockDaoBurnDistribution(pocs, pcts);
         returnBurn.setDao(address(mockDao));
         vm.expectRevert(ReturnBurn.DaoAlreadySet.selector);
@@ -106,7 +106,7 @@ contract ReturnBurnTest is BaseTest {
         address[] memory pocs = new address[](1);
         pocs[0] = address(poc);
         uint256[] memory pcts = new uint256[](1);
-        pcts[0] = Constants.PERCENTAGE_DIVISOR;
+        pcts[0] = Constants.BPS_DIVISOR;
         MockDaoBurnDistribution mockDao = new MockDaoBurnDistribution(pocs, pcts);
         returnBurn.setDao(address(mockDao));
 
@@ -177,8 +177,8 @@ contract ReturnBurnTest is BaseTest {
         pocs[0] = address(poc1);
         pocs[1] = address(poc2);
         uint256[] memory pcts = new uint256[](2);
-        pcts[0] = 600; // 60%
-        pcts[1] = 400; // 40%
+        pcts[0] = 6000; // 60% in BPS
+        pcts[1] = 4000; // 40% in BPS
         MockDaoBurnDistribution mockDao = new MockDaoBurnDistribution(pocs, pcts);
         returnBurn.setDao(address(mockDao));
 
@@ -221,7 +221,7 @@ contract ReturnBurnTest is BaseTest {
         address[] memory pocs = new address[](1);
         pocs[0] = address(0x1);
         uint256[] memory pcts = new uint256[](1);
-        pcts[0] = 500; // 50%, sum not 1000
+        pcts[0] = 5000; // 50%, sum not 10000 BPS
         MockDaoBurnDistribution mockDao = new MockDaoBurnDistribution(pocs, pcts);
         returnBurn.setDao(address(mockDao));
 

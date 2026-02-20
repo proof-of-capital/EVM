@@ -95,7 +95,7 @@ contract ReturnBurn {
         for (uint256 i = 0; i < percentages.length; i++) {
             sumPercentages += percentages[i];
         }
-        require(sumPercentages == Constants.PERCENTAGE_DIVISOR, InvalidPercentageSum());
+        require(sumPercentages == Constants.BPS_DIVISOR, InvalidPercentageSum());
 
         uint256 allocated = 0;
         for (uint256 i = 0; i < pocContracts.length; i++) {
@@ -103,7 +103,7 @@ contract ReturnBurn {
             if (i == pocContracts.length - 1) {
                 portion = toProcess - allocated;
             } else {
-                portion = (toProcess * percentages[i]) / Constants.PERCENTAGE_DIVISOR;
+                portion = (toProcess * percentages[i]) / Constants.BPS_DIVISOR;
                 allocated += portion;
             }
             if (portion > 0) {

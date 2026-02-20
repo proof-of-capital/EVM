@@ -46,6 +46,7 @@ library Constants {
 
     // Percentage constants
     uint256 public constant PERCENTAGE_DIVISOR = 1000; // For percentage calculations (0.1% precision)
+    uint256 public constant BPS_DIVISOR = 10000; // Basis points: 10000 = 100% (0.01% precision)
     uint256 public constant MAX_ROYALTY_PERCENT = 1000; // 100% maximum royalty
     uint256 public constant MIN_ROYALTY_PERCENT = 1; // 0.1% minimum royalty
 

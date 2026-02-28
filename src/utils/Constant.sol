@@ -43,6 +43,7 @@ library Constants {
     uint256 public constant THIRTY_DAYS = 30 days; // 30 days
     uint256 public constant SIXTY_DAYS = 60 days; // 60 days
     uint256 public constant SEVEN_DAYS = 7 days; // 7 days
+    uint256 public constant MAX_DEFERRED_WITHDRAWAL_LOCK = 180 days; // 6 months, max lock for deferred withdrawals
 
     // Percentage constants
     uint256 public constant PERCENTAGE_DIVISOR = 1000; // For percentage calculations (0.1% precision)

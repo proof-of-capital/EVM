@@ -113,6 +113,80 @@ contract ProofOfCapitalAdminTest is BaseTest {
         assertEq(proofOfCapital.lockEndTime(), afterFirstExtension + 10 minutes);
     }
 
+    // Tests for extendDeferredWithdrawalLock function
+    function testExtendDeferredWithdrawalLockSuccess() public {
+        assertEq(proofOfCapital.deferredWithdrawalLockEndTime(), 0);
+
+        uint256 lockTimestamp = block.timestamp + 90 days;
+        vm.prank(owner);
+        proofOfCapital.extendDeferredWithdrawalLock(lockTimestamp);
+
+        assertEq(proofOfCapital.deferredWithdrawalLockEndTime(), lockTimestamp);
+    }
+
+    function testExtendDeferredWithdrawalLockAtMaxPeriod() public {
+        uint256 lockTimestamp = block.timestamp + Constants.MAX_DEFERRED_WITHDRAWAL_LOCK;
+        vm.prank(owner);
+        proofOfCapital.extendDeferredWithdrawalLock(lockTimestamp);
+
+        assertEq(proofOfCapital.deferredWithdrawalLockEndTime(), lockTimestamp);
+    }
+
+    function testExtendDeferredWithdrawalLockUnauthorized() public {
+        vm.prank(royalty);
+        vm.expectRevert();
+        proofOfCapital.extendDeferredWithdrawalLock(block.timestamp + 90 days);
+    }
+
+    function testExtendDeferredWithdrawalLockExceedsSixMonths() public {
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalLockExceedsMaxPeriod.selector);
+        proofOfCapital.extendDeferredWithdrawalLock(block.timestamp + Constants.MAX_DEFERRED_WITHDRAWAL_LOCK + 1);
+    }
+
+    function testExtendDeferredWithdrawalLockNewMustBeGreaterThanOld() public {
+        uint256 firstLock = block.timestamp + 60 days;
+        vm.prank(owner);
+        proofOfCapital.extendDeferredWithdrawalLock(firstLock);
+
+        // Try to set lock to same or earlier time
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.NewDeferredWithdrawalLockMustBeGreaterThanOld.selector);
+        proofOfCapital.extendDeferredWithdrawalLock(block.timestamp + 30 days);
+    }
+
+    function testExtendDeferredWithdrawalLockInvalidTimePeriod() public {
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.InvalidTimePeriod.selector);
+        proofOfCapital.extendDeferredWithdrawalLock(block.timestamp - 1);
+    }
+
+    function testExtendDeferredWithdrawalLockEvent() public {
+        uint256 lockTimestamp = block.timestamp + 90 days;
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, true);
+        emit IProofOfCapital.DeferredWithdrawalLockExtended(lockTimestamp);
+        proofOfCapital.extendDeferredWithdrawalLock(lockTimestamp);
+    }
+
+    function testLaunchDeferredWithdrawalRevertsWhenLockActive() public {
+        vm.prank(owner);
+        proofOfCapital.extendDeferredWithdrawalLock(block.timestamp + 30 days);
+
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalLockActive.selector);
+        proofOfCapital.launchDeferredWithdrawal(owner, 1000e18);
+    }
+
+    function testCollateralDeferredWithdrawalRevertsWhenLockActive() public {
+        vm.prank(owner);
+        proofOfCapital.extendDeferredWithdrawalLock(block.timestamp + 30 days);
+
+        vm.prank(owner);
+        vm.expectRevert(IProofOfCapital.DeferredWithdrawalLockActive.selector);
+        proofOfCapital.collateralDeferredWithdrawal(owner);
+    }
+
     // COMMENTED: Test was failing
     /*
     function testExtendLockAtBoundaryOfTwoYears() public {

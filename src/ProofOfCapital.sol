@@ -121,6 +121,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     address public override recipientDeferredWithdrawalLaunch;
     uint256 public override collateralTokenDeferredWithdrawalDate;
     address public override recipientDeferredWithdrawalCollateralToken;
+    uint256 public override deferredWithdrawalLockEndTime;
 
     // Old contract address change control
 
@@ -291,6 +292,21 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
     }
 
     /**
+     * @dev Extend lock period for deferred withdrawals (max 6 months from now)
+     */
+    function extendDeferredWithdrawalLock(uint256 lockTimestamp) external override onlyOwner {
+        require(lockTimestamp > block.timestamp, InvalidTimePeriod());
+        require(lockTimestamp > deferredWithdrawalLockEndTime, NewDeferredWithdrawalLockMustBeGreaterThanOld());
+        require(
+            lockTimestamp <= block.timestamp + Constants.MAX_DEFERRED_WITHDRAWAL_LOCK,
+            DeferredWithdrawalLockExceedsMaxPeriod()
+        );
+
+        deferredWithdrawalLockEndTime = lockTimestamp;
+        emit DeferredWithdrawalLockExtended(lockTimestamp);
+    }
+
+    /**
      * @dev Toggle deferred withdrawal state
      * @notice If called when less than 60 days remain until the end of the lock (i.e., when users can already interact with the contract),
      * the owner can re-enable withdrawal—for example, to transfer tokens to another contract with a lock (for a safe migration).
@@ -332,6 +348,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      */
     function launchDeferredWithdrawal(address recipientAddress, uint256 amount) external override onlyOwner {
         require(recipientAddress != address(0) && amount > 0, InvalidRecipientOrAmount());
+        require(block.timestamp >= deferredWithdrawalLockEndTime, DeferredWithdrawalLockActive());
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(launchDeferredWithdrawalAmount == 0, LaunchDeferredWithdrawalAlreadyScheduled());
 
@@ -361,6 +378,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      * @notice Only DAO can confirm; if DAO is not set, owner can confirm
      */
     function confirmLaunchDeferredWithdrawal() external override onlyDao {
+        require(block.timestamp >= deferredWithdrawalLockEndTime, DeferredWithdrawalLockActive());
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(block.timestamp >= launchDeferredWithdrawalDate, WithdrawalDateNotReached());
         require(launchBalance > totalLaunchSold, InsufficientTokenBalance());
@@ -384,6 +402,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      * @dev Schedule deferred withdrawal of collateral tokens
      */
     function collateralDeferredWithdrawal(address recipientAddress) external override onlyOwner {
+        require(block.timestamp >= deferredWithdrawalLockEndTime, DeferredWithdrawalLockActive());
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(recipientAddress != address(0), InvalidRecipient());
         require(collateralTokenDeferredWithdrawalDate == 0, CollateralDeferredWithdrawalAlreadyScheduled());
@@ -414,6 +433,7 @@ contract ProofOfCapital is Ownable, IProofOfCapital {
      * @notice Only DAO can confirm; if DAO is not set, owner can confirm
      */
     function confirmCollateralDeferredWithdrawal() external override onlyDao {
+        require(block.timestamp >= deferredWithdrawalLockEndTime, DeferredWithdrawalLockActive());
         require(canWithdrawal, DeferredWithdrawalBlocked());
         require(collateralTokenDeferredWithdrawalDate != 0, NoDeferredWithdrawalScheduled());
         require(block.timestamp >= collateralTokenDeferredWithdrawalDate, WithdrawalDateNotReached());

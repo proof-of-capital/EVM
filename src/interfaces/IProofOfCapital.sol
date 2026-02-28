@@ -115,6 +115,9 @@ interface IProofOfCapital {
     error CurrentStepEarnedExceedsCurrentStep();
     error BelowMinimumOutput();
     error OnlyReturnBurnContract();
+    error DeferredWithdrawalLockActive();
+    error DeferredWithdrawalLockExceedsMaxPeriod();
+    error NewDeferredWithdrawalLockMustBeGreaterThanOld();
     // Events
     event OldContractRegistered(address indexed oldContractAddress);
     event UnaccountedCollateralBalanceProcessed(uint256 amount, uint256 deltaCollateral, uint256 change);
@@ -122,6 +125,7 @@ interface IProofOfCapital {
     event UnaccountedOffsetTokenBalanceProcessed(uint256 amount);
     event DAOAddressChanged(address indexed newDaoAddress);
     event LockExtended(uint256 additionalTime);
+    event DeferredWithdrawalLockExtended(uint256 lockTimestamp);
     event MarketMakerStatusChanged(address indexed marketMaker, bool isActive);
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 cost);
     event TokensSold(address indexed seller, uint256 amount, uint256 payout);
@@ -178,6 +182,7 @@ interface IProofOfCapital {
     // Management functions
 
     function extendLock(uint256 lockTimestamp) external;
+    function extendDeferredWithdrawalLock(uint256 lockTimestamp) external;
     function toggleDeferredWithdrawal() external;
     function assignNewReserveOwner(address newReserveOwner) external;
     function switchProfitMode(bool flag) external;
@@ -239,6 +244,7 @@ interface IProofOfCapital {
     function daoAddress() external view returns (address);
     function RETURN_BURN_CONTRACT_ADDRESS() external view returns (address);
     function lockEndTime() external view returns (uint256);
+    function deferredWithdrawalLockEndTime() external view returns (uint256);
     function controlDay() external view returns (uint256);
     function controlPeriod() external view returns (uint256);
     function initialPricePerLaunchToken() external view returns (uint256);
